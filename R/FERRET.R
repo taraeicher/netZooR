@@ -366,6 +366,7 @@ ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "de
                   main = "Subspace Similarity")
         }
       }
+      print(auc)
       auc <-  methods::new("FERRET_ROC_AUC",auc = unlist(auc), roc = rocOverall)
     }
   }
@@ -476,9 +477,11 @@ ScaleNetworksByPercentile <- function(networks, numberOfCutoffs){
 #' needs to be set when generating the plot.
 #' @param ylab The label for the Y axis of the plot. Default is empty. This only
 #' needs to be set when generating the plot.
+#' @param minTextDistAsPercentage The minimum distance between text as a percentage
+#' of the distance in the plot. This prevents annotations from overlapping.
 #' @returns The averaged, lowest, and highest values at each cutoff, also generates a  plot as a side effect.
 #' @export
-ConsolidateRobustness <- function(resultList, xlab, ylab){
+ConsolidateRobustness <- function(resultList, xlab, ylab, minTextDistAsPercentage){
   
   # Initialize mean, min, max.
   averageResults <- resultList[[1]]
@@ -569,22 +572,26 @@ ConsolidateRobustness <- function(resultList, xlab, ylab){
   if("Jaccard" %in% names(resultList[[1]]@roc)){
     PlotROC(averageSims = averageResultsRoc$Jaccard, lowestSims = minResultsRoc$Jaccard,
             highestSims = maxResultsRoc$Jaccard, auc = averageResultsAUC[["Jaccard"]], xlab = xlab, ylab = ylab,
-            main = "Jaccard Similarity", absoluteMin = absoluteMin[["Jaccard"]], absoluteMax = absoluteMax[["Jaccard"]])
+            main = "Jaccard Similarity", absoluteMin = absoluteMin[["Jaccard"]], absoluteMax = absoluteMax[["Jaccard"]],
+            minTextDistAsPercentage = minTextDistAsPercentage)
   }
   if("Degree" %in% names(resultList[[1]]@roc)){
     PlotROC(averageSims = averageResultsRoc$Degree, lowestSims = minResultsRoc$Degree,
             highestSims = maxResultsRoc$Degree, auc = averageResultsAUC[["Degree"]], xlab = xlab, ylab = ylab,
-            main = "Degree Similarity", absoluteMin = absoluteMin[["Degree"]], absoluteMax = absoluteMax[["Degree"]])
+            main = "Degree Similarity", absoluteMin = absoluteMin[["Degree"]], absoluteMax = absoluteMax[["Degree"]],
+            minTextDistAsPercentage = minTextDistAsPercentage)
   }
   if("Modularity" %in% names(resultList[[1]]@roc)){
     PlotROC(averageSims = averageResultsRoc$Modularity, lowestSims = minResultsRoc$Modularity,
             highestSims = maxResultsRoc$Modularity, auc = averageResultsAUC[["Modularity"]], xlab = xlab, ylab = ylab,
-            main = "Modularity Similarity", absoluteMin = absoluteMin[["Modularity"]], absoluteMax = absoluteMax[["Modularity"]])
+            main = "Modularity Similarity", absoluteMin = absoluteMin[["Modularity"]], absoluteMax = absoluteMax[["Modularity"]],
+            minTextDistAsPercentage = minTextDistAsPercentage)
   }
   if("Subspace" %in% names(resultList[[1]]@roc)){
     PlotROC(averageSims = averageResultsRoc$Subspace, lowestSims = minResultsRoc$Subspace,
             highestSims = maxResultsRoc$Subspace, auc = averageResultsAUC[["Subspace"]], xlab = xlab, ylab = ylab,
-            main = "Subspace Similarity", absoluteMin = absoluteMin[["Subspace"]], absoluteMax = absoluteMax[["Subspace"]])
+            main = "Subspace Similarity", absoluteMin = absoluteMin[["Subspace"]], absoluteMax = absoluteMax[["Subspace"]],
+            minTextDistAsPercentage = minTextDistAsPercentage)
   }
 }
 
@@ -620,57 +627,44 @@ ConsolidateRobustnessHelper <- function(resultList, functionToApply, metric){
     return(get(functionToApply)(y))
   }))
   
+  # For each X bin, get the average cutoff.
+  averageCutoff <- unlist(lapply(1:length(xBins), function(binIdx){
+    cutoffPerResult <- unlist(lapply(1:length(resultList), function(i){
+      xPosInBin <- intersect(which(resultList[[i]]@roc[[metric]]@outgroup >= 0),
+                             which(resultList[[i]]@roc[[metric]]@outgroup <= xBins[binIdx]))
+      if(binIdx > 1){
+        xPosInBin <- intersect(which(resultList[[i]]@roc[[metric]]@outgroup > xBins[binIdx-1]),
+                               which(resultList[[i]]@roc[[metric]]@outgroup <= xBins[binIdx]))
+      }
+      cutoffs <- as.numeric(names(resultList[[i]]@roc[[metric]]@ingroup)[xPosInBin])
+      return(cutoffs)
+    }))
+    return(mean(cutoffPerResult))
+  }))
+  str(yConsolidated)
+  str(xBins)
+  str(averageCutoff)
+  
   # Remove NA, NAN, and Inf
   whichNotNA <- which(!is.na(yConsolidated))
   yConsolidated <- yConsolidated[whichNotNA]
   xBins <- xBins[whichNotNA]
+  averageCutoff <- averageCutoff[whichNotNA]
   whichNotNAN <- which(!is.nan(yConsolidated))
   yConsolidated <- yConsolidated[whichNotNAN]
   xBins <- xBins[whichNotNAN]
+  averageCutoff <- averageCutoff[whichNotNAN]
   whichNotInf <- which(!is.infinite(yConsolidated))
   yConsolidated <- yConsolidated[whichNotInf]
   xBins <- xBins[whichNotInf]
+  averageCutoff <- averageCutoff[whichNotInf]
   
   # Name the vectors.
-  names(yConsolidated) <- as.character(1:length(xBins))
-  names(xBins) <- as.character(1:length(xBins))
+  names(yConsolidated) <- as.character(averageCutoff)
+  names(xBins) <- as.character(averageCutoff)
   
   # The results are a list.
   results <- list(ingroup = yConsolidated, outgroup = xBins)
-  return(results)
-}
-
-#' This is a helper function for ConsolidateRobustness().
-#' @param resultList A list of FERRET_ROC_AUC objects to consolidate.
-#' @param functionToApply One of "mean", "min", or "max".
-#' @param metric The metric to consider.
-#' @param group One of "ingroup" or "outgroup"
-#' @returns a vector of new results.
-ConsolidateRobustnessHelperOld <- function(resultList, functionToApply, metric, group){
-  
-  # Get result for each cutoff.
-  results <- unlist(lapply(1:length(resultList[[1]]@roc[[metric]]@ingroup), function(i){
-    val <- NA
-    
-    # Consolidate across evaluations.
-    allAtIndex <- unlist(lapply(resultList, function(results){
-      atIndex <- NULL
-      if(group == "ingroup"){
-        atIndex <- results@roc[[metric]]@ingroup[i]
-      }else{
-        atIndex <- results@roc[[metric]]@outgroup[i]
-      }
-      return(atIndex)
-    }))
-    
-    # For those results that are not NA, take the average.
-    whichNotNA <- which(!is.na(allAtIndex))
-    if(length(whichNotNA) > 0){
-      val <- get(functionToApply)(allAtIndex[whichNotNA])
-    }
-    return(val)
-  }))
-  names(results) <- paste("cutoff", 1:length(resultList[[1]]@roc[[metric]]@ingroup))
   return(results)
 }
 
@@ -724,7 +718,7 @@ WriteRobustnessAUC <- function(results, fileName){
   }
   # Add a row representing AUC.
   resultDfAuc <- as.data.frame(t(as.data.frame(results@auc)))
-  colnames(resultDfAuc) <- names(results@auc)
+  colnames(resultDfAuc) <- names(results@roc)
   
   # Add a row for each of the ingroup ROC values.
   resultDfIngroup <- do.call(cbind, lapply(1:length(results@roc), function(i){
@@ -930,7 +924,7 @@ GetCommonNetworkAcrossComparisons <- function(results, comparisons, useTargetsOn
 
   # Extract the subset of networks in the comparisons list.
   networks <- results@results[which(names(results@results) %in% flatComparisons)]
-  
+
   # If interpretation of negative is "poor", rescale the networks.
   minOfAll <- min(unlist(lapply(results@results, 
                                 function(network){return(min(network[,3]))})))
@@ -1134,7 +1128,8 @@ ComputeRobustnessForOneEdgeType <- function(results, comparisons, metric = c("ja
               main = "Subspace Similarity")
     }
   }
-  retVal <- methods::new("FERRET_ROC_AUC",auc = unlist(auc), roc = roc)
+  auc <- as.numeric(unlist(auc))
+  retVal <- methods::new("FERRET_ROC_AUC",auc = auc, roc = roc)
 
   # Return the AUC scores.
   return(retVal)
@@ -1299,8 +1294,8 @@ PlotROC <- function(averageSims, lowestSims = NULL, highestSims = NULL, auc,
   if(showCutoffs == TRUE){
     # Bin the X and Y values.
     percentageBins <- seq(limMin, limMax, (limMax - limMin) * (minTextDistAsPercentage / 100))
-    percentageBinsOverlap <- seq(limMin + (limMax - limMin) * (minTextDistAsPercentage / 100), 
-                                 limMax + (limMax - limMin) * (minTextDistAsPercentage / 100), 
+    percentageBinsOverlap <- seq(limMin - (limMax - limMin) * (minTextDistAsPercentage / 200), 
+                                 limMax + (limMax - limMin) * (minTextDistAsPercentage / 200), 
                                  (limMax - limMin) * (minTextDistAsPercentage / 100))
     everyOtherBin <- percentageBins[seq(1, length(percentageBins), 2)]
     binX <- unlist(lapply(x, function(point){
@@ -1361,7 +1356,6 @@ PlotROC <- function(averageSims, lowestSims = NULL, highestSims = NULL, auc,
         
         # If there is one, keep it. Else, return a value at random.
         if(length(intersectionVals) == 1){
-          print(intersectionVals)
           toKeep <- intersectionVals
         }else if(length(intersectionVals > 1)){
           toKeep <- sample(intersectionVals, 1)
@@ -1705,8 +1699,8 @@ DegreeSim <- function(network1, network2){
                                                attr = "weight"))
     
     # Rearrange matrices.
-    allNodes1 <- c(network1[,1], network1[,2])
-    allNodes2 <- c(network2[,1], network2[,2])
+    allNodes1 <- as.character(c(network1[,1], network1[,2]))
+    allNodes2 <- as.character(c(network2[,1], network2[,2]))
     nodeOrder <- sort(union(allNodes1, allNodes2))
     net1Order <- net1Adj[nodeOrder, nodeOrder]
     net2Order <- net2Adj[nodeOrder, nodeOrder]
@@ -1803,6 +1797,8 @@ ModularitySim <- function(network1, network2){
     expandedNetworks <- ExpandNetworks(network1, network2)
     network1 <- expandedNetworks$network1
     network2 <- expandedNetworks$network2
+    colnames(network1)[3] <- "weight"
+    colnames(network2)[3] <- "weight"
     
     # Compute the community structure of the first network using ALPACA functions.
     # If one of the networks is empty, ALPACA will throw an error, so just return 0.

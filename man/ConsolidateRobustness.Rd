@@ -4,7 +4,7 @@
 \alias{ConsolidateRobustness}
 \title{This function consolidates ROC curves and AUC scores to generate a single plot.}
 \usage{
-ConsolidateRobustness(resultList, xlab, ylab)
+ConsolidateRobustness(resultList, xlab, ylab, minTextDistAsPercentage)
 }
 \arguments{
 \item{resultList}{A list of FERRET_ROC_AUC objects to consolidate.}
@@ -14,6 +14,9 @@ needs to be set when generating the plot.}
 
 \item{ylab}{The label for the Y axis of the plot. Default is empty. This only
 needs to be set when generating the plot.}
+
+\item{minTextDistAsPercentage}{The minimum distance between text as a percentage
+of the distance in the plot. This prevents annotations from overlapping.}
 }
 \value{
 The averaged, lowest, and highest values at each cutoff, also generates a  plot as a side effect.
