@@ -1483,6 +1483,17 @@ ComputeSimilarities <- function(results, comparisons, cutoffs, metric, k = 5){
   
   # Set a cutoff for zero.
   zeroCutoff <- 0.0000000001
+  
+  # Obtain the unique nodes to use for computing the projections. Even though
+  # we project separately for each cutoff, we want to project onto the same space
+  # for consistency across cutoffs. This means that we want the dimensionality of
+  # the graph to be the same.
+  uniqueNodes <- sort(unique(unlist(lapply(results@results, function(network){
+    return(c(network[,1], network[,2]))
+  }))))
+  if(length(uniqueNodes) <= k){
+    uniqueNodes <- c(uniqueNodes, as.character(seq(1, k+2, 1)))
+  }
    
   # For each cutoff, do all comparisons for in-group and out-group.
   sim <- lapply(cutoffs, function(cutoff){
@@ -1496,13 +1507,6 @@ ComputeSimilarities <- function(results, comparisons, cutoffs, metric, k = 5){
     # If we are doing subspace similarity, first compute the projections of all networks.
     projections <- NULL
     if(metric == "subspace"){
-      # Compute the projection of the identity matrix.
-      uniqueNodes <- sort(unique(unlist(lapply(cutoffResults@results, function(network){
-        return(c(network[,1], network[,2]))
-      }))))
-      if(length(uniqueNodes) <= k){
-        uniqueNodes <- c(uniqueNodes, as.character(seq(1, k+2, 1)))
-      }
       
       # Compute the projections for the networks.
       projections <- lapply(cutoffResults@results, function(network){
@@ -1515,14 +1519,95 @@ ComputeSimilarities <- function(results, comparisons, cutoffs, metric, k = 5){
       })
       names(projections) <- names(cutoffResults@results)
     }
+    
+    # If we are doing modularity similarity, first compute the clusters for the
+    # base network.
+    if(metric == "modularity"){
+      network <- results@results[comparisons@ingroup[[1]]@source][[1]]
+      str(network)
+      # Expand the networks
+      extraNodes <- setdiff(uniqueNodes, network)
+      expandedNetwork <- network
+      if(nrow(expandedNetwork) == 0){
+        expandedNetwork <- data.frame(source = extraNodes,
+                                      target = extraNodes, weight = rep(0, length(extraNodes)))
+      }else{
+        extraZeros <- data.frame(source = extraNodes,
+                                 target = extraNodes, weight = rep(0, length(extraNodes)))
+        rownames(extraZeros) <- paste(extraZeros$source, extraZeros$target, sep = "_")
+        colnames(extraZeros) <- colnames(expandedNetwork[c(1,2,3)])
+        expandedNetwork <- rbind(expandedNetwork, extraZeros)
+      }
+      colnames(expandedNetwork)[3] <- "weight"
+      str(expandedNetwork)
+      
+      # Compute the community structure of the first network using ALPACA functions.
+      # If one of the networks is empty, ALPACA will throw an error, so just return 0.
+      communities <- alpacaWBMlouvain(expandedNetwork)[[1]]
+      
+      # Remove duplicates from community structure, which can happen in the case of
+      # non-bipartite networks.
+      uniqueNodes <- unique(names(communities))
+      for(node in uniqueNodes){
+        whichNode <- which(names(communities) == node)
+        if(length(whichNode) > 1){
+          communities <- communities[-whichNode[-1]]
+        }
+      }
+      
+      w <- igraph::as_adjacency_matrix(igraph::graph_from_data_frame(expandedNetwork, 
+                                                                     directed = TRUE), 
+                                       attr = "weight")
+      
+      # Compute the expected community structure of the baseline network Nij.
+      # We will adjust these values later by multiplying by sum(A) / length(which(expandedNetwork$weight > 0))
+      nodeCommSrcSums <- as.matrix(do.call(cbind, lapply(sort(unique(communities)), function(community){
+        return(data.frame(v1=unlist(lapply(1:nrow(w), function(gene){
+          return(sum(w[gene, names(communities)[which(communities == community)]]))
+        }))))
+      })))
+      
+      # The sum of weights from all nodes in each community to j.
+      # We will adjust these values later by multiplying by sum(A) / length(which(expandedNetwork$weight > 0))
+      nodeCommTargetSums <- as.matrix(do.call(cbind, lapply(1:nrow(w), function(gene){
+        return(data.frame(v1 = unlist(lapply(sort(unique(communities)), function(community){
+          return(sum(w[names(communities)[which(communities == community)], gene]))
+        }))))
+      })))
+      
+      # The sum of weights between all communities.
+      # We will adjust these values later by multiplying by sum(A) / length(which(expandedNetwork$weight > 0))
+      nodeCrossCommSums <- as.matrix(do.call(cbind, lapply(sort(unique(communities)), function(community){
+        return(data.frame(v1 = unlist(lapply(sort(unique(communities)), function(community2){
+          return(sum(w[names(communities)[which(communities == community)], 
+                       names(communities)[which(communities == community2)]]))
+        }))))
+      })))
+      # Build first part of numerator (the scaled weight from node i to the community of to node j).
+      numeratorTerm1 <- nodeCommSrcSums[,communities]
+      
+      # Build second part of numerator (the scaled weight from the community of node i to node j).
+      numeratorTerm2 <- nodeCommTargetSums[communities,]
+      
+      # Build the denominator.
+      denominatorStep1 <- nodeCrossCommSums[communities,]
+      denominatorStep2 <- t(denominatorStep1[,communities])
+      
+      # Compute the expected community structure.
+      # We will adjust these values later by multiplying by sum(A) / length(which(expandedNetwork$weight > 0))
+      N <- (numeratorTerm1 * numeratorTerm2) / denominatorStep2
+      N[which(is.nan(N))] <- 0
+    }
 
     # Compute all ingroup similarities.
     ingroupSim <- ComputeSimilarityForGroup(results = cutoffResults, comparisons = comparisons@ingroup,
                                             metric = metric, k = k,
-                                            projections = projections)
+                                            projections = projections,
+                                            expectedCommunityStructure = N)
     ingroupSim[which(abs(ingroupSim) < zeroCutoff)] <- 0
     outgroupSim <- ComputeSimilarityForGroup(results = cutoffResults, comparisons = comparisons@outgroup,
-                                             metric = metric, k = k, projections = projections)
+                                             metric = metric, k = k, projections = projections,
+                                             expectedCommunityStructure = N)
     outgroupSim[which(abs(outgroupSim) < zeroCutoff)] <- 0
 
     # Compute the average similarity.
@@ -1592,8 +1677,11 @@ GetPositive <- function(results){
 #' subspace similarity or if inhibitory negative edges are present.
 #' @param projectionIdentity The projection of the identity matrix. Can be NULL if not
 #' using subspace similarity.
+#' @param expectedCommunityStructure The expected community structure. Can be NULL if not
+#' using modularity similarity 
 #' @returns A scalar similarity value.
-ComputeSimilarityForGroup <- function(results, comparisons, metric, k = 5, projections = NULL,projectionIdentity = NULL){
+ComputeSimilarityForGroup <- function(results, comparisons, metric, k = 5, projections = NULL,projectionIdentity = NULL,
+                                      expectedCommunityStructure = NULL){
   
   # Compute the similarity for the group.
   groupSimilarity <- unlist(lapply(comparisons, function(comparison){
@@ -1617,7 +1705,8 @@ ComputeSimilarityForGroup <- function(results, comparisons, metric, k = 5, proje
     }else if(metric == "degree"){
       similarity <- DegreeSim(network1 = network1, network2 = network2)
     }else if(metric == "modularity"){
-      similarity <- ModularitySim(network1 = network1, network2 = network2)
+      similarity <- ModularitySim(network1 = network1, network2 = network2,
+                                  expectedCommunityStructure = expectedCommunityStructure)
     }else if(metric == "subspace"){
       similarity <- SubspaceSim(projection1 = projections[[comparison@source]], 
                                 projection2 = projections[[comparison@target]], 
@@ -1785,84 +1874,39 @@ ExpandNetworks <- function(network1, network2){
 #' Helper function to compute the Modularity similarities between two networks.
 #' @param network1 A network for comparison.
 #' @param network2 Another network for comparison.
+#' @param expectedCommunityStructure The expected community structure matrix.
+#' It is unweighted and will be scaled here.
 #' @returns The similarity value.
-ModularitySim <- function(network1, network2){
+ModularitySim <- function(network1, network2, expectedCommunityStructure){
   
   similarity <- NA
   
   # If one data frame is empty, similarity is 0.
+  str(network1)
+  str(network2)
   if(nrow(network1) > 0 && nrow(network2) > 0){
     
     # Expand the networks
     expandedNetworks <- ExpandNetworks(network1, network2)
     network1 <- expandedNetworks$network1
     network2 <- expandedNetworks$network2
-    colnames(network1)[3] <- "weight"
-    colnames(network2)[3] <- "weight"
-    
-    # Compute the community structure of the first network using ALPACA functions.
-    # If one of the networks is empty, ALPACA will throw an error, so just return 0.
-    communities <- alpacaWBMlouvain(network1)[[1]]
-    
-    # Remove duplicates from community structure, which can happen in the case of
-    # non-bipartite networks.
-    uniqueNodes <- unique(names(communities))
-    for(node in uniqueNodes){
-      whichNode <- which(names(communities) == node)
-      if(length(whichNode) > 1){
-        communities <- communities[-whichNode[-1]]
-      }
-    }
+    str(network1)
+    str(network2)
 
-    # Normalize the edge weights in the original network.
+    # Obtain an adjacency matrix for the network being compared.
     colnames(network1)[3] <- "weight"
     colnames(network2)[3] <- "weight"
-    w <- igraph::as_adjacency_matrix(igraph::graph_from_data_frame(network1, 
-                                                                   directed = TRUE), 
-                                     attr = "weight")
     A <- igraph::as_adjacency_matrix(igraph::graph_from_data_frame(network2, 
                                                                    directed = TRUE), 
                                      attr = "weight")
-    w_tilde <- w * sum(A) / length(which(network1$weight > 0))
 
-    # Compute the expected community structure of the baseline network Nij.
-    # The sum of weights from i to all nodes in each community.
-    nodeCommSrcSums <- as.matrix(do.call(cbind, lapply(sort(unique(communities)), function(community){
-      return(data.frame(v1=unlist(lapply(1:nrow(w_tilde), function(gene){
-        return(sum(w_tilde[gene, names(communities)[which(communities == community)]]))
-      }))))
-    })))
-    
-    # The sum of weights from all nodes in each community to j.
-    nodeCommTargetSums <- as.matrix(do.call(cbind, lapply(1:nrow(w_tilde), function(gene){
-      return(data.frame(v1 = unlist(lapply(sort(unique(communities)), function(community){
-        return(sum(w_tilde[names(communities)[which(communities == community)], gene]))
-      }))))
-    })))
-    
-    # The sum of weights between all communities.
-    nodeCrossCommSums <- as.matrix(do.call(cbind, lapply(sort(unique(communities)), function(community){
-      return(data.frame(v1 = unlist(lapply(sort(unique(communities)), function(community2){
-        return(sum(w_tilde[names(communities)[which(communities == community)], 
-                           names(communities)[which(communities == community2)]]))
-      }))))
-    })))
-    # Build first part of numerator (the scaled weight from node i to the community of to node j).
-    numeratorTerm1 <- nodeCommSrcSums[,communities]
-    
-    # Build second part of numerator (the scaled weight from the community of node i to node j).
-    numeratorTerm2 <- nodeCommTargetSums[communities,]
-    
-    # Build the denominator.
-    denominatorStep1 <- nodeCrossCommSums[communities,]
-    denominatorStep2 <- t(denominatorStep1[,communities])
-    
-    # Compute the expected community structure.
-    N <- (numeratorTerm1 * numeratorTerm2) / denominatorStep2
-    N[which(is.nan(N))] <- 0
+    # Normalize the expected community structure matrix.
+    N <- expectedCommunityStructure * sum(A) / length(which(network1$weight > 0))
     
     # Compute differential modularity per edge. In our implementation, we do not
     # maximize differemtial modularity with respect to M.
+    str(A)
+    str(N)
     D <- sum(abs(A - N))
     
     # Normalize.
