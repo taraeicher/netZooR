@@ -4,12 +4,15 @@
 \alias{ModularitySim}
 \title{Helper function to compute the Modularity similarities between two networks.}
 \usage{
-ModularitySim(network1, network2)
+ModularitySim(network1, network2, expectedCommunityStructure)
 }
 \arguments{
 \item{network1}{A network for comparison.}
 
 \item{network2}{Another network for comparison.}
+
+\item{expectedCommunityStructure}{The expected community structure matrix.
+It is unweighted and will be scaled here.}
 }
 \value{
 The similarity value.

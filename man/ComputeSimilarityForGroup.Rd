@@ -10,7 +10,8 @@ ComputeSimilarityForGroup(
   metric,
   k = 5,
   projections = NULL,
-  projectionIdentity = NULL
+  projectionIdentity = NULL,
+  expectedCommunityStructure = NULL
 )
 }
 \arguments{
@@ -38,6 +39,9 @@ subspace similarity or if inhibitory negative edges are present.}
 
 \item{projectionIdentity}{The projection of the identity matrix. Can be NULL if not
 using subspace similarity.}
+
+\item{expectedCommunityStructure}{The expected community structure. Can be NULL if not
+using modularity similarity}
 }
 \value{
 A scalar similarity value.
