@@ -641,9 +641,6 @@ ConsolidateRobustnessHelper <- function(resultList, functionToApply, metric){
     }))
     return(mean(cutoffPerResult))
   }))
-  str(yConsolidated)
-  str(xBins)
-  str(averageCutoff)
   
   # Remove NA, NAN, and Inf
   whichNotNA <- which(!is.na(yConsolidated))
@@ -1524,7 +1521,7 @@ ComputeSimilarities <- function(results, comparisons, cutoffs, metric, k = 5){
     # base network.
     if(metric == "modularity"){
       network <- results@results[comparisons@ingroup[[1]]@source][[1]]
-      str(network)
+
       # Expand the networks
       extraNodes <- setdiff(uniqueNodes, network)
       expandedNetwork <- network
@@ -1539,8 +1536,7 @@ ComputeSimilarities <- function(results, comparisons, cutoffs, metric, k = 5){
         expandedNetwork <- rbind(expandedNetwork, extraZeros)
       }
       colnames(expandedNetwork)[3] <- "weight"
-      str(expandedNetwork)
-      
+
       # Compute the community structure of the first network using ALPACA functions.
       # If one of the networks is empty, ALPACA will throw an error, so just return 0.
       communities <- alpacaWBMlouvain(expandedNetwork)[[1]]
@@ -1585,14 +1581,20 @@ ComputeSimilarities <- function(results, comparisons, cutoffs, metric, k = 5){
       })))
       # Build first part of numerator (the scaled weight from node i to the community of to node j).
       numeratorTerm1 <- nodeCommSrcSums[,communities]
-      
+      colnames(numeratorTerm1) <- names(communities)
+      rownames(numeratorTerm1) <- names(communities)
+
       # Build second part of numerator (the scaled weight from the community of node i to node j).
       numeratorTerm2 <- nodeCommTargetSums[communities,]
-      
+      colnames(numeratorTerm2) <- names(communities)
+      rownames(numeratorTerm2) <- names(communities)
+
       # Build the denominator.
       denominatorStep1 <- nodeCrossCommSums[communities,]
       denominatorStep2 <- t(denominatorStep1[,communities])
-      
+      colnames(denominatorStep2) <- names(communities)
+      rownames(denominatorStep2) <- names(communities)
+
       # Compute the expected community structure.
       # We will adjust these values later by multiplying by sum(A) / length(which(expandedNetwork$weight > 0))
       N <- (numeratorTerm1 * numeratorTerm2) / denominatorStep2
@@ -1882,16 +1884,12 @@ ModularitySim <- function(network1, network2, expectedCommunityStructure){
   similarity <- NA
   
   # If one data frame is empty, similarity is 0.
-  str(network1)
-  str(network2)
   if(nrow(network1) > 0 && nrow(network2) > 0){
     
-    # Expand the networks
+    # Expand the networks.This is broken!
     expandedNetworks <- ExpandNetworks(network1, network2)
     network1 <- expandedNetworks$network1
     network2 <- expandedNetworks$network2
-    str(network1)
-    str(network2)
 
     # Obtain an adjacency matrix for the network being compared.
     colnames(network1)[3] <- "weight"
@@ -1899,14 +1897,16 @@ ModularitySim <- function(network1, network2, expectedCommunityStructure){
     A <- igraph::as_adjacency_matrix(igraph::graph_from_data_frame(network2, 
                                                                    directed = TRUE), 
                                      attr = "weight")
+    
+    # Filter expected community structure to only include nodes in the adjacency matrix.
+    expectedCommunityStructure <- expectedCommunityStructure[rownames(A), colnames(A)]
+    str(expectedCommunityStructure)
 
     # Normalize the expected community structure matrix.
     N <- expectedCommunityStructure * sum(A) / length(which(network1$weight > 0))
     
     # Compute differential modularity per edge. In our implementation, we do not
     # maximize differemtial modularity with respect to M.
-    str(A)
-    str(N)
     D <- sum(abs(A - N))
     
     # Normalize.
