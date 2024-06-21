@@ -125,10 +125,11 @@ DownloadFERRETData <- function(datasetName, destinationDir){
 #' or inhibitory ("inhibitory") regulation, depending on the meaning.
 #' @param firstColumnIsRowname Whether to consider the first column as the list of
 #' row names.
+#' @param isTabDelimited Whether or not the file is tab-delimited.
 #' @returns An object of type FERRET_Results.
 #' @export
 LoadResults <- function(resultDirectory, interpretationOfNegative = "poor",
-                        firstColumnIsRowname = TRUE){
+                        firstColumnIsRowname = TRUE, isTabDelimited = FALSE){
   
   # Check that the interpretation of negative is valid.
   if(interpretationOfNegative != "poor" && interpretationOfNegative != "inhibitory"){
@@ -155,26 +156,41 @@ LoadResults <- function(resultDirectory, interpretationOfNegative = "poor",
   allFiles <- lapply(fileNames, function(file){
     results <- NULL
     # Read the file.
+    print(file)
     tryCatch({
       if(firstColumnIsRowname == TRUE){
-        results <- utils::read.csv(paste0(resultDirectory, "/", file),
-                                   row.names = 1)
+        if(isTabDelimited == TRUE){
+          results <- utils::read.table(paste0(resultDirectory, "/", file),
+                                     row.names = 1, sep = "\t", header = TRUE)
+        }else{
+          results <- utils::read.csv(paste0(resultDirectory, "/", file),
+                                     row.names = 1)
+        }
       }else{
-        results <- utils::read.csv(paste0(resultDirectory, "/", file))
+        if(isTabDelimited == TRUE){
+          results <- utils::read.table(paste0(resultDirectory, "/", file), sep = "\t",
+                                       header = TRUE)
+        }else{
+          results <- utils::read.csv(paste0(resultDirectory, "/", file))
+        }
       }
       # Check that the columns are in the right order.
       if(ncol(results) != 3 || !is.numeric(results[,3])){
-        stop("The third column must be numeric!")
+        if(nrow(results) == 0){
+          results[,3] <- as.numeric(results[,3])
+          return(results)
+        }else{
+          stop("The third column must be numeric!")
+        }
       }else{
         # Add row names.
-        rownames(results) <- paste(results[,1], results[,2], sep = "_")
         return(results)
       }
       
     }, error = function(cond){
+      print(cond)
       stop(paste("File has an invalid format:", file))
     })
-    
   })
   names(allFiles) <- fileNames
   result <- methods::new("FERRET_Results",results = allFiles, directory = resultDirectory,
@@ -1143,7 +1159,6 @@ ComputeRobustnessForOneEdgeType <- function(results, comparisons, metric = c("ja
 #' value across both X and Y.
 #' @returns The AUC score
 AUCTrapezoid <- function(x, y, absoluteMin = NULL, absoluteMax = NULL) {
-
   # Get minima and maxima.
   whichNotNA <- intersect(which(!is.na(x)), which(!is.na(y)))
   x <- x[whichNotNA]
@@ -1818,9 +1833,13 @@ DegreeSim <- function(network1, network2){
     
     # Compute F1 score.
     degreeOverlap <- 0
-    if(degreeOverlapIn != 0 || degreeOverlapOut != 0){
+    if(abs(degreeOverlapIn + degreeOverlapOut) > 0){
       degreeOverlap <- (2 * degreeOverlapIn * degreeOverlapOut) / (degreeOverlapIn + degreeOverlapOut)
     }
+    #if(length(which(is.infinite(degreeOverlap))) > 0){
+    #  print(degreeOverlapIn[which(is.infinite(degreeOverlap))])
+    #  print(degreeOverlapOut[which(is.infinite(degreeOverlap))])
+    #}
   }
   return(degreeOverlap)
 }

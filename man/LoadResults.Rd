@@ -11,7 +11,8 @@ score for each regulatory relationship.}
 LoadResults(
   resultDirectory,
   interpretationOfNegative = "poor",
-  firstColumnIsRowname = TRUE
+  firstColumnIsRowname = TRUE,
+  isTabDelimited = FALSE
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ or inhibitory ("inhibitory") regulation, depending on the meaning.}
 
 \item{firstColumnIsRowname}{Whether to consider the first column as the list of
 row names.}
+
+\item{isTabDelimited}{Whether or not the file is tab-delimited.}
 }
 \value{
 An object of type FERRET_Results.
