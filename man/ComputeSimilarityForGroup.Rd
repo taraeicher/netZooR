@@ -4,15 +4,7 @@
 \alias{ComputeSimilarityForGroup}
 \title{Helper function to compute the similarities within the ingroup or the outgroup}
 \usage{
-ComputeSimilarityForGroup(
-  results,
-  comparisons,
-  metric,
-  k = 5,
-  projections = NULL,
-  projectionIdentity = NULL,
-  expectedCommunityStructure = NULL
-)
+ComputeSimilarityForGroup(results, comparisons, metric)
 }
 \arguments{
 \item{results}{Object of type FERRET_Results}
@@ -23,25 +15,8 @@ FERRET_Comparisons.}
 \item{metric}{The metric to use for computing similarity. An element
 in the following list:
 - jaccard: Computes the Jaccard similarity (intersection / union) of edges.
-- degree: Computes the overlap in degree of each node.
-- modularity: Computes the differential modularity from a "baseline" network
-to each "perturbed" network, then scales each modularity value between 0 and 1.
-- subspace: Computes the geodesic distance between each pair of networks
-on the Grassmann manifold for a given input k, then scales each
-distance between 0 and 1.
-Default is all elements.}
-
-\item{k}{is the number of eigenvectors to include in the subspace representation
-of each network. Default is 5.}
-
-\item{projections}{A list of all projections for the results. Can be NULL if not using
-subspace similarity or if inhibitory negative edges are present.}
-
-\item{projectionIdentity}{The projection of the identity matrix. Can be NULL if not
-using subspace similarity.}
-
-\item{expectedCommunityStructure}{The expected community structure. Can be NULL if not
-using modularity similarity}
+- in-degree: Computes the overlap in in-degree of each node.
+- out-degree: Computes the overlap in out-degree of each node.}
 }
 \value{
 A scalar similarity value.

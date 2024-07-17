@@ -12,8 +12,7 @@ overlap including but not limited to basic cellular function.}
 ComputeRobustnessAUC(
   results,
   comparisons,
-  metric = c("jaccard", "degree", "modularity", "subspace"),
-  k = 5,
+  metric = c("jaccard", "in-degree", "out-degree"),
   numberOfCutoffs = 10,
   plotCurve = TRUE,
   xlab = "",
@@ -31,16 +30,8 @@ in FERRET_Results.}
 \item{metric}{The metric to use for computing similarity. One or more elements
 in the following list:
 - jaccard: Computes the Jaccard similarity (intersection / union) of edges.
-- degree: Computes the overlap in degree of each node.
-- modularity: Computes the differential modularity from a "baseline" network
-to each "perturbed" network, then scales each modularity value between 0 and 1.
-- subspace: Computes the geodesic distance between each pair of networks
-on the Grassmann manifold for a given input k, then scales each
-distance between 0 and 1.
-Default is all elements.}
-
-\item{k}{is the number of eigenvectors to include in the subspace representation
-of each network. Default is 5.}
+- in-degree: Computes the overlap in in-degree of each node.
+- out-degree: Compute the overlap in out-degree of each node.}
 
 \item{numberOfCutoffs}{The number of cutoffs to include in the AUC/ROC curve.
 These are determined using the range of values over all networks.}

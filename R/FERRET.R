@@ -246,15 +246,8 @@ BuildComparisonObject <- function(sourceNetwork, ingroupToCompare, outgroupToCom
 #' @param metric The metric to use for computing similarity. One or more elements
 #' in the following list:
 #' - jaccard: Computes the Jaccard similarity (intersection / union) of edges.
-#' - degree: Computes the overlap in degree of each node.
-#' - modularity: Computes the differential modularity from a "baseline" network
-#' to each "perturbed" network, then scales each modularity value between 0 and 1.
-#' - subspace: Computes the geodesic distance between each pair of networks
-#' on the Grassmann manifold for a given input k, then scales each
-#' distance between 0 and 1.
-#' Default is all elements.
-#' @param k is the number of eigenvectors to include in the subspace representation
-#' of each network. Default is 5.
+#' - in-degree: Computes the overlap in in-degree of each node.
+#' - out-degree: Compute the overlap in out-degree of each node.
 #' @param numberOfCutoffs The number of cutoffs to include in the AUC/ROC curve.
 #' These are determined using the range of values over all networks.
 #' @param xlab The label for the X axis of the plot. Default is empty. This only
@@ -265,8 +258,8 @@ BuildComparisonObject <- function(sourceNetwork, ingroupToCompare, outgroupToCom
 #' @param mode "Percentile" or "Score".
 #' @returns An object of type FERRET_ROC_AUC, also generates a  plot as a side effect.
 #' @export
-ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "degree", "modularity", "subspace"), 
-                        k = 5, numberOfCutoffs = 10, plotCurve = TRUE, xlab = "", ylab = "", mode = "Score"){
+ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "in-degree", "out-degree"), 
+                        numberOfCutoffs = 10, plotCurve = TRUE, xlab = "", ylab = "", mode = "Score"){
   
   # Check the inputs.
   if(!is(results, "FERRET_Results") || !is(comparisons, "FERRET_Comparisons")){
@@ -326,7 +319,6 @@ ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "de
                                                       comparisons = comparisons,
                                                       numberOfCutoffs = numberOfCutoffs,
                                                       metric = metric, 
-                                                      k = k, 
                                                       xlab = xlab,
                                                       ylab = ylab,
                                                       plotCurve = FALSE)
@@ -334,7 +326,6 @@ ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "de
                                                       comparisons = comparisons, 
                                                       numberOfCutoffs = numberOfCutoffs,
                                                       metric = metric, 
-                                                      k = k, 
                                                       xlab = xlab,
                                                       ylab = ylab,
                                                       plotCurve = FALSE)
@@ -361,28 +352,20 @@ ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "de
                   main = "Jaccard Similarity")
         }
       }
-      if("degree" %in% metric){
-        auc[["Degree"]] <- AUCTrapezoid(unname(rocOverall$Degree@outgroup), unname(rocOverall$Degree@ingroup))
+      if("in-degree" %in% metric){
+        auc[["InDegree"]] <- AUCTrapezoid(unname(rocOverall$InDegree@outgroup), unname(rocOverall$InDegree@ingroup))
         if(plotCurve == TRUE){
-          PlotROC(averageSims = rocOverall$Degree, auc = auc[["Degree"]], xlab = xlab, ylab = ylab,
-                  main = "Degree Similarity")
+          PlotROC(averageSims = rocOverall$InDegree, auc = auc[["InDegree"]], xlab = xlab, ylab = ylab,
+                  main = "In-Degree Similarity")
         }
       }
-      if("modularity" %in% metric){
-        auc[["Modularity"]] <- AUCTrapezoid(unname(rocOverall$Modularity@outgroup), unname(rocOverall$Modularity@ingroup))
+      if("out-degree" %in% metric){
+        auc[["OutDegree"]] <- AUCTrapezoid(unname(rocOverall$OutDegree@outgroup), unname(rocOverall$OutDegree@ingroup))
         if(plotCurve == TRUE){
-          PlotROC(averageSims = rocOverall$Modularity, auc = auc[["Modularity"]], xlab = xlab, ylab = ylab,
-                  main = "Modularity Similarity")
+          PlotROC(averageSims = rocOverall$OutDegree, auc = auc[["OutDegree"]], xlab = xlab, ylab = ylab,
+                  main = "Out-Degree Similarity")
         }
       }
-      if("subspace" %in% metric){
-        auc[["Subspace"]] <- AUCTrapezoid(unname(rocOverall$Subspace@outgroup), unname(rocOverall$Subspace@ingroup))
-        if(plotCurve == TRUE){
-          PlotROC(averageSims = rocOverall$Subspace, auc = auc[["Subspace"]], xlab = xlab, ylab = ylab,
-                  main = "Subspace Similarity")
-        }
-      }
-      print(auc)
       auc <-  methods::new("FERRET_ROC_AUC",auc = unlist(auc), roc = rocOverall)
     }
   }
@@ -397,7 +380,7 @@ ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "de
     auc <- ComputeRobustnessForOneEdgeType(results = resultsScaled, 
                                                    comparisons = comparisons, 
                                                    metric = metric, 
-                                                   k = k, numberOfCutoffs = numberOfCutoffs,
+                                                   numberOfCutoffs = numberOfCutoffs,
                                                    plotCurve = plotCurve, xlab = xlab,
                                                    ylab = ylab)
   }
@@ -591,22 +574,16 @@ ConsolidateRobustness <- function(resultList, xlab, ylab, minTextDistAsPercentag
             main = "Jaccard Similarity", absoluteMin = absoluteMin[["Jaccard"]], absoluteMax = absoluteMax[["Jaccard"]],
             minTextDistAsPercentage = minTextDistAsPercentage)
   }
-  if("Degree" %in% names(resultList[[1]]@roc)){
-    PlotROC(averageSims = averageResultsRoc$Degree, lowestSims = minResultsRoc$Degree,
-            highestSims = maxResultsRoc$Degree, auc = averageResultsAUC[["Degree"]], xlab = xlab, ylab = ylab,
-            main = "Degree Similarity", absoluteMin = absoluteMin[["Degree"]], absoluteMax = absoluteMax[["Degree"]],
+  if("InDegree" %in% names(resultList[[1]]@roc)){
+    PlotROC(averageSims = averageResultsRoc$InDegree, lowestSims = minResultsRoc$InDegree,
+            highestSims = maxResultsRoc$InDegree, auc = averageResultsAUC[["InDegree"]], xlab = xlab, ylab = ylab,
+            main = "In-Degree Similarity", absoluteMin = absoluteMin[["InDegree"]], absoluteMax = absoluteMax[["InDegree"]],
             minTextDistAsPercentage = minTextDistAsPercentage)
   }
-  if("Modularity" %in% names(resultList[[1]]@roc)){
-    PlotROC(averageSims = averageResultsRoc$Modularity, lowestSims = minResultsRoc$Modularity,
-            highestSims = maxResultsRoc$Modularity, auc = averageResultsAUC[["Modularity"]], xlab = xlab, ylab = ylab,
-            main = "Modularity Similarity", absoluteMin = absoluteMin[["Modularity"]], absoluteMax = absoluteMax[["Modularity"]],
-            minTextDistAsPercentage = minTextDistAsPercentage)
-  }
-  if("Subspace" %in% names(resultList[[1]]@roc)){
-    PlotROC(averageSims = averageResultsRoc$Subspace, lowestSims = minResultsRoc$Subspace,
-            highestSims = maxResultsRoc$Subspace, auc = averageResultsAUC[["Subspace"]], xlab = xlab, ylab = ylab,
-            main = "Subspace Similarity", absoluteMin = absoluteMin[["Subspace"]], absoluteMax = absoluteMax[["Subspace"]],
+  if("OutDegree" %in% names(resultList[[1]]@roc)){
+    PlotROC(averageSims = averageResultsRoc$OutDegree, lowestSims = minResultsRoc$OutDegree,
+            highestSims = maxResultsRoc$OutDegree, auc = averageResultsAUC[["OutDegree"]], xlab = xlab, ylab = ylab,
+            main = "Out-Degree Similarity", absoluteMin = absoluteMin[["OutDegree"]], absoluteMax = absoluteMax[["OutDegree"]],
             minTextDistAsPercentage = minTextDistAsPercentage)
   }
 }
@@ -1034,15 +1011,8 @@ GetFullNetworkFromPCANetwork <- function(pcNetwork, PC, zeroCutoff = 0.001){
 #' @param metric The metric to use for computing similarity. One or more elements
 #' in the following list:
 #' - jaccard: Computes the Jaccard similarity (intersection / union) of edges.
-#' - degree: Computes the overlap in degree of each node.
-#' - modularity: Computes the differential modularity from a "baseline" network
-#' to each "perturbed" network, then scales each modularity value between 0 and 1.
-#' - subspace: Computes the geodesic distance between each pair of networks
-#' on the Grassmann manifold for a given input k, then scales each
-#' distance between 0 and 1.
-#' Default is all elements.
-#' @param k is the number of eigenvectors to include in the subspace representation
-#' of each network. Default is 5.
+#' - in-degree: Computes the overlap in in-degree of each node.
+#' - out-degree: Computes the overlap in out-degree of each node.
 #' @param xlab The label for the X axis of the plot. Default is empty. This only
 #' needs to be set when generating the plot.
 #' @param ylab The label for the Y axis of the plot. Default is empty. This only
@@ -1052,11 +1022,11 @@ GetFullNetworkFromPCANetwork <- function(pcNetwork, PC, zeroCutoff = 0.001){
 #' @param numberOfCutoffs Number of cutoffs to evaluate.
 #' @returns An AUC score, also generates a  plot as a side effect.
 #' @export
-ComputeRobustnessForOneEdgeType <- function(results, comparisons, metric = c("jaccard", "degree", "modularity", "subspace"), 
-                                 k = 5, plotCurve = TRUE, xlab = "", ylab = "", mode = "Score", numberOfCutoffs = 10){
+ComputeRobustnessForOneEdgeType <- function(results, comparisons, metric = c("jaccard", "in-degree", "out-degree"), 
+                                 plotCurve = TRUE, xlab = "", ylab = "", mode = "Score", numberOfCutoffs = 10){
   
   # Stop if no metrics were input.
-  possibleMetrics <- c("jaccard", "modularity", "subspace", "degree")
+  possibleMetrics <- c("jaccard", "in-degree", "out-degree")
   if(length(metric) == 0 || !is.character(metric) || length(setdiff(metric, possibleMetrics)) > 0){
     stop(paste("Metric must be one or more of the following:", paste(possibleMetrics, collapse = ", ")))
   }
@@ -1093,55 +1063,41 @@ ComputeRobustnessForOneEdgeType <- function(results, comparisons, metric = c("ja
               main = "Jaccard Similarity")
     }
   }
-  if("degree" %in% metric){
+  if("in-degree" %in% metric){
     degreeSim <- ComputeSimilarities(results = results, comparisons = comparisons,
-                                   cutoffs = cutoffs, metric = "degree")
-    message("Finished all Degree similarity metrics")
+                                   cutoffs = cutoffs, metric = "in-degree")
+    message("Finished all In-Degree similarity metrics")
     aucDegree <- 0
     if(length(which(is.na(degreeSim@ingroup))) < length(degreeSim@ingroup) &&
        length(which(is.na(degreeSim@outgroup))) < length(degreeSim@outgroup)){
       aucDegree <- AUCTrapezoid(unname(degreeSim@outgroup), unname(degreeSim@ingroup))
     }
-    auc[["Degree"]] <- aucDegree
-    roc[["Degree"]] <- degreeSim
+    auc[["InDegree"]] <- aucDegree
+    roc[["InDegree"]] <- degreeSim
     if(plotCurve == TRUE){
       PlotROC(averageSims = degreeSim, auc = aucDegree, xlab = xlab, ylab = ylab,
-              main = "Degree Similarity")
+              main = "In-Degree Similarity")
     }
   }
-  if("modularity" %in% metric){
-    modularitySim <- ComputeSimilarities(results = results, comparisons = comparisons,
-                                           cutoffs = cutoffs, metric = "modularity")
-    message("Finished all Modularity similarity metrics")
-    aucModularity <- 0
-    if(length(which(is.na(modularitySim@ingroup))) < length(modularitySim@ingroup) &&
-       length(which(is.na(modularitySim@outgroup))) < length(modularitySim@outgroup)){
-      aucModularity <- AUCTrapezoid(unname(modularitySim@outgroup), unname(modularitySim@ingroup))
+  if("out-degree" %in% metric){
+    degreeSim <- ComputeSimilarities(results = results, comparisons = comparisons,
+                                     cutoffs = cutoffs, metric = "out-degree")
+    message("Finished all Out-Degree similarity metrics")
+    aucDegree <- 0
+    if(length(which(is.na(degreeSim@ingroup))) < length(degreeSim@ingroup) &&
+       length(which(is.na(degreeSim@outgroup))) < length(degreeSim@outgroup)){
+      aucDegree <- AUCTrapezoid(unname(degreeSim@outgroup), unname(degreeSim@ingroup))
     }
-    auc[["Modularity"]] <- aucModularity
-    roc[["Modularity"]] <- modularitySim
+    auc[["OutDegree"]] <- aucDegree
+    roc[["OutDegree"]] <- degreeSim
     if(plotCurve == TRUE){
-      PlotROC(averageSims = modularitySim, auc = aucModularity, xlab = xlab, ylab = ylab,
-              main = "Modularity Similarity")
+      PlotROC(averageSims = degreeSim, auc = aucDegree, xlab = xlab, ylab = ylab,
+              main = "Out-Degree Similarity")
     }
   }
-  if("subspace" %in% metric){
-    subspaceSim <- ComputeSimilarities(results = results, comparisons = comparisons, k = k,
-                                       cutoffs = cutoffs, metric = "subspace")
-    message("Finished all Subspace similarity metrics")
-    aucSubspace <- 0
-    if(length(which(is.na(subspaceSim@ingroup))) < length(subspaceSim@ingroup) &&
-       length(which(is.na(subspaceSim@outgroup))) < length(subspaceSim@outgroup)){
-      aucSubspace <- AUCTrapezoid(unname(subspaceSim@outgroup), unname(subspaceSim@ingroup))
-    }
-    auc[["Subspace"]] <- aucSubspace
-    roc[["Subspace"]] <- subspaceSim
-    if(plotCurve == TRUE){
-      PlotROC(averageSims = subspaceSim, auc = aucSubspace, xlab = xlab, ylab = ylab,
-              main = "Subspace Similarity")
-    }
-  }
+  aucNames <- names(auc)
   auc <- as.numeric(unlist(auc))
+  names(auc) <- aucNames
   retVal <- methods::new("FERRET_ROC_AUC",auc = auc, roc = roc)
 
   # Return the AUC scores.
@@ -1213,9 +1169,15 @@ AUCTrapezoid <- function(x, y, absoluteMin = NULL, absoluteMax = NULL) {
       # Add the triangular portion.
       auc <- auc + (max(y[i], y[i-1]) - min(y[i], y[i-1])) * (x[i] - x[i-1]) / 2
     }
+    
+    # If the max value in X is not the max value in Y, add an additional
+    # chunk that continues the last Y-value.
+    if(maxX < maxY){
+      auc <- auc + (y[length(x)] - min_total) * (max_total - maxX)
+    }
 
     # Divide by the portion covered.
-    auc <- auc / ((max_total - min_total) * (maxX - minX))
+    auc <- auc / ((max_total - min_total) * (max_total - min_total))
   }
   return(auc)
 }
@@ -1472,17 +1434,10 @@ GetEdgesAboveCutoff <- function(network, cutoff){
 #' @param metric The metric to use for computing similarity. An element
 #' in the following list:
 #' - jaccard: Computes the Jaccard similarity (intersection / union) of edges.
-#' - degree: Computes the overlap in degree of each node.
-#' - modularity: Computes the differential modularity from a "baseline" network
-#' to each "perturbed" network, then scales each modularity value between 0 and 1.
-#' - subspace: Computes the geodesic distance between each pair of networks
-#' on the Grassmann manifold for a given input k, then scales each
-#' distance between 0 and 1.
-#' Default is all elements.
-#' @param k is the number of eigenvectors to include in the subspace representation
-#' of each network. Default is 5.
+#' - in-degree: Computes the overlap in in-degree of each node.
+#' - out-degree: Computes the overlap in out-degree of each node.
 #' @returns Object of type FERRET_Similarity
-ComputeSimilarities <- function(results, comparisons, cutoffs, metric, k = 5){
+ComputeSimilarities <- function(results, comparisons, cutoffs, metric){
   
   # Check that input types are correct.
   if(!is(results, "FERRET_Results") || !is(comparisons, "FERRET_Comparisons")){
@@ -1495,17 +1450,6 @@ ComputeSimilarities <- function(results, comparisons, cutoffs, metric, k = 5){
   
   # Set a cutoff for zero.
   zeroCutoff <- 0.0000000001
-  
-  # Obtain the unique nodes to use for computing the projections. Even though
-  # we project separately for each cutoff, we want to project onto the same space
-  # for consistency across cutoffs. This means that we want the dimensionality of
-  # the graph to be the same.
-  uniqueNodes <- sort(unique(unlist(lapply(results@results, function(network){
-    return(c(network[,1], network[,2]))
-  }))))
-  if(length(uniqueNodes) <= k){
-    uniqueNodes <- c(uniqueNodes, as.character(seq(1, k+2, 1)))
-  }
    
   # For each cutoff, do all comparisons for in-group and out-group.
   sim <- lapply(cutoffs, function(cutoff){
@@ -1516,115 +1460,12 @@ ComputeSimilarities <- function(results, comparisons, cutoffs, metric, k = 5){
       return(GetEdgesAboveCutoff(result, cutoff))
     })
 
-    # If we are doing subspace similarity, first compute the projections of all networks.
-    projections <- NULL
-    if(metric == "subspace"){
-      
-      # Compute the projections for the networks.
-      projections <- lapply(cutoffResults@results, function(network){
-        projection <- ComputeProjection(network = network, k, allNodes = uniqueNodes)
-        projection <- do.call(cbind, lapply(colnames(projection), function(c){
-          projectionC <- projection[,c]
-          projectionC[which(abs(projectionC) < zeroCutoff)] <- 0
-          return(projectionC)
-        }))
-      })
-      names(projections) <- names(cutoffResults@results)
-    }
-    
-    # If we are doing modularity similarity, first compute the clusters for the
-    # base network.
-    if(metric == "modularity"){
-      network <- results@results[comparisons@ingroup[[1]]@source][[1]]
-
-      # Expand the networks
-      extraNodes <- setdiff(uniqueNodes, network)
-      expandedNetwork <- network
-      if(nrow(expandedNetwork) == 0){
-        expandedNetwork <- data.frame(source = extraNodes,
-                                      target = extraNodes, weight = rep(0, length(extraNodes)))
-      }else{
-        extraZeros <- data.frame(source = extraNodes,
-                                 target = extraNodes, weight = rep(0, length(extraNodes)))
-        rownames(extraZeros) <- paste(extraZeros$source, extraZeros$target, sep = "_")
-        colnames(extraZeros) <- colnames(expandedNetwork[c(1,2,3)])
-        expandedNetwork <- rbind(expandedNetwork, extraZeros)
-      }
-      colnames(expandedNetwork)[3] <- "weight"
-
-      # Compute the community structure of the first network using ALPACA functions.
-      # If one of the networks is empty, ALPACA will throw an error, so just return 0.
-      communities <- alpacaWBMlouvain(expandedNetwork)[[1]]
-      
-      # Remove duplicates from community structure, which can happen in the case of
-      # non-bipartite networks.
-      uniqueNodes <- unique(names(communities))
-      for(node in uniqueNodes){
-        whichNode <- which(names(communities) == node)
-        if(length(whichNode) > 1){
-          communities <- communities[-whichNode[-1]]
-        }
-      }
-      
-      w <- igraph::as_adjacency_matrix(igraph::graph_from_data_frame(expandedNetwork, 
-                                                                     directed = TRUE), 
-                                       attr = "weight")
-      
-      # Compute the expected community structure of the baseline network Nij.
-      # We will adjust these values later by multiplying by sum(A) / length(which(expandedNetwork$weight > 0))
-      nodeCommSrcSums <- as.matrix(do.call(cbind, lapply(sort(unique(communities)), function(community){
-        return(data.frame(v1=unlist(lapply(1:nrow(w), function(gene){
-          return(sum(w[gene, names(communities)[which(communities == community)]]))
-        }))))
-      })))
-      
-      # The sum of weights from all nodes in each community to j.
-      # We will adjust these values later by multiplying by sum(A) / length(which(expandedNetwork$weight > 0))
-      nodeCommTargetSums <- as.matrix(do.call(cbind, lapply(1:nrow(w), function(gene){
-        return(data.frame(v1 = unlist(lapply(sort(unique(communities)), function(community){
-          return(sum(w[names(communities)[which(communities == community)], gene]))
-        }))))
-      })))
-      
-      # The sum of weights between all communities.
-      # We will adjust these values later by multiplying by sum(A) / length(which(expandedNetwork$weight > 0))
-      nodeCrossCommSums <- as.matrix(do.call(cbind, lapply(sort(unique(communities)), function(community){
-        return(data.frame(v1 = unlist(lapply(sort(unique(communities)), function(community2){
-          return(sum(w[names(communities)[which(communities == community)], 
-                       names(communities)[which(communities == community2)]]))
-        }))))
-      })))
-      # Build first part of numerator (the scaled weight from node i to the community of to node j).
-      numeratorTerm1 <- nodeCommSrcSums[,communities]
-      colnames(numeratorTerm1) <- names(communities)
-      rownames(numeratorTerm1) <- names(communities)
-
-      # Build second part of numerator (the scaled weight from the community of node i to node j).
-      numeratorTerm2 <- nodeCommTargetSums[communities,]
-      colnames(numeratorTerm2) <- names(communities)
-      rownames(numeratorTerm2) <- names(communities)
-
-      # Build the denominator.
-      denominatorStep1 <- nodeCrossCommSums[communities,]
-      denominatorStep2 <- t(denominatorStep1[,communities])
-      colnames(denominatorStep2) <- names(communities)
-      rownames(denominatorStep2) <- names(communities)
-
-      # Compute the expected community structure.
-      # We will adjust these values later by multiplying by sum(A) / length(which(expandedNetwork$weight > 0))
-      N <- (numeratorTerm1 * numeratorTerm2) / denominatorStep2
-      N[which(is.nan(N))] <- 0
-    }
-
     # Compute all ingroup similarities.
     ingroupSim <- ComputeSimilarityForGroup(results = cutoffResults, comparisons = comparisons@ingroup,
-                                            metric = metric, k = k,
-                                            projections = projections,
-                                            expectedCommunityStructure = N)
+                                            metric = metric)
     ingroupSim[which(abs(ingroupSim) < zeroCutoff)] <- 0
     outgroupSim <- ComputeSimilarityForGroup(results = cutoffResults, comparisons = comparisons@outgroup,
-                                             metric = metric, k = k, projections = projections,
-                                             expectedCommunityStructure = N)
+                                             metric = metric)
     outgroupSim[which(abs(outgroupSim) < zeroCutoff)] <- 0
 
     # Compute the average similarity.
@@ -1681,24 +1522,10 @@ GetPositive <- function(results){
 #' @param metric The metric to use for computing similarity. An element
 #' in the following list:
 #' - jaccard: Computes the Jaccard similarity (intersection / union) of edges.
-#' - degree: Computes the overlap in degree of each node.
-#' - modularity: Computes the differential modularity from a "baseline" network
-#' to each "perturbed" network, then scales each modularity value between 0 and 1.
-#' - subspace: Computes the geodesic distance between each pair of networks
-#' on the Grassmann manifold for a given input k, then scales each
-#' distance between 0 and 1.
-#' Default is all elements.
-#' @param k is the number of eigenvectors to include in the subspace representation
-#' of each network. Default is 5.
-#' @param projections A list of all projections for the results. Can be NULL if not using
-#' subspace similarity or if inhibitory negative edges are present.
-#' @param projectionIdentity The projection of the identity matrix. Can be NULL if not
-#' using subspace similarity.
-#' @param expectedCommunityStructure The expected community structure. Can be NULL if not
-#' using modularity similarity 
+#' - in-degree: Computes the overlap in in-degree of each node.
+#' - out-degree: Computes the overlap in out-degree of each node.
 #' @returns A scalar similarity value.
-ComputeSimilarityForGroup <- function(results, comparisons, metric, k = 5, projections = NULL,projectionIdentity = NULL,
-                                      expectedCommunityStructure = NULL){
+ComputeSimilarityForGroup <- function(results, comparisons, metric){
   
   # Compute the similarity for the group.
   groupSimilarity <- unlist(lapply(comparisons, function(comparison){
@@ -1719,15 +1546,10 @@ ComputeSimilarityForGroup <- function(results, comparisons, metric, k = 5, proje
     cat(".")
     if(metric == "jaccard"){
       similarity <- JaccardSim(network1 = network1, network2 = network2)
-    }else if(metric == "degree"){
-      similarity <- DegreeSim(network1 = network1, network2 = network2)
-    }else if(metric == "modularity"){
-      similarity <- ModularitySim(network1 = network1, network2 = network2,
-                                  expectedCommunityStructure = expectedCommunityStructure)
-    }else if(metric == "subspace"){
-      similarity <- SubspaceSim(projection1 = projections[[comparison@source]], 
-                                projection2 = projections[[comparison@target]], 
-                                k = k)
+    }else if(metric == "in-degree"){
+      similarity <- InDegreeSim(network1 = network1, network2 = network2)
+    }else if(metric == "out-degree"){
+      similarity <- OutDegreeSim(network1 = network1, network2 = network2)
     }else{
       stop(paste("Invalid metric to use for similarity:", metric))
     }
@@ -1773,11 +1595,11 @@ JaccardSim <- function(network1, network2){
   return(jaccard)
 }
 
-#' Helper function to compute the Degree similarities between two networks.
+#' Helper function to compute the In-Degree similarities between two networks.
 #' @param network1 A network for comparison.
 #' @param network2 Another network for comparison.
 #' @returns The similarity value.
-DegreeSim <- function(network1, network2){
+InDegreeSim <- function(network1, network2){
   
   degreeOverlap <- NA
   
@@ -1812,34 +1634,73 @@ DegreeSim <- function(network1, network2){
     net2Order <- net2Adj[nodeOrder, nodeOrder]
     
     # Sum each row and each column.
-    net1SumOut <- rowSums(net1Order)
-    net2SumOut <- rowSums(net2Order)
     net1SumIn <- colSums(net1Order)
     net2SumIn <- colSums(net2Order)
     
     # Sum the edge counts.
-    net1PercentageOut <- net1SumOut / max(sum(net1SumOut), .Machine$double.xmin) 
-    net2PercentageOut <- net2SumOut / max(sum(net2SumOut), .Machine$double.xmin)
     net1PercentageIn <- net1SumIn / max(sum(net1SumIn), .Machine$double.xmin)
     net2PercentageIn <- net2SumIn / max(sum(net2SumIn), .Machine$double.xmin)
     
     # Compute the overall differences.
-    netDiffOut <- abs(net1PercentageOut - net2PercentageOut) / 2
     netDiffIn <- abs(net1PercentageIn - net2PercentageIn) / 2
-    
+
     # Convert to similarities.
-    degreeOverlapOut <- 1 - sum(netDiffOut)
-    degreeOverlapIn <- 1 - sum(netDiffIn)
-    
-    # Compute F1 score.
+    degreeOverlap <- 1 - sum(netDiffIn)
+  }
+  return(degreeOverlap)
+}
+
+#' Helper function to compute the Out-Degree similarities between two networks.
+#' @param network1 A network for comparison.
+#' @param network2 Another network for comparison.
+#' @returns The similarity value.
+OutDegreeSim <- function(network1, network2){
+  
+  degreeOverlap <- NA
+  
+  # If both data frames are empty, return NA. Else, calculate.
+  if(nrow(network1) == 0 && nrow(network2) == 0){
+    degreeOverlap <- NA
+  }
+  else if(nrow(network1) == 0 || nrow(network2) == 0){
     degreeOverlap <- 0
-    if(abs(degreeOverlapIn + degreeOverlapOut) > 0){
-      degreeOverlap <- (2 * degreeOverlapIn * degreeOverlapOut) / (degreeOverlapIn + degreeOverlapOut)
-    }
-    #if(length(which(is.infinite(degreeOverlap))) > 0){
-    #  print(degreeOverlapIn[which(is.infinite(degreeOverlap))])
-    #  print(degreeOverlapOut[which(is.infinite(degreeOverlap))])
-    #}
+  }else if(nrow(network1) > 0 && nrow(network2) > 0){
+    
+    # Expand the networks
+    expandedNetworks <- ExpandNetworks(network1, network2)
+    expandedNetwork1 <- expandedNetworks$network1
+    expandedNetwork2 <- expandedNetworks$network2
+    
+    # Create adjacency matrices.
+    colnames(expandedNetwork1) <- c("source", "target", "weight")
+    colnames(expandedNetwork2) <- c("source", "target", "weight")
+    net1Adj <- as.matrix(igraph::as_adjacency_matrix(igraph::graph_from_data_frame(expandedNetwork1, 
+                                                                                   directed = TRUE), 
+                                                     attr = "weight"))
+    net2Adj <- as.matrix(igraph::as_adjacency_matrix(igraph::graph_from_data_frame(expandedNetwork2, 
+                                                                                   directed = TRUE), 
+                                                     attr = "weight"))
+    
+    # Rearrange matrices.
+    allNodes1 <- as.character(c(network1[,1], network1[,2]))
+    allNodes2 <- as.character(c(network2[,1], network2[,2]))
+    nodeOrder <- sort(union(allNodes1, allNodes2))
+    net1Order <- net1Adj[nodeOrder, nodeOrder]
+    net2Order <- net2Adj[nodeOrder, nodeOrder]
+    
+    # Sum each row and each column.
+    net1SumOut <- rowSums(net1Order)
+    net2SumOut <- rowSums(net2Order)
+    
+    # Sum the edge counts.
+    net1PercentageOut <- net1SumOut / max(sum(net1SumOut), .Machine$double.xmin) 
+    net2PercentageOut <- net2SumOut / max(sum(net2SumOut), .Machine$double.xmin)
+    
+    # Compute the overall differences.
+    netDiffOut <- abs(net1PercentageOut - net2PercentageOut) / 2
+
+    # Convert to similarities.
+    degreeOverlap <- 1 - sum(netDiffOut)
   }
   return(degreeOverlap)
 }
@@ -1890,147 +1751,4 @@ ExpandNetworks <- function(network1, network2){
     expanded <- list(network1 = extraZeros1, network2 = extraZeros2)
   }
   return(expanded)
-}
-
-#' Helper function to compute the Modularity similarities between two networks.
-#' @param network1 A network for comparison.
-#' @param network2 Another network for comparison.
-#' @param expectedCommunityStructure The expected community structure matrix.
-#' It is unweighted and will be scaled here.
-#' @returns The similarity value.
-ModularitySim <- function(network1, network2, expectedCommunityStructure){
-  
-  similarity <- NA
-  
-  # If one data frame is empty, similarity is 0.
-  if(nrow(network1) > 0 && nrow(network2) > 0){
-    
-    # Expand the networks.This is broken!
-    expandedNetworks <- ExpandNetworks(network1, network2)
-    network1 <- expandedNetworks$network1
-    network2 <- expandedNetworks$network2
-
-    # Obtain an adjacency matrix for the network being compared.
-    colnames(network1)[3] <- "weight"
-    colnames(network2)[3] <- "weight"
-    A <- igraph::as_adjacency_matrix(igraph::graph_from_data_frame(network2, 
-                                                                   directed = TRUE), 
-                                     attr = "weight")
-    
-    # Filter expected community structure to only include nodes in the adjacency matrix.
-    expectedCommunityStructure <- expectedCommunityStructure[rownames(A), colnames(A)]
-    str(expectedCommunityStructure)
-
-    # Normalize the expected community structure matrix.
-    N <- expectedCommunityStructure * sum(A) / length(which(network1$weight > 0))
-    
-    # Compute differential modularity per edge. In our implementation, we do not
-    # maximize differemtial modularity with respect to M.
-    D <- sum(abs(A - N))
-    
-    # Normalize.
-    DNorm <- D / (sum(A) + sum(N))
-    
-    # Convert to similarity.
-    similarity <- 1 - DNorm
-  }else if(xor(nrow(network1) == 0,  nrow(network2) == 0)){
-    similarity = 0
-  }else{
-    similarity <- NA
-  }
-  return(similarity)
-}
-
-#' Helper function to compute the Subspace similarities between two networks.
-#' @param projection1 The projection of network 1.
-#' @param projection2 The projection of network 2.
-#' @param k Number of eigenvectors to include in the subspace projection. 
-#' @returns The similarity value.
-#' @import irlba
-SubspaceSim <- function(projection1, projection2, k){
-  
-  subspaceSim <- NA
-  
-  if(max(abs(projection1)) > 0 || max(abs(projection2)) > 0){
-    # Compute the projection distance between networks 1 and 2 as per Ding et al.
-    projectionDist <- k - sum(diag(projection1 %*% t(projection1) %*% projection2 %*% t(projection2)))
-    
-    # The normalization factor should be k. Note that if we were to include the
-    # zero matrix as projection1 or projection2, this is what we would get.
-    projectionDistNormFactor <- k
-    
-    # Round down to 0 if the differences are very small.
-    cutoff <- 0.00000000001
-    if(projectionDistNormFactor < cutoff && projectionDist < cutoff){
-      projectionDist <- 0
-      projectionDistNormFactor <- 1
-    }
-    
-    # Set similarity.
-    subspaceSim <- 1 - (projectionDist / projectionDistNormFactor)
-  }
-  
-  # Return normalized similarity.
-  return(subspaceSim)
-}
-
-#' Helper function to compute the projection of a network.
-#' @param network A network to project (N x N).
-#' @param k Number of eigenvectors to include in the subspace projection. 
-#' @param allNodes Additional nodes to add to the adjacency matrix.
-#' @returns The projection (a matrix of N x k)
-#' @import irlba
-ComputeProjection <- function(network, k, allNodes){
-  set.seed(1)
-  
-  # Check that k is a valid value.
-  if(!is.numeric(k) || k - floor(k) != 0 || k <= 0){
-    stop("Number of eigenvectors k must be an integer greater than 0!")
-  }
-  if(k >= length(unique(allNodes))){
-    stop("Number of eigenvectors must be less than the dimensionality of the adjacency matrix!")
-  }
-  
-  # Add all relationships with nodes that are not in the network.
-  # To add these nodes to the adjacency list, they only need to show up once.
-  colnames(network)[3] <- "weight"
-  extraNodes <- setdiff(allNodes, c(network[,1], network[,2]))
-  expandedNetwork <- network
-  if(nrow(network) == 0){
-    expandedNetwork <- data.frame(source = extraNodes,
-                             target = extraNodes, weight = rep(0, length(extraNodes)))
-  }else{
-    extraZeros <- data.frame(source = extraNodes,
-                             target = extraNodes, weight = rep(0, length(extraNodes)))
-    rownames(extraZeros) <- paste(extraZeros$source, extraZeros$target, sep = "_")
-    colnames(extraZeros) <- colnames(network[c(1,2,3)])
-    expandedNetwork <- rbind(network, extraZeros)
-  }
-
-  # Compute the adjacency matrix.
-  netAdj <- igraph::as_adjacency_matrix(igraph::graph_from_data_frame(expandedNetwork, 
-                                          directed = TRUE), attr = "weight")
-
-  # Compute the normalized graph Laplacian.
-  degree <- matrix(data = rep(0, ncol(netAdj) * nrow(netAdj)), nrow = nrow(netAdj))
-  laplacian <- degree - netAdj
-
-  # Obtain the first k eigenvectors, of L, which corresponds to the
-  # directions of highest variance of L. This is projection captures the
-  # most information from L.
-  projection <- NULL
-  tryCatch({
-    if(sum(laplacian) == 0){
-      projection <- matrix(data = rep(0, nrow(laplacian) * k), nrow = nrow(laplacian))
-      colnames(projection) <- paste0(rep("PC", k), as.character(seq(1, k, 1)))
-    }else{
-      projection <- as.matrix(irlba::prcomp_irlba(laplacian, n = k)$rotation)
-    }
-  }, error = function(cond){
-    print(cond)
-    stop("Could not project network onto a subspace!")
-  })
-
-  # Return the projection.
-  return(projection)
 }
