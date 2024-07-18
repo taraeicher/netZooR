@@ -9,6 +9,7 @@ PlotROC(
   lowestSims = NULL,
   highestSims = NULL,
   auc,
+  monotonicity,
   xlab,
   ylab,
   main,
@@ -27,6 +28,8 @@ This is a FERRET_Similarities object.}
 \item{highestSims}{The upper boundary for the curve. This is a FERRET_Similarities object.}
 
 \item{auc}{This is a total AUC score to include on the curve as text.}
+
+\item{monotonicity}{This is a total monotonicity score to include on the curve as text.}
 
 \item{xlab}{This is the label to include on the X axis.}
 

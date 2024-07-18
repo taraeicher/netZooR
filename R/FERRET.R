@@ -72,6 +72,7 @@ methods::setClass(
 methods::setClass(
   Class="FERRET_ROC_AUC",
   representation(auc = "numeric",
+                 monotonicity = "numeric",
                  roc = "list")
 )
 
@@ -304,6 +305,7 @@ ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "in
     
     # Combine AUC scores if inhibitory.
     auc <- list()
+    monotonicity <- list()
     if(results@interpretationOfNegative == "inhibitory"){
       
       # First compute all ROC scores.
@@ -347,6 +349,7 @@ ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "in
       # Finally, compute AUC.
       if("jaccard" %in% metric){
         auc[["Jaccard"]] <- AUCTrapezoid(unname(rocOverall$Jaccard@outgroup), unname(rocOverall$Jaccard@ingroup))
+        monotonicity[["Jaccard"]] <- Monotonicity(unname(rocOverall$Jaccard@outgroup), unname(rocOverall$Jaccard@ingroup))
         if(plotCurve == TRUE){
           PlotROC(averageSims = rocOverall$Jaccard, auc = auc[["Jaccard"]], xlab = xlab, ylab = ylab,
                   main = "Jaccard Similarity")
@@ -354,6 +357,7 @@ ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "in
       }
       if("in-degree" %in% metric){
         auc[["InDegree"]] <- AUCTrapezoid(unname(rocOverall$InDegree@outgroup), unname(rocOverall$InDegree@ingroup))
+        monotonicity[["InDegree"]] <- Monotonicity(unname(rocOverall$Jaccard@outgroup), unname(rocOverall$Jaccard@ingroup))
         if(plotCurve == TRUE){
           PlotROC(averageSims = rocOverall$InDegree, auc = auc[["InDegree"]], xlab = xlab, ylab = ylab,
                   main = "In-Degree Similarity")
@@ -361,12 +365,13 @@ ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "in
       }
       if("out-degree" %in% metric){
         auc[["OutDegree"]] <- AUCTrapezoid(unname(rocOverall$OutDegree@outgroup), unname(rocOverall$OutDegree@ingroup))
+        monotonicity[["OutDegree"]] <- Monotonicity(unname(rocOverall$Jaccard@outgroup), unname(rocOverall$Jaccard@ingroup))
         if(plotCurve == TRUE){
           PlotROC(averageSims = rocOverall$OutDegree, auc = auc[["OutDegree"]], xlab = xlab, ylab = ylab,
                   main = "Out-Degree Similarity")
         }
       }
-      auc <-  methods::new("FERRET_ROC_AUC",auc = unlist(auc), roc = rocOverall)
+      auc <-  methods::new("FERRET_ROC_AUC",auc = unlist(auc), monotonicity = unlist(monotonicity), roc = rocOverall)
     }
   }
   
@@ -520,8 +525,14 @@ ConsolidateRobustness <- function(resultList, xlab, ylab, minTextDistAsPercentag
                         y = unname(averageResults@roc[[metric]]@ingroup),
                         absoluteMin  = absoluteMin[[metric]], absoluteMax = absoluteMax[[metric]]))
   }))
+  averageResultsMonotonicity <- unlist(lapply(names(resultList[[1]]@roc), function(metric){
+    return(Monotonicity(x = unname(averageResults@roc[[metric]]@outgroup),
+                        y = unname(averageResults@roc[[metric]]@ingroup),
+                        absoluteMin  = absoluteMin[[metric]], absoluteMax = absoluteMax[[metric]]))
+  }))
   names(averageResultsAUC) <- names(resultList[[1]]@roc)
   averageResults@auc <- averageResultsAUC
+  averageResults@monotonicity <- averageResultsMonotonicity
   
   # Find the min.
   minResultsRoc <- lapply(names(resultList[[1]]@roc), function(metric){
@@ -538,8 +549,14 @@ ConsolidateRobustness <- function(resultList, xlab, ylab, minTextDistAsPercentag
                         unname(minResults@roc[[metric]]@ingroup),
                         absoluteMin  = absoluteMin[[metric]], absoluteMax = absoluteMax[[metric]]))
   }))
+  minResultsMonotonicity <- unlist(lapply(names(resultList[[1]]@roc), function(metric){
+    return(Monotonicity(unname(minResults@roc[[metric]]@outgroup),
+                        unname(minResults@roc[[metric]]@ingroup),
+                        absoluteMin  = absoluteMin[[metric]], absoluteMax = absoluteMax[[metric]]))
+  }))
   names(minResultsAUC) <- names(resultList[[1]]@roc)
   minResults@auc <- minResultsAUC
+  minResults@monotonicity <- minResultsMonotonicity
   
   # Find the max.
   maxResultsRoc <- lapply(names(resultList[[1]]@roc), function(metric){
@@ -556,8 +573,14 @@ ConsolidateRobustness <- function(resultList, xlab, ylab, minTextDistAsPercentag
                         unname(maxResults@roc[[metric]]@ingroup),
                         absoluteMin  = absoluteMin[[metric]], absoluteMax = absoluteMax[[metric]]))
   }))
+  maxResultsMonotonicity <- unlist(lapply(names(resultList[[1]]@roc), function(metric){
+    return(Monotonicity(unname(maxResults@roc[[metric]]@outgroup),
+                        unname(maxResults@roc[[metric]]@ingroup),
+                        absoluteMin  = absoluteMin[[metric]], absoluteMax = absoluteMax[[metric]]))
+  }))
   names(maxResultsAUC) <- names(resultList[[1]]@roc)
   maxResults@auc <- maxResultsAUC
+  maxResults@monotonicity <- maxResultsMonotonicity
   
   # Plot the ROC curve with the boundaries.
   # Reset the parameters accordingly to generate a panel.
@@ -570,19 +593,22 @@ ConsolidateRobustness <- function(resultList, xlab, ylab, minTextDistAsPercentag
   }
   if("Jaccard" %in% names(resultList[[1]]@roc)){
     PlotROC(averageSims = averageResultsRoc$Jaccard, lowestSims = minResultsRoc$Jaccard,
-            highestSims = maxResultsRoc$Jaccard, auc = averageResultsAUC[["Jaccard"]], xlab = xlab, ylab = ylab,
+            highestSims = maxResultsRoc$Jaccard, auc = averageResultsAUC[["Jaccard"]], monotonicity = averageResultsMonotonicity[["Jaccard"]],
+            xlab = xlab, ylab = ylab,
             main = "Jaccard Similarity", absoluteMin = absoluteMin[["Jaccard"]], absoluteMax = absoluteMax[["Jaccard"]],
             minTextDistAsPercentage = minTextDistAsPercentage)
   }
   if("InDegree" %in% names(resultList[[1]]@roc)){
     PlotROC(averageSims = averageResultsRoc$InDegree, lowestSims = minResultsRoc$InDegree,
-            highestSims = maxResultsRoc$InDegree, auc = averageResultsAUC[["InDegree"]], xlab = xlab, ylab = ylab,
+            highestSims = maxResultsRoc$InDegree, auc = averageResultsAUC[["InDegree"]], monotonicity = averageResultsMonotonicity[["InDegree"]],
+            xlab = xlab, ylab = ylab,
             main = "In-Degree Similarity", absoluteMin = absoluteMin[["InDegree"]], absoluteMax = absoluteMax[["InDegree"]],
             minTextDistAsPercentage = minTextDistAsPercentage)
   }
   if("OutDegree" %in% names(resultList[[1]]@roc)){
     PlotROC(averageSims = averageResultsRoc$OutDegree, lowestSims = minResultsRoc$OutDegree,
-            highestSims = maxResultsRoc$OutDegree, auc = averageResultsAUC[["OutDegree"]], xlab = xlab, ylab = ylab,
+            highestSims = maxResultsRoc$OutDegree, auc = averageResultsAUC[["OutDegree"]], monotonicity = averageResultsMonotonicity[["OutDegree"]],
+            xlab = xlab, ylab = ylab,
             main = "Out-Degree Similarity", absoluteMin = absoluteMin[["OutDegree"]], absoluteMax = absoluteMax[["OutDegree"]],
             minTextDistAsPercentage = minTextDistAsPercentage)
   }
@@ -671,10 +697,12 @@ ReadRobustnessAUC <- function(fileName){
     stop(paste("Cannot read file", fileName))
   })
   
-  # Extract AUC scores.
+  # Extract AUC and monotonicity scores.
   metrics <- setdiff(colnames(resultDf), c("cutoff", "inOrOut"))
   auc <- unlist(resultDf[1,metrics])
+  monotonicity <- unlist(resultDf[2,metrics])
   names(auc) <- metrics
+  names(monotonicity) <- metrics
   
   # Extract each metric's ROC scores.
   roc <- lapply(metrics, function(metric){
@@ -693,7 +721,7 @@ ReadRobustnessAUC <- function(fileName){
   names(roc) <- metrics
   
   # Create a FERRET_ROC_AUC object.
-  result <- methods::new("FERRET_ROC_AUC", auc = auc, roc = roc)
+  result <- methods::new("FERRET_ROC_AUC", auc = auc, monotonicity = monotonicity, roc = roc)
 }
 
 #' This function saves the results of ComputeRobustnessAUC to a file.
@@ -710,6 +738,10 @@ WriteRobustnessAUC <- function(results, fileName){
   resultDfAuc <- as.data.frame(t(as.data.frame(results@auc)))
   colnames(resultDfAuc) <- names(results@roc)
   
+  # Add a row representing monotonicity.
+  resultDfMonotonicity <- as.data.frame(t(as.data.frame(results@monotonicity)))
+  colnames(resultDfMonotonicity) <- names(results@roc)
+  
   # Add a row for each of the ingroup ROC values.
   resultDfIngroup <- do.call(cbind, lapply(1:length(results@roc), function(i){
     df <- data.frame(V1 = results@roc[[i]]@ingroup)
@@ -723,11 +755,11 @@ WriteRobustnessAUC <- function(results, fileName){
   colnames(resultDfOutgroup) <- names(results@roc)
   
   # Combine all values.
-  resultDf <- do.call(rbind, list(resultDfAuc, resultDfIngroup, resultDfOutgroup))
-  resultDf$cutoff <- c("NA", names(results@roc[[1]]@ingroup), names(results@roc[[1]]@outgroup))
-  resultDf$inOrOut <- c("NA", rep("Ingroup", length(results@roc[[1]]@ingroup)),
+  resultDf <- do.call(rbind, list(resultDfAuc, resultDfMonotonicity, resultDfIngroup, resultDfOutgroup))
+  resultDf$cutoff <- c("NA", "NA", names(results@roc[[1]]@ingroup), names(results@roc[[1]]@outgroup))
+  resultDf$inOrOut <- c("NA", "NA", rep("Ingroup", length(results@roc[[1]]@ingroup)),
                         rep("Outgroup", length(results@roc[[1]]@outgroup)))
-  rownames(resultDf) <- c("AUC", paste0("IngroupROC_", names(results@roc[[1]]@ingroup)),
+  rownames(resultDf) <- c("AUC", "Monotonicity", paste0("IngroupROC_", names(results@roc[[1]]@ingroup)),
                           paste0("OutgroupROC_", names(results@roc[[1]]@outgroup)))
   
   # Save in file.
@@ -1046,21 +1078,25 @@ ComputeRobustnessForOneEdgeType <- function(results, comparisons, metric = c("ja
   # For each metric, compute the similarities and the AUC scores.
   auc <- list()
   roc <- list()
+  monotonicity <- list()
   if("jaccard" %in% metric){
     jaccardSim <- ComputeSimilarities(results = results, comparisons = comparisons,
                                      cutoffs = cutoffs, metric = "jaccard")
     message("Finished all Jaccard similarity metrics")
     
     aucJaccard <- 0
+    monotonicityJaccard <- 0
     if(length(which(is.na(jaccardSim@ingroup))) < length(jaccardSim@ingroup) &&
        length(which(is.na(jaccardSim@outgroup))) < length(jaccardSim@outgroup)){
       aucJaccard <- AUCTrapezoid(unname(jaccardSim@outgroup), unname(jaccardSim@ingroup))
+      monotonicityJaccard <- Monotonicity(unname(jaccardSim@outgroup), unname(jaccardSim@ingroup))
     }
     auc[["Jaccard"]] <- aucJaccard
+    monotonicity[["Jaccard"]] <- monotonicityJaccard
     roc[["Jaccard"]] <- jaccardSim
     if(plotCurve == TRUE){
-      PlotROC(averageSims = jaccardSim, auc = aucJaccard, xlab = xlab, ylab = ylab,
-              main = "Jaccard Similarity")
+      PlotROC(averageSims = jaccardSim, auc = aucJaccard, monotonicity = monotonicityJaccard,
+              xlab = xlab, ylab = ylab, main = "Jaccard Similarity")
     }
   }
   if("in-degree" %in% metric){
@@ -1068,15 +1104,18 @@ ComputeRobustnessForOneEdgeType <- function(results, comparisons, metric = c("ja
                                    cutoffs = cutoffs, metric = "in-degree")
     message("Finished all In-Degree similarity metrics")
     aucDegree <- 0
+    monotonicityDegree <- 0
     if(length(which(is.na(degreeSim@ingroup))) < length(degreeSim@ingroup) &&
        length(which(is.na(degreeSim@outgroup))) < length(degreeSim@outgroup)){
       aucDegree <- AUCTrapezoid(unname(degreeSim@outgroup), unname(degreeSim@ingroup))
+      monotonicityDegree <- Monotonicity(unname(degreeSim@outgroup), unname(degreeSim@ingroup))
     }
     auc[["InDegree"]] <- aucDegree
     roc[["InDegree"]] <- degreeSim
+    monotonicity[["InDegree"]] <- monotonicityDegree
     if(plotCurve == TRUE){
-      PlotROC(averageSims = degreeSim, auc = aucDegree, xlab = xlab, ylab = ylab,
-              main = "In-Degree Similarity")
+      PlotROC(averageSims = degreeSim, auc = aucDegree, monotonicity = monotonicityDegree,
+              xlab = xlab, ylab = ylab, main = "In-Degree Similarity")
     }
   }
   if("out-degree" %in% metric){
@@ -1084,21 +1123,28 @@ ComputeRobustnessForOneEdgeType <- function(results, comparisons, metric = c("ja
                                      cutoffs = cutoffs, metric = "out-degree")
     message("Finished all Out-Degree similarity metrics")
     aucDegree <- 0
+    monotonicityDegree <- 0
     if(length(which(is.na(degreeSim@ingroup))) < length(degreeSim@ingroup) &&
        length(which(is.na(degreeSim@outgroup))) < length(degreeSim@outgroup)){
       aucDegree <- AUCTrapezoid(unname(degreeSim@outgroup), unname(degreeSim@ingroup))
+      monotonicityDegree <- Monotonicity(unname(degreeSim@outgroup), unname(degreeSim@ingroup))
     }
     auc[["OutDegree"]] <- aucDegree
     roc[["OutDegree"]] <- degreeSim
+    monotonicity[["OutDegree"]] <- monotonicityDegree
     if(plotCurve == TRUE){
-      PlotROC(averageSims = degreeSim, auc = aucDegree, xlab = xlab, ylab = ylab,
-              main = "Out-Degree Similarity")
+      PlotROC(averageSims = degreeSim, auc = aucDegree, monotonicity = monotonicityDegree,
+              xlab = xlab, ylab = ylab, main = "Out-Degree Similarity")
     }
   }
+  
+  # Convert from list to vector.
   aucNames <- names(auc)
   auc <- as.numeric(unlist(auc))
+  monotonicity <- as.numeric(unlist(monotonicity))
   names(auc) <- aucNames
-  retVal <- methods::new("FERRET_ROC_AUC",auc = auc, roc = roc)
+  names(monotonicity) <- aucNames
+  retVal <- methods::new("FERRET_ROC_AUC",auc = auc, roc = roc, monotonicity = monotonicity)
 
   # Return the AUC scores.
   return(retVal)
@@ -1182,12 +1228,84 @@ AUCTrapezoid <- function(x, y, absoluteMin = NULL, absoluteMax = NULL) {
   return(auc)
 }
 
+#' Given the values for axis X and axis Y, this function computes the monotonicity
+#' of the ROC curve. 
+#' @param x The value on the X axis
+#' @param y The value on the Y axis
+#' @param absoluteMin The absolute minimum value. If NULL, it is the minimum
+#' value across both X and Y.
+#' @param absoluteMax The absolute maximum value. If NULL, it is the maximum
+#' value across both X and Y.
+#' @returns The monotonicity
+Monotonicity <- function(x, y, absoluteMin = NULL, absoluteMax = NULL) {
+  # Get minima and maxima.
+  whichNotNA <- intersect(which(!is.na(x)), which(!is.na(y)))
+  x <- x[whichNotNA]
+  y <- y[whichNotNA]
+  minX <- min(x)
+  minY <- min(y)
+  maxX <- max(x)
+  maxY <- max(y)
+  
+  # Set minima and maxima.
+  zeroCutoff <- 0.0000000001
+  
+  # If there are negatives, stop.
+  if(minX < (-1 * zeroCutoff) || minY < (-1 * zeroCutoff)){
+    stop("ERROR: You have input negative similarities.")
+  }
+  
+  # If there is no variation in either x or y, return NA.
+  monotonicity <- NA
+  if(minX != maxX || minY != maxY){
+    
+    # Sort x.
+    orderX <- order(x)
+    x <- x[orderX]
+    y <- y[orderX]
+    
+    # When there are duplicate values of X, order according to Y within the duplicates.
+    duplicates <- names(table(x))[which(table(x) > 1)]
+    for(duplicate in duplicates){
+      whichXDuplicate <- which(x == as.numeric(duplicate))
+      y[whichXDuplicate] <- y[whichXDuplicate][order(y[whichXDuplicate])]
+    }
+    
+    # Obtain global minima and maxima.
+    min_total <- min(minY, minX)
+    max_total <- max(maxY, maxX)
+    
+    # Set min and max.
+    if(!is.null(absoluteMin)){
+      min_total <- absoluteMin
+    }
+    if(!is.null(absoluteMax)){
+      max_total <- absoluteMax
+    }
+    
+    # Compute the monotonicity.
+    nonMonotonicity <- 0
+    for(i in 2:length(x)){
+      
+      # If there is a dip, add its percentage of the total variation.
+      if(y[i] < y[i-1]){
+        nonMonotonicity <- nonMonotonicity + (y[i-1] - y[i]) / (max_total - min_total)
+      }
+    }
+    
+    # Normalize it by half the number of transitions.
+    monotonicity <- 1 - (nonMonotonicity / ((length(x) - 1) / 2))
+  }
+  return(monotonicity)
+}
+
 #' This function plots the ROC curve for a given similarity index.
 #' @param averageSims The average similarities for the in-groups and out-groups.
 #' This is a FERRET_Similarities object.
 #' @param lowestSims The lower boundary for the curve. This is a FERRET_Similarities object.
 #' @param highestSims The upper boundary for the curve. This is a FERRET_Similarities object.
 #' @param auc This is a total AUC score to include on the curve as text.
+#' @param monotonicity This is a total monotonicity score to include on the curve as text.
 #' @param xlab This is the label to include on the X axis.
 #' @param ylab This is the label to include on the Y axis.
 #' @param main This is the title of the plot.
@@ -1198,7 +1316,7 @@ AUCTrapezoid <- function(x, y, absoluteMin = NULL, absoluteMax = NULL) {
 #' of the distance in the plot. This prevents annotations from overlapping.
 #' @returns Nothing, but generates a plot as a side effect.
 #' @export
-PlotROC <- function(averageSims, lowestSims = NULL, highestSims = NULL, auc, 
+PlotROC <- function(averageSims, lowestSims = NULL, highestSims = NULL, auc, monotonicity,
                     xlab, ylab, main, absoluteMin = NULL, absoluteMax = NULL,
                     showCutoffs = TRUE, minTextDistAsPercentage = 10){
   # Set the seed.
@@ -1375,7 +1493,10 @@ PlotROC <- function(averageSims, lowestSims = NULL, highestSims = NULL, auc,
   # Include the text.
   graphics::text(paste(paste0("RAUC:"), format(round(auc, 2), nsmall = 2)), 
        x = 0.8 * (max_total - min_total) + min_total, 
-       y = 0.1 * (max_total - min_total) + min_total)
+       y = 0.2 * (max_total - min_total) + min_total)
+  graphics::text(paste(paste0("Monotonicity:"), format(round(auc, 2), nsmall = 2)), 
+                 x = 0.8 * (max_total - min_total) + min_total, 
+                 y = 0.1 * (max_total - min_total) + min_total)
 }
 
 #' This function obtains the cutoffs to use in computing the AUC scores.

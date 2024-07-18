@@ -199,6 +199,42 @@ test_that("[FERRET] AUCTrapezoid() function yields expected results",{
   y <- c(-1,2,3)
   expect_error(AUCTrapezoid(x,y), "ERROR: You have input negative similarities.")
 })
+test_that("[FERRET] Monotonicity() function yields expected results",{
+  # Test for a straight line.
+  x <- c(0, 0.5, 1)
+  y <- c(0, 0.5, 1)
+  expect_equal(Monotonicity(x,y), 1)
+  
+  # Test for a dip in Y.
+  x <- c(0, 0.5, 1)
+  y <- c(1, 0.5, 1)
+  expect_equal(Monotonicity(x,y), 0.5)
+  
+  # Test for oscillating values of Y.
+  x <- c(0, 0.25, 0.5, 0.75, 1)
+  y <- c(1, 0.5, 1, 0.5, 1)
+  expect_equal(Monotonicity(x,y), 0.5)
+  
+  # Test for no range in X, and X is in the middle.
+  x <- c(0.5, 0.5, 0.5)
+  y <- c(0, 0.5, 1)
+  expect_equal(Monotonicity(x,y), 1)
+  
+  # Test for no range in Y, and Y is in the middle.
+  y <- c(0.5, 0.5, 0.5)
+  x <- c(0, 0.5, 1)
+  expect_equal(AUCTrapezoid(x,y), 0.5)
+  
+  # Test when the X axis is out-of-order.
+  x <- c(1, 0.5, 0)
+  y <- c(1, 0.5, 0)
+  expect_equal(Monotonicity(x,y), 1)
+  
+  # Test for error with negative values.
+  x <- c(-1,2,3)
+  y <- c(-1,2,3)
+  expect_error(Monotonicity(x,y), "ERROR: You have input negative similarities.")
+})
 test_that("[FERRET] PlotROC() function handles errors appropriately",{
   
   # Check for the appropriate input.
@@ -1112,22 +1148,28 @@ test_that("[FERRET] WriteRobustnessAUC() and ReadRobustnessAUC() functions yield
   ingroupVec <- c(0.1, 0.2, 0.3)
   names(ingroupVec) <- c(0.4, 0.5, 0.6)
   robustnessAUC <- methods::new("FERRET_ROC_AUC", auc = c(Metric1 = 0.6, Metric2 = 0.4, Metric3 = 0.8), 
+                                monotonicity = c(Metric1 = 0.6, Metric2 = 0.4, Metric3 = 0.8), 
                                 roc = list("Metric1" = methods::new("FERRET_Similarities", ingroup = ingroupVec, outgroup = ingroupVec / 10),
                                            "Metric2" = methods::new("FERRET_Similarities", ingroup = ingroupVec, outgroup = ingroupVec / 10),
                                            "Metric3" = methods::new("FERRET_Similarities", ingroup = ingroupVec, outgroup = ingroupVec / 10)))
   WriteRobustnessAUC(robustnessAUC, "tmp.csv")
   robustnessWritten <- read.csv("tmp.csv", row.names = 1)
+  print(robustnessWritten)
   expect_equal(colnames(robustnessWritten), c("Metric1", "Metric2", "Metric3", "cutoff", "inOrOut"))
-  expect_equal(rownames(robustnessWritten), c("AUC", "IngroupROC_0.4", "IngroupROC_0.5", "IngroupROC_0.6",
+  expect_equal(rownames(robustnessWritten), c("AUC", "Monotonicity", "IngroupROC_0.4", "IngroupROC_0.5", "IngroupROC_0.6",
                                              "OutgroupROC_0.4", "OutgroupROC_0.5", "OutgroupROC_0.6"))
   expect_true(is.na(robustnessWritten["AUC", "cutoff"]))
   expect_true(is.na(robustnessWritten["AUC", "inOrOut"]))
-  expect_equal(robustnessWritten[2:4,"Metric1"], robustnessWritten[5:7, "Metric1"] * 10)
-  expect_equal(robustnessWritten[2:7,"Metric1"], robustnessWritten[2:7,"Metric2"])
-  expect_equal(robustnessWritten[2:7,"Metric3"], robustnessWritten[2:7,"Metric2"])
-  expect_equal(robustnessWritten[2:7,"cutoff"], rep(c(0.4, 0.5, 0.6), 2))
+  expect_true(is.na(robustnessWritten["Monotonicity", "cutoff"]))
+  expect_true(is.na(robustnessWritten["Monotonicity", "inOrOut"]))
+  expect_equal(robustnessWritten[3:5,"Metric1"], robustnessWritten[6:8, "Metric1"] * 10)
+  expect_equal(robustnessWritten[3:8,"Metric1"], robustnessWritten[3:8,"Metric2"])
+  expect_equal(robustnessWritten[3:8,"Metric3"], robustnessWritten[3:8,"Metric2"])
+  expect_equal(robustnessWritten[3:8,"cutoff"], rep(c(0.4, 0.5, 0.6), 2))
   expect_true(is.na(robustnessWritten[1,"cutoff"]))
   expect_true(is.na(robustnessWritten[1,"inOrOut"]))
+  expect_true(is.na(robustnessWritten[2,"cutoff"]))
+  expect_true(is.na(robustnessWritten[2,"inOrOut"]))
   robustnessAUCRead <- ReadRobustnessAUC("tmp.csv")
   expect_equal(robustnessAUC, robustnessAUCRead)
   unlink("tmp.csv")
@@ -1136,20 +1178,23 @@ test_that("[FERRET] WriteRobustnessAUC() and ReadRobustnessAUC() functions yield
   ingroupVec <- 0.1
   names(ingroupVec) <- 0.4
   robustnessAUC <- methods::new("FERRET_ROC_AUC", auc = c(Metric1 = 0.6, Metric2 = 0.4, Metric3 = 0.8), 
+                                monotonicity = c(Metric1 = 0.6, Metric2 = 0.4, Metric3 = 0.8), 
                                 roc = list("Metric1" = methods::new("FERRET_Similarities", ingroup = ingroupVec, outgroup = ingroupVec / 10),
                                            "Metric2" = methods::new("FERRET_Similarities", ingroup = ingroupVec, outgroup = ingroupVec / 10),
                                            "Metric3" = methods::new("FERRET_Similarities", ingroup = ingroupVec, outgroup = ingroupVec / 10)))
   WriteRobustnessAUC(robustnessAUC, "tmp.csv")
   robustnessWritten <- read.csv("tmp.csv", row.names = 1)
   expect_equal(colnames(robustnessWritten), c("Metric1", "Metric2", "Metric3", "cutoff", "inOrOut"))
-  expect_equal(rownames(robustnessWritten), c("AUC", "IngroupROC_0.4","OutgroupROC_0.4"))
+  expect_equal(rownames(robustnessWritten), c("AUC", "Monotonicity", "IngroupROC_0.4","OutgroupROC_0.4"))
   expect_true(is.na(robustnessWritten["AUC", "cutoff"]))
   expect_true(is.na(robustnessWritten["AUC", "inOrOut"]))
-  expect_equal(robustnessWritten[2:3,"Metric1"], c(0.1, 0.01))
-  expect_equal(robustnessWritten[2:3,"Metric1"], robustnessWritten[2:3,"Metric2"])
-  expect_equal(robustnessWritten[2:3,"Metric3"], robustnessWritten[2:3,"Metric2"])
-  expect_equal(robustnessWritten[2:3,"cutoff"], rep(0.4, 2))
-  expect_equal(robustnessWritten[2:3,"inOrOut"], c("Ingroup", "Outgroup"))
+  expect_true(is.na(robustnessWritten["Monotonicity", "cutoff"]))
+  expect_true(is.na(robustnessWritten["Monotonicity", "inOrOut"]))
+  expect_equal(robustnessWritten[3:4,"Metric1"], c(0.1, 0.01))
+  expect_equal(robustnessWritten[3:4,"Metric1"], robustnessWritten[3:4,"Metric2"])
+  expect_equal(robustnessWritten[3:4,"Metric3"], robustnessWritten[3:4,"Metric2"])
+  expect_equal(robustnessWritten[3:4,"cutoff"], rep(0.4, 2))
+  expect_equal(robustnessWritten[3:4,"inOrOut"], c("Ingroup", "Outgroup"))
   robustnessAUCRead <- ReadRobustnessAUC("tmp.csv")
   expect_equal(robustnessAUC, robustnessAUCRead)
   unlink("tmp.csv")
@@ -1157,18 +1202,20 @@ test_that("[FERRET] WriteRobustnessAUC() and ReadRobustnessAUC() functions yield
   # Check the same when there is only one metric.
   ingroupVec <- c(0.1, 0.2, 0.3)
   names(ingroupVec) <- c(0.4, 0.5, 0.6)
-  robustnessAUC <- methods::new("FERRET_ROC_AUC", auc = c(Metric1 = 0.6), 
+  robustnessAUC <- methods::new("FERRET_ROC_AUC", auc = c(Metric1 = 0.6), monotonicity = c(Metric1 = 0.6), 
                                 roc = list("Metric1" = methods::new("FERRET_Similarities", ingroup = ingroupVec, outgroup = ingroupVec / 10)))
   WriteRobustnessAUC(robustnessAUC, "tmp.csv")
   robustnessWritten <- read.csv("tmp.csv", row.names = 1)
   expect_equal(colnames(robustnessWritten), c("Metric1", "cutoff", "inOrOut"))
-  expect_equal(rownames(robustnessWritten), c("AUC", "IngroupROC_0.4", "IngroupROC_0.5", "IngroupROC_0.6",
+  expect_equal(rownames(robustnessWritten), c("AUC", "Monotonicity", "IngroupROC_0.4", "IngroupROC_0.5", "IngroupROC_0.6",
                                              "OutgroupROC_0.4", "OutgroupROC_0.5", "OutgroupROC_0.6"))
   expect_true(is.na(robustnessWritten["AUC", "cutoff"]))
   expect_true(is.na(robustnessWritten["AUC", "inOrOut"]))
-  expect_equal(robustnessWritten[5:7,"Metric1"], robustnessWritten[2:4,"Metric1"] / 10)
-  expect_equal(robustnessWritten[2:7,"cutoff"], rep(c(0.4, 0.5, 0.6), 2))
-  expect_equal(robustnessWritten[2:7,"inOrOut"], c(rep("Ingroup", 3), rep("Outgroup", 3)))
+  expect_true(is.na(robustnessWritten["Monotonicity", "cutoff"]))
+  expect_true(is.na(robustnessWritten["Monotonicity", "inOrOut"]))
+  expect_equal(robustnessWritten[6:8,"Metric1"], robustnessWritten[3:5,"Metric1"] / 10)
+  expect_equal(robustnessWritten[3:8,"cutoff"], rep(c(0.4, 0.5, 0.6), 2))
+  expect_equal(robustnessWritten[3:8,"inOrOut"], c(rep("Ingroup", 3), rep("Outgroup", 3)))
   robustnessAUCRead <- ReadRobustnessAUC("tmp.csv")
   expect_equal(robustnessAUC, robustnessAUCRead)
   unlink("tmp.csv")
@@ -1176,17 +1223,19 @@ test_that("[FERRET] WriteRobustnessAUC() and ReadRobustnessAUC() functions yield
   # Check the same when there is only one metric and one cutoff.
   ingroupVec <- 0.1
   names(ingroupVec) <- 0.4
-  robustnessAUC <- methods::new("FERRET_ROC_AUC", auc = c(Metric1 = 0.6), 
+  robustnessAUC <- methods::new("FERRET_ROC_AUC", auc = c(Metric1 = 0.6), monotonicity = c(Metric1 = 0.6), 
                                 roc = list("Metric1" = methods::new("FERRET_Similarities", ingroup = ingroupVec, outgroup = ingroupVec / 10)))
   WriteRobustnessAUC(robustnessAUC, "tmp.csv")
   robustnessWritten <- read.csv("tmp.csv", row.names = 1)
   expect_equal(colnames(robustnessWritten), c("Metric1", "cutoff", "inOrOut"))
-  expect_equal(rownames(robustnessWritten), c("AUC", "IngroupROC_0.4", "OutgroupROC_0.4"))
+  expect_equal(rownames(robustnessWritten), c("AUC", "Monotonicity", "IngroupROC_0.4", "OutgroupROC_0.4"))
   expect_true(is.na(robustnessWritten["AUC", "cutoff"]))
   expect_true(is.na(robustnessWritten["AUC", "inOrOut"]))
-  expect_equal(robustnessWritten[3,"Metric1"], robustnessWritten[2,"Metric1"] / 10)
-  expect_equal(robustnessWritten[2:3,"cutoff"], rep(0.4, 2))
-  expect_equal(robustnessWritten[2:3,"inOrOut"], c("Ingroup", "Outgroup"))
+  expect_true(is.na(robustnessWritten["Monotonicity", "cutoff"]))
+  expect_true(is.na(robustnessWritten["Monotonicity", "inOrOut"]))
+  expect_equal(robustnessWritten[4,"Metric1"], robustnessWritten[3,"Metric1"] / 10)
+  expect_equal(robustnessWritten[3:4,"cutoff"], rep(0.4, 2))
+  expect_equal(robustnessWritten[3:4,"inOrOut"], c("Ingroup", "Outgroup"))
   robustnessAUCRead <- ReadRobustnessAUC("tmp.csv")
   expect_equal(robustnessAUC, robustnessAUCRead)
   unlink("tmp.csv")
