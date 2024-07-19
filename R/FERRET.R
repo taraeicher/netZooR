@@ -1494,8 +1494,8 @@ PlotROC <- function(averageSims, lowestSims = NULL, highestSims = NULL, auc, mon
   graphics::text(paste(paste0("RAUC:"), format(round(auc, 2), nsmall = 2)), 
        x = 0.8 * (max_total - min_total) + min_total, 
        y = 0.2 * (max_total - min_total) + min_total)
-  graphics::text(paste(paste0("Monotonicity:"), format(round(auc, 2), nsmall = 2)), 
-                 x = 0.8 * (max_total - min_total) + min_total, 
+  graphics::text(paste(paste0("Monotonicity:"), format(round(monotonicity, 2), nsmall = 2)), 
+                 x = 0.7 * (max_total - min_total) + min_total, 
                  y = 0.1 * (max_total - min_total) + min_total)
 }
 
