@@ -352,23 +352,23 @@ ComputeRobustnessAUC <- function(results, comparisons, metric = c("jaccard", "in
         monotonicity[["Jaccard"]] <- Monotonicity(unname(rocOverall$Jaccard@outgroup), unname(rocOverall$Jaccard@ingroup))
         if(plotCurve == TRUE){
           PlotROC(averageSims = rocOverall$Jaccard, auc = auc[["Jaccard"]], xlab = xlab, ylab = ylab,
-                  main = "Jaccard Similarity")
+                  main = "Jaccard Similarity", monotonicity = monotonicity[["Jaccard"]])
         }
       }
       if("in-degree" %in% metric){
         auc[["InDegree"]] <- AUCTrapezoid(unname(rocOverall$InDegree@outgroup), unname(rocOverall$InDegree@ingroup))
-        monotonicity[["InDegree"]] <- Monotonicity(unname(rocOverall$Jaccard@outgroup), unname(rocOverall$Jaccard@ingroup))
+        monotonicity[["InDegree"]] <- Monotonicity(unname(rocOverall$InDegree@outgroup), unname(rocOverall$InDegree@ingroup))
         if(plotCurve == TRUE){
           PlotROC(averageSims = rocOverall$InDegree, auc = auc[["InDegree"]], xlab = xlab, ylab = ylab,
-                  main = "In-Degree Similarity")
+                  main = "In-Degree Similarity", monotonicity = monotonicity[["InDegree"]])
         }
       }
       if("out-degree" %in% metric){
         auc[["OutDegree"]] <- AUCTrapezoid(unname(rocOverall$OutDegree@outgroup), unname(rocOverall$OutDegree@ingroup))
-        monotonicity[["OutDegree"]] <- Monotonicity(unname(rocOverall$Jaccard@outgroup), unname(rocOverall$Jaccard@ingroup))
+        monotonicity[["OutDegree"]] <- Monotonicity(unname(rocOverall$OutDegree@outgroup), unname(rocOverall$OutDegree@ingroup))
         if(plotCurve == TRUE){
           PlotROC(averageSims = rocOverall$OutDegree, auc = auc[["OutDegree"]], xlab = xlab, ylab = ylab,
-                  main = "Out-Degree Similarity")
+                  main = "Out-Degree Similarity", monotonicity = monotonicity[["OutDegree"]])
         }
       }
       auc <-  methods::new("FERRET_ROC_AUC",auc = unlist(auc), monotonicity = unlist(monotonicity), roc = rocOverall)
