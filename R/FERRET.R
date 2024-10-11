@@ -531,6 +531,7 @@ ConsolidateRobustness <- function(resultList, xlab, ylab, minTextDistAsPercentag
                         absoluteMin  = absoluteMin[[metric]], absoluteMax = absoluteMax[[metric]]))
   }))
   names(averageResultsAUC) <- names(resultList[[1]]@roc)
+  names(averageResultsMonotonicity) <- names(resultList[[1]]@roc)
   averageResults@auc <- averageResultsAUC
   averageResults@monotonicity <- averageResultsMonotonicity
   
@@ -612,6 +613,9 @@ ConsolidateRobustness <- function(resultList, xlab, ylab, minTextDistAsPercentag
             main = "Out-Degree Similarity", absoluteMin = absoluteMin[["OutDegree"]], absoluteMax = absoluteMax[["OutDegree"]],
             minTextDistAsPercentage = minTextDistAsPercentage)
   }
+  
+  # Return a list of results.
+  return(list("average" = averageResults, "min" = minResults, "max" = maxResults))
 }
 
 #' This is a helper function for ConsolidateRobustness().
@@ -759,8 +763,8 @@ WriteRobustnessAUC <- function(results, fileName){
   resultDf$cutoff <- c("NA", "NA", names(results@roc[[1]]@ingroup), names(results@roc[[1]]@outgroup))
   resultDf$inOrOut <- c("NA", "NA", rep("Ingroup", length(results@roc[[1]]@ingroup)),
                         rep("Outgroup", length(results@roc[[1]]@outgroup)))
-  rownames(resultDf) <- c("AUC", "Monotonicity", paste0("IngroupROC_", names(results@roc[[1]]@ingroup)),
-                          paste0("OutgroupROC_", names(results@roc[[1]]@outgroup)))
+  rownames(resultDf) <- make.unique(c("AUC", "Monotonicity", paste0("IngroupROC_", names(results@roc[[1]]@ingroup)),
+                          paste0("OutgroupROC_", names(results@roc[[1]]@outgroup))))
   
   # Save in file.
   tryCatch({
@@ -1319,6 +1323,8 @@ Monotonicity <- function(x, y, absoluteMin = NULL, absoluteMax = NULL) {
 PlotROC <- function(averageSims, lowestSims = NULL, highestSims = NULL, auc, monotonicity,
                     xlab, ylab, main, absoluteMin = NULL, absoluteMax = NULL,
                     showCutoffs = TRUE, minTextDistAsPercentage = 10){
+  print(paste("AUC is", auc))
+  print(paste("Monotonicity is", monotonicity))
   # Set the seed.
   set.seed(1)
   
