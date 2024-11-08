@@ -215,6 +215,7 @@ CalculateFruchtermanReingoldLayout <- function(knowledgeGraph){
   # Calculate and return the layout.
   message("Calculating Fruchterman-Reingold layout...")
   fruchtermanReingold <- igraph::layout_with_fr(graph)
+  rownames(fruchtermanReingold) <- V(graph)$name
   message("Fruchterman-Reingold layout complete!")
   return(fruchtermanReingold)
 }
@@ -232,38 +233,40 @@ CalculateFruchtermanReingoldLayout <- function(knowledgeGraph){
 PlotKnowledgeGraph <- function(knowledgeGraph, nodeSize = 1, alpha = 0.1, edgeWidth = 0,
                                layout = NULL){
   
-  # Convert the knowledge graph to a data frame.
-  kgEdges <- which(knowledgeGraph@adjacencyMatrix != 0, arr.ind = TRUE)
-  weights <- knowledgeGraph@adjacencyMatrix[kgEdges]
-  kgEdgesNamed <- data.frame(
-    from = rownames(knowledgeGraph@adjacencyMatrix)[kgEdges[, 1]],
-    to = colnames(knowledgeGraph@adjacencyMatrix)[kgEdges[, 2]],
-    weight = weights,
-    stringsAsFactors = FALSE
-  )
-
-  # Set the node attributes.
-  vertexLabelSize = 0
-  vertexLabelOffset = 0
-  vertexLabelColor = "black"
-  uniqueNodes <- unique(c(kgEdgesNamed$from, kgEdgesNamed$to))
-  nodeAttrs <- data.frame(node = uniqueNodes,
-                          color = rep(rgb(0, 0, 0, max = 255, alpha = alpha * 255), length(uniqueNodes)),
-                          size = rep(nodeSize, length(uniqueNodes)),
-                          frame.width = rep(0, length(uniqueNodes)),
-                          label.color = vertexLabelColor, label.cex = vertexLabelSize,
-                          label.dist = vertexLabelOffset)
-  rownames(nodeAttrs) <- uniqueNodes
-  
-  # Add edge attributes.
-  kgEdgesNamed$width <- edgeWidth
-  
-  # Create a graph object.
-  graph <- igraph::graph_from_data_frame(kgEdgesNamed, vertices = nodeAttrs, directed = FALSE)
-  str(graph)
-
-  # Plot.
-  igraph::plot.igraph(graph, layout = layout, vertex.label = labels)
+  # # Convert the knowledge graph to a data frame.
+  # kgEdges <- which(knowledgeGraph@adjacencyMatrix != 0, arr.ind = TRUE)
+  # weights <- knowledgeGraph@adjacencyMatrix[kgEdges]
+  # kgEdgesNamed <- data.frame(
+  #   from = rownames(knowledgeGraph@adjacencyMatrix)[kgEdges[, 1]],
+  #   to = colnames(knowledgeGraph@adjacencyMatrix)[kgEdges[, 2]],
+  #   weight = weights,
+  #   stringsAsFactors = FALSE
+  # )
+  # 
+  # # Set the node attributes.
+  # vertexLabelSize = 0
+  # vertexLabelOffset = 0
+  # vertexLabelColor = "black"
+  # uniqueNodes <- unique(c(kgEdgesNamed$from, kgEdgesNamed$to))
+  # nodeAttrs <- data.frame(node = uniqueNodes,
+  #                         color = rep(rgb(0, 0, 0, max = 255, alpha = alpha * 255), length(uniqueNodes)),
+  #                         size = rep(nodeSize, length(uniqueNodes)),
+  #                         frame.width = rep(0, length(uniqueNodes)),
+  #                         label.color = vertexLabelColor, label.cex = vertexLabelSize,
+  #                         label.dist = vertexLabelOffset)
+  # rownames(nodeAttrs) <- uniqueNodes
+  # 
+  # # Add edge attributes.
+  # kgEdgesNamed$width <- edgeWidth
+  # 
+  # # Create a graph object.
+  # graph <- igraph::graph_from_data_frame(kgEdgesNamed, vertices = nodeAttrs, directed = FALSE)
+  # str(graph)
+  # 
+  # # Plot.
+  # igraph::plot.igraph(graph, layout = layout, vertex.label = labels)
+  plot(x = layout[,1], y = layout[,2], pch = 20, 
+       col = rgb(red = 0, blue = 0, green = 0, alpha = 0.1))
 }
 
 #' Finds clusters in the pathway knowledge graph using Louvain clustering.
@@ -274,7 +277,7 @@ PlotKnowledgeGraph <- function(knowledgeGraph, nodeSize = 1, alpha = 0.1, edgeWi
 FindClusters <- function(knowledgeGraph, clusterCount){
   
   # Check input.
-  if(length(knowledgeGraph@adjacencyMatrix) == 0 || max(knowledgeGraph@adjacencyMatrix) == 0){
+  if(length(knowledgeGraph@adjacencyMatrix) == 0 || max(knowledgeGraph@adjacencyMatrix, na.rm = TRUE) == 0){
     stop("ERROR: The knowledge graph has no edges.")
   }
   if(nrow(knowledgeGraph@adjacencyMatrix) < clusterCount){
