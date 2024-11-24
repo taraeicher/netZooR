@@ -111,7 +111,7 @@ BuildPathwayGraph <- function(analyteHasPathway, pathwaySizeLimit = -1){
     
     # Get all analytes in the pathway.
     pathway <- uniquePathways[i]
-    analytesInPathway  <- analyteHasPathway[which(analyteHasPathway$Pathway == pathway), "Analyte"]
+    analytesInPathway  <- unique(analyteHasPathway[which(analyteHasPathway$Pathway == pathway), "Analyte"])
     
     # Set the pathway's weight to be the probability of a given analyte in the pathway
     # directly influencing any other analyte in the pathway.
@@ -120,7 +120,7 @@ BuildPathwayGraph <- function(analyteHasPathway, pathwaySizeLimit = -1){
     # Add an edge for each analyte in the pathway.
     clique <- make_full_graph(length(analytesInPathway), directed = FALSE)
     V(clique)$name <- analytesInPathway
-    edgeMat <- t(get.edgelist(clique))
+    edgeMat <- t(igraph::as_edgelist(clique))
     edgeVec <- as.vector(edgeMat)
     
     
@@ -128,7 +128,7 @@ BuildPathwayGraph <- function(analyteHasPathway, pathwaySizeLimit = -1){
     if(length(edgeVec) > 0){
 
       # Add the edge to the pathway dict.
-      edgeVecFormatted <- paste(t(edgeMat)[,1], t(edgeMat)[,2], sep = "|")
+      edgeVecFormatted <- unique(paste(t(edgeMat)[,1], t(edgeMat)[,2], sep = "|"))
       pathwayToEdge <- rbind(pathwayToEdge, data.frame(Pathway = rep(pathway, length(edgeVec)),
                                                        Edge = edgeVecFormatted))
       
@@ -166,7 +166,7 @@ BuildPathwayGraph <- function(analyteHasPathway, pathwaySizeLimit = -1){
   }
   
   # Create the knowledge graph.
-  adj <- igraph::get.adjacency(G, attr = "weight", sparse = TRUE)
+  adj <- igraph::as_adjacency_matrix(G, attr = "weight", sparse = TRUE)
   knowledgeGraph <- methods::new("TARDIGRADE_KnowledgeGraph", 
                                  adjacencyMatrix = adj, 
                                  edgeDict = edgePathwayDict,

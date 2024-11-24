@@ -671,6 +671,20 @@ test_that("[TARDIGRADE] ModifyGraph() function yields expected results",{
                                          targetAnalytes = c("a2", "a3", "a4", "a5", "a6"))
   expect_equal(modifiedGraphAdditional, trueModifiedMatrix)
 })
+test_that("[TARDIGRADE] PlotKnowledgeGraph() function yields expected results",{
+  # Test that an error is thrown when invalid values are supplied.
+  
+  # Test that an invalid state is returned when a file is open.
+  
+  # Test that a plot exists when it should exist.
+  
+  # Test that "OKAY" status is returned when it should be.
+})
+test_that("[TARDIGRADE] CalculateFruchtermanReingoldLayout() function yields expected results",{
+  # Test that an error is thrown when invalid values are supplied.
+  
+  # Test that the correct format is returned.
+})
 test_that("[TARDIGRADE] DiffuseHeat() function yields expected results",{
   
   # If the inputs are of an incorrect format, an error should be thrown.
