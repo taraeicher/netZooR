@@ -393,7 +393,7 @@ filterSamples <- function(obj, ids, groups = colnames(obj), keepOnly = FALSE) {
 #' @param groups Vector of labels for each sample or a column name of the phenoData slot
 #' for the ids to filter. Default is the column names
 #' @param normalizationMethod Choice of 'qsmooth' or 'quantile'
-#' @param ... Options for \code{\link{qsmooth}} function or \code{\link{normalizeQuantiles}}
+#' @param ... Options for \code{\link{limma::qsmooth}} function or \code{\link{limma::normalizeQuantiles}}
 #'
 #' @return ExpressionSet object with an assayData called normalizedMatrix
 #' @export
