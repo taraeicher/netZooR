@@ -23,6 +23,7 @@
 #' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/'
 #' bladder <- paste0(u, 'yarn/bladder.rdata')
 #' skin <- paste0(u, 'yarn/skin.rdata')
+#' print(getwd())
 #' download.file(bladder, destfile='data/bladder.rdata')
 #' download.file(skin, destfile='data/skin.rdata')
 #' data(skin)
