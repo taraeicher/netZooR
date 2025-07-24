@@ -25,7 +25,7 @@
 #' matrices in memory. Useful on a machine with low RAM. However, runtimes
 #' are (much) longer.
 #' @param deltaQmin convergence parameter determining the minimum required increase
-#' in the modularity for each iteration. Default is min(10^{-4},1/(number of edges)),
+#' in the modularity for each iteration. Default is min(10^(-4),1/(number of edges)),
 #' with number of edges determined by \code{nrow(condor.object$edges)}. User can
 #' set this parameter by passing a numeric value to deltaQmin.
 #' @return \code{condor.object} with \code{\link{condorModularityMax}} output
@@ -285,7 +285,7 @@ plot.enrich.hist = function(qik_enrich_out,ks=TRUE,wilcoxon=TRUE,...){
 #' This function uses a slightly different implementation from the paper. It 
 #' does not use the "adaptive BRIM" method for identifying the number of 
 #' modules. Rather, it simply continues to iterate until the difference in 
-#' modularity between iterations is less that 10^-4. Starting from a random 
+#' modularity between iterations is less that 10^(-4). Starting from a random 
 #' initial condition, this could take some time. Use 
 #' \code{\link{condorCluster}} for quicker runtimes and likely better 
 #' clustering, it initializes the blue 
@@ -306,7 +306,7 @@ plot.enrich.hist = function(qik_enrich_out,ks=TRUE,wilcoxon=TRUE,...){
 #' node name, the second column the community assignment.
 #' @param weights edgeweights for each edge in \code{edgelist}.
 #' @param deltaQmin convergence parameter determining the minimum required increase
-#' in the modularity for each iteration. Default is min(10^-4,1/(number of edges)),
+#' in the modularity for each iteration. Default is min(10^(-4),1/(number of edges)),
 #' with number of edges determined by \code{nrow(condor.object$edges)}. User can
 #' set this parameter by passing a numeric value to deltaQmin.
 #' @return Qcoms data.frame with modularity of each community.
@@ -332,7 +332,7 @@ condorMatrixModularity = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),we
   if(deltaQmin == "default"){
     #number of edges
     m = nrow(condor.object$edges)
-    deltaQmin <- min(10^-4,1/m)
+    deltaQmin <- min(10^(-4),1/m)
   }
   if(deltaQmin != "default" & !is.numeric(deltaQmin)){
     stop("deltaQmin must be either 'default' or a numeric value")
@@ -512,7 +512,7 @@ condorMatrixModularity = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),we
 #' This function uses a slightly different implementation from the paper. It 
 #' does not use the "adaptive BRIM" method for identifying the number of 
 #' modules. Rather, it simply continues to iterate until the difference in 
-#' modularity between iterations is less that 10^-4. Starting from a random 
+#' modularity between iterations is less that 10^(-4). Starting from a random 
 #' initial condition, this could take some time. Use 
 #' \code{\link{condorCluster}} for quicker runtimes and likely better 
 #' clustering, it initializes the blue 
@@ -529,7 +529,7 @@ condorMatrixModularity = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),we
 #' node name, the second column the community assignment.
 #' @param weights edgeweights for each edge in \code{edgelist}.
 #' @param deltaQmin convergence parameter determining the minimum required increase
-#' in the modularity for each iteration. Default is min(10^-4,1/(number of edges)),
+#' in the modularity for each iteration. Default is min(10^(-4),1/(number of edges)),
 #' with number of edges determined by \code{nrow(condor.object$edges)}. User can
 #' set this parameter by passing a numeric value to deltaQmin.
 #' @return Qcoms data.frame with modularity of each community. 
@@ -556,7 +556,7 @@ condorModularityMax = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),weigh
   if(deltaQmin == "default"){
     #number of edges
     m = nrow(condor.object$edges)
-    deltaQmin <- min(10^-4,1/m)
+    deltaQmin <- min(10^(-4),1/m)
   }
   if(deltaQmin != "default" & !is.numeric(deltaQmin)){
     stop("deltaQmin must be either 'default' or a numeric value")
@@ -715,13 +715,13 @@ condorModularityMax = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),weigh
 #' @param condor.object output of either \code{\link{condorCluster}} or 
 #' \code{\link{condorModularityMax}}
 #' @param color_list vector of colors accepted by \code{col} inside the 
-#' \code{\link[graphics]{plot}} function. There must be as many colors as 
+#' \code{\link{plot}} function. There must be as many colors as 
 #' communities.
 #' @param point.size passed to \code{cex} in the 
-#' \code{\link[graphics]{plot}}
+#' \code{\link{plot}}
 #' @param xlab x axis label
 #' @param ylab y axis label
-#' @return produces a \code{\link[graphics]{plot}} output.
+#' @return produces a \code{\link{plot}} output.
 #' @references \url{http://tools.medialab.sciences-po.fr/iwanthue/} for 
 #'  a nice color generator at 
 #' @note For the condor paper \url{http://arxiv.org/abs/1509.02816}, I used
@@ -824,7 +824,7 @@ condorPlotCommunities = function(condor.object,color_list,point.size=0.01,
 #' @param main plot title
 #' @param xlab x axis label
 #' @param ylab y axis label
-#' @return produces a \code{\link[graphics]{plot}} output.
+#' @return produces a \code{\link{plot}} output.
 #' @examples
 #' data(small1976)
 #' condor.object <- createCondorObject(small1976)

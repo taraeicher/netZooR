@@ -23,8 +23,8 @@
 #' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/'
 #' bladder <- paste0(u, 'yarn/bladder.rdata')
 #' skin <- paste0(u, 'yarn/skin.rdata')
-#' download.file(bladder, destfile='netZooR/data/bladder.rdata')
-#' download.file(skin, destfile='netZooR/data/skin.rdata')
+#' download.file(bladder, destfile='netZooR/data/bladder.rdata', method = "curl")
+#' download.file(skin, destfile='netZooR/data/skin.rdata', method = "curl")
 #' data(skin)
 #' # subsetting and changing column name just for a silly example
 #' skin <- skin[1:10,]
@@ -393,7 +393,7 @@ filterSamples <- function(obj, ids, groups = colnames(obj), keepOnly = FALSE) {
 #' @param groups Vector of labels for each sample or a column name of the phenoData slot
 #' for the ids to filter. Default is the column names
 #' @param normalizationMethod Choice of 'qsmooth' or 'quantile'
-#' @param ... Options for \code{\link{qsmooth}} function or \code{\link[limma]{normalizeQuantiles}}
+#' @param ... Options for \code{\link{limma::qsmooth}} function or \code{\link{limma::normalizeQuantiles}}
 #'
 #' @return ExpressionSet object with an assayData called normalizedMatrix
 #' @export
@@ -727,7 +727,7 @@ qstats <- function(exprs, groups, window) {
 #'
 #' @usage data(skin)
 #'
-#' @format An object of class \code{"ExpressionSet"}; see \code{\link[Biobase]{ExpressionSet}}.
+#' @format An object of class \code{"ExpressionSet"}, see \code{\linkS4class{ExpressionSet}}.
 #'
 #' @keywords datasets
 #'
@@ -755,7 +755,7 @@ system('mv skin.rdata data/')
 #'
 #' @usage data(bladder)
 #'
-#' @format An object of class \code{"ExpressionSet"}; see \code{\link[Biobase]{ExpressionSet}}.
+#' @format An object of class \code{"ExpressionSet"}, see \code{\linkS4class{ExpressionSet}}.
 #'
 #' @keywords datasets
 #'
