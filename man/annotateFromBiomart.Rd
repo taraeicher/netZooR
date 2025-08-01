@@ -40,8 +40,11 @@ Annotate your Expression Set with biomaRt
 u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/'
 bladder <- paste0(u, 'yarn/bladder.rdata')
 skin <- paste0(u, 'yarn/skin.rdata')
-download.file(bladder, destfile='netZooR/data/bladder.rdata')
-download.file(skin, destfile='netZooR/data/skin.rdata')
+data_folder <- "data"
+dest_file_bladder <- file.path(data_folder, "bladder.rdata")
+dest_file_skin <- file.path(data_folder, "skin.rdata")
+download.file(bladder, destfile=dest_file)
+download.file(skin, destfile=dest_file_skin)
 data(skin)
 # subsetting and changing column name just for a silly example
 skin <- skin[1:10,]
