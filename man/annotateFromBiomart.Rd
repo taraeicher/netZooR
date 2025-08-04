@@ -43,7 +43,7 @@ skin <- paste0(u, 'yarn/skin.rdata')
 data_folder <- "data"
 dest_file_bladder <- file.path(data_folder, "bladder.rdata")
 dest_file_skin <- file.path(data_folder, "skin.rdata")
-download.file(bladder, destfile=dest_file)
+download.file(bladder, destfile=dest_file_bladder)
 download.file(skin, destfile=dest_file_skin)
 data(skin)
 # subsetting and changing column name just for a silly example
