@@ -1,7 +1,7 @@
 Package: netZooR
 Type: Package
 Title: A menagerie of methods for the inference and analysis of gene regulatory networks
-Version: 1.13.17
+Version: 1.13.18
 Date: 2025-07-31
 Authors@R: c(person("Marouen", "Ben Guebila",
 			email = "marouen.b.guebila@gmail.com", role = c("aut","cre"), comment = c(ORCID = "0000-0001-5934-966X")),
@@ -30,6 +30,7 @@ Depends: R (>= 4.2.0),
 	 pandaR,
    Biobase,
 Remotes: 
+	 stan-dev/cmdstanr,
 	 jnpaulson/pandaR, 
 	 cytoscape/RCy3
 biocViews:
