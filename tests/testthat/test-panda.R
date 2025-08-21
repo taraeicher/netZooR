@@ -3,8 +3,10 @@ context("test PANDA result")
 test_that("panda function works", {
 
    
-  # test 1: check test error message when empty inputs
+  # test 1: check test error message when empty inputs and declare dependencies
    expect_error(pandaPy())
+   py_require('pandas')
+   py_require('scipy')
    
    # input file path
    system("curl -O  https://netzoo.s3.us-east-2.amazonaws.com/netZooR/example_datasets/expr4_200_L.txt")

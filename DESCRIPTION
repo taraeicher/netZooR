@@ -1,12 +1,12 @@
-Package: netZooR
+\Package: netZooR
 Type: Package
-Title: Unified methods for the inference and analysis of gene regulatory networks
-Version: 1.13.9
-Date: 2024-11-26
+Title: A menagerie of methods for the inference and analysis of gene regulatory networks
+Version: 1.13.21
+Date: 2025-07-31
 Authors@R: c(person("Tara", "Eicher",
-                        email = "teicher@hsph.harvard.edu", role = c("aut","cre"), comment = c(ORCID = "0000-0003-1809-4458")),
-             person("Marouen", "Ben Guebila",
-			email = "benguebila@hsph.harvard.edu", role = c("aut"), comment = c(ORCID = "0000-0001-5934-966X")),
+			email = "teicher@hsph.harvard.edu", role = c("aut"), comment = c(ORCID = "0000-0003-1809-4458")),
+	     person("Marouen", "Ben Guebila",
+                        email = "marouen.b.guebila@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0001-5934-966X")),
 	     person("Tian", "Wang", 
 			email = "tian.wang@bc.edu", role = c("aut"), comment = c(ORCID = "0000-0002-2767-3243")),
 	     person("John", "Platig",
@@ -30,6 +30,7 @@ Depends: R (>= 4.2.0),
 	 pandaR,
    Biobase,
 Remotes: 
+	 stan-dev/cmdstanr,
 	 jnpaulson/pandaR, 
 	 cytoscape/RCy3
 biocViews:
@@ -41,6 +42,7 @@ biocViews:
 	NetworkInference,
 	Transcription
 Imports:
+	cmdstanr,
 	AnnotationDbi,
 	assertthat,
 	biomaRt,
