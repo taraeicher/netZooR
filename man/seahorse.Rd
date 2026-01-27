@@ -63,7 +63,7 @@ phenotype_data = data.frame(matrix(0, ncol=2, nrow = 10))
 colnames(phenotype_data) = c("sex", "height")
 rownames(phenotype_data) = colnames(expression_data)
 phenotype_data$sex = c(rep("male", nrow(phenotype_data)/2), rep("female", nrow(phenotype_data)/2))
-phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = T)
+phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = TRUE)
 
 phenotype_dictionary = c("categorical", "numeric")
 
