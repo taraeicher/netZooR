@@ -65,12 +65,11 @@ jobs:
 
       - if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get install python3-venv
-          pip install --upgrade pip
+          sudo apt-get update
+          sudo apt-get install -y python3-venv
           python3 -m venv env
-          source env/bin/activate
-          echo "VIRTUAL ENV:" $VIRTUAL_ENV
-
+          echo "RETICULATE_PYTHON=${GITHUB_WORKSPACE}/env/bin/python" >> $GITHUB_ENV
+  
       - name: Install reticulate
         run: |
             library("reticulate")
