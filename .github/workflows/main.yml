@@ -9,7 +9,6 @@
 name: netZooR
 
 env:
-    RETICULATE_AUTOCONFIGURE: "FALSE"
     ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
     GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -66,18 +65,20 @@ jobs:
 
       - if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-venv
+          sudo apt-get install python3-venv
+          pip install --upgrade pip
           python3 -m venv env
-          echo "RETICULATE_PYTHON=${GITHUB_WORKSPACE}/env/bin/python" >> $GITHUB_ENV
-        shell: bash
-  
-      - name: Install Python deps
-        run: |
           source env/bin/activate
-          pip install -U pip
-          pip install numpy scipy pandas joblib
-        shell: bash
+          echo "VIRTUAL ENV:" $VIRTUAL_ENV
+  
+      - name: Install reticulate
+        run: |
+            library("reticulate")
+            py_install("numpy")
+            py_install("scipy")
+            py_install("pandas")
+            py_install("joblib")
+        shell: Rscript {0}
 
       - name: Check
         uses: r-lib/actions/check-r-package@v2.11.3
