@@ -53,7 +53,8 @@
 #' @export
 #'
 #' @examples
-#' if (requireNamespace("cmdstanr", quietly = TRUE)) {
+#' if (requireNamespace("cmdstanr", quietly = TRUE) && tryCatch({
+#' nzchar(cmdstanr::cmdstan_path())}, error = function(e) FALSE)) {
 #'    data(TIGER_expr)
 #'    data(TIGER_prior)
 #'    tiger(TIGER_expr,TIGER_prior)
