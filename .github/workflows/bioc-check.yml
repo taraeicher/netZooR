@@ -70,7 +70,8 @@ jobs:
       - name: Install dependencies
         run: |
           BiocManager::install("remotes", ask = FALSE, update = FALSE)
-          remotes::install_deps(dependencies = TRUE, repos = BiocManager::repositories())
+          repos <- c(BiocManager::repositories(), "https://mc-stan.org/r-packages/")
+          remotes::install_deps(dependencies = TRUE, repos = repos)
           # Additional CI tools
           BiocManager::install(c("BiocCheck", "rcmdcheck"), ask = FALSE, update = FALSE)
         shell: Rscript {0}
@@ -108,7 +109,7 @@ jobs:
             --install-args="--build"
         env:
           _R_CHECK_CRAN_INCOMING_: false
-          _R_CHECK_FORCE_SUGGESTS_: true
+          _R_CHECK_FORCE_SUGGESTS_: false
 
       - name: Show check results
         if: always()
@@ -152,7 +153,8 @@ jobs:
           install.packages("BiocManager", repos = "https://cloud.r-project.org")
           BiocManager::install(ask = FALSE, update = FALSE)
           BiocManager::install("remotes", ask = FALSE, update = FALSE)
-          remotes::install_deps(dependencies = TRUE, repos = BiocManager::repositories())
+          repos <- c(BiocManager::repositories(), "https://mc-stan.org/r-packages/")
+          remotes::install_deps(dependencies = TRUE, repos = repos)
           BiocManager::install("covr", ask = FALSE, update = FALSE)
         shell: Rscript {0}
 

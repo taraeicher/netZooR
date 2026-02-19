@@ -64,6 +64,10 @@ tiger = function(expr,prior,method="VB",TFexpressed = TRUE,
                  seed=123,out_path=NULL,out_size = 300,
                  a_sigma=1,b_sigma=1,a_alpha=1,b_alpha=1,
                  sigmaZ=10,sigmaB=1,tol = 0.005){
+  if (!requireNamespace("cmdstanr", quietly = TRUE)) {
+    stop("Package 'cmdstanr' is required for tiger().\n",
+         "Install from: https://mc-stan.org/cmdstanr/", call. = FALSE)
+  }
   # check data
   sample.name = colnames(expr)
   if (TFexpressed){
