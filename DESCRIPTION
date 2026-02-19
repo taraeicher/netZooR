@@ -59,7 +59,8 @@ Imports:
     doParallel,
     foreach,
     reshape,
-    MASS
+    MASS,
+    data.table
 License: GPL-3
 Encoding: UTF-8
 LazyData: false
@@ -77,7 +78,6 @@ Suggests:
     matrixTests,
     gplots,
     nnet,
-    data.table,
     vegan,
     reshape2,
     penalized,
