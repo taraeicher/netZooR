@@ -99,9 +99,7 @@ Suggests:
     readr,
     RColorBrewer,
     quantro,
-    fgsea,
-    cmdstanr
-Additional_repositories: https://mc-stan.org/r-packages/
+    fgsea
 Remotes: jnpaulson/pandaR
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3
