@@ -752,12 +752,15 @@ condorPlotCommunities = function(condor.object,color_list,point.size=0.01,
   data.table::setnames(dt1,c("SNP","red.memb"))
   dt2 <- data.table::data.table(condor.object$blue.memb)
   data.table::setnames(dt2,c("gene","blue.memb"))
-  dt3 <- merge(dt0,dt1,by="SNP",all.x=TRUE)    
+  dt3 <- merge(dt0,dt1,by="SNP",all.x=TRUE)
+  dt3 <- data.table::as.data.table(dt3)
   eqtl_object <- merge(dt3,dt2,by="gene",all.x=TRUE)
+  eqtl_object <- data.table::as.data.table(eqtl_object)
   data.table::setkey(eqtl_object,"SNP")
-  eqtl_all <- data.table::data.table(eqtl_object[!is.na(SNP)])
+  eqtl_all <- eqtl_object[!is.na(eqtl_object[["SNP"]])]
+  eqtl_all <- data.table::as.data.table(eqtl_all)
   #this groups red and blue nodes in the same community. very important
-  eqtl_block <- eqtl_all[blue.memb==red.memb]
+  eqtl_block <- eqtl_all[eqtl_all[["blue.memb"]]==eqtl_all[["red.memb"]]]
   # coerce non-factor inpout
   eqtl_block$gene = as.factor(eqtl_block$gene)
   eqtl_block$SNP = as.factor(eqtl_block$SNP)
@@ -772,15 +775,17 @@ condorPlotCommunities = function(condor.object,color_list,point.size=0.01,
   #make new index for each node that will correspond to it's row/col number
   red_tmp <- data.table::data.table(rindx=seq_len(nlevels(eqtl_block$SNP)),SNP=unique(eqtl_block$SNP))
   red_indx <- merge(red_tmp,unique(eqtl_block,by="SNP")[,c("SNP","red.memb"),with=FALSE],by="SNP")
+  red_indx <- data.table::as.data.table(red_indx)
   red_indx[,red.com.size:=length(unique(SNP)),by=red.memb]
   red_indx[red.com.size > 1,rindx:=sample(x=rindx),by=red.memb][,red.memb:=NULL,]
-  setkey(red_indx,"SNP")
+  data.table::setkey(red_indx,"SNP")
   blue_tmp <- data.table::data.table(bindx=seq_len(nlevels(eqtl_block$gene)),gene=unique(eqtl_block$gene))
   blue_indx <- merge(blue_tmp,unique(eqtl_block,by="gene")[,c("gene","blue.memb"),with=FALSE],by="gene")
+  blue_indx <- data.table::as.data.table(blue_indx)
   #shuffle nodes within each community to make density homogeneous
   blue_indx[,blue.com.size:=length(unique(gene)),by=blue.memb]
   blue_indx[blue.com.size > 1,bindx:=sample(x=bindx),by=blue.memb][,blue.memb:=NULL,]
-  setkey(blue_indx,"gene")
+  data.table::setkey(blue_indx,"gene")
   
   if(dim(red_indx)[1] != nlevels(eqtl_all$SNP) && dim(blue_indx)[1] != nlevels(eqtl_all$gene)){
     print("Warning! not all nodes in block!")
@@ -790,8 +795,10 @@ condorPlotCommunities = function(condor.object,color_list,point.size=0.01,
   #if(nlevels(eqtl_all$SNP) != nlevels(eqtl_all$SNP)){
   #  tmp = setdiff(levels(eqtl_all$SNP),levels(eqtl_all$SNP))
   m1 <- merge(eqtl_all,red_indx,by="SNP",all=TRUE)
+  m1 <- data.table::as.data.table(m1)
   #setkey(m1,"gene")
   m2 <- merge(m1,blue_indx,by="gene",all=TRUE)
+  m2 <- data.table::as.data.table(m2)
   
   #pdf("Community_structure_matrix.pdf",height=7,width=12)
   #setEPS()

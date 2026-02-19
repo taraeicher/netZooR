@@ -25,8 +25,11 @@ Filtered ExpressionSet object
 Filter genes that have less than a minimum threshold CPM for a given group/tissue
 }
 \examples{
-data(skin)
-filterLowGenes(skin,'SMTSD')
+\donttest{
+u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+if(!is.null(skin)) filterLowGenes(skin,'SMTSD')
+}
 
 }
 \seealso{

@@ -125,7 +125,11 @@ spider <- function(motif,expr=NULL,epifilter=NULL,ppi=NULL,alpha=0.1,hamming=0.0
       Idx1=match(motif[,1], tf.names);
       Idx2=match(motif[,2], gene.names);
       Idx=(Idx2-1)*num.TFs+Idx1;
-      regulatoryNetwork[Idx]=motif[,3]*epifilter[,3]
+      if(!is.null(epifilter)){
+        regulatoryNetwork[Idx]=motif[,3]*epifilter[,3]
+      } else {
+        regulatoryNetwork[Idx]=motif[,3]
+      }
     }else if(mode=='intersection'){
       gene.names=unique(intersect(rownames(expr),unique(motif[,2])))
       tf.names  =unique(intersect(unique(ppi[,1]),unique(motif[,1])))
@@ -160,7 +164,11 @@ spider <- function(motif,expr=NULL,epifilter=NULL,ppi=NULL,alpha=0.1,hamming=0.0
       Idx=(Idx2-1)*num.TFs+Idx1;
       indIdx=!is.na(Idx)
       Idx=Idx[indIdx] #remove missing genes
-      regulatoryNetwork[Idx]=motif[indIdx,3]*epifilter[indIdx,3];          
+      if(!is.null(epifilter)){
+        regulatoryNetwork[Idx]=motif[indIdx,3]*epifilter[indIdx,3];
+      } else {
+        regulatoryNetwork[Idx]=motif[indIdx,3];
+      }
     }
     num.conditions <- ncol(expr)
     if (randomize=='within.gene'){

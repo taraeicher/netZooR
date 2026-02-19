@@ -1157,7 +1157,7 @@ monsterBereFull <- function(motif.data,
     #z <- optL1(tfTargets, expr.data, minlambda1=25, fold=5)
     
     
-    predict(z, expr.data)
+    penalized::predict(z, expr.data)
   }))
   
   ## Convert values to ranks

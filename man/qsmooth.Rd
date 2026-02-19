@@ -36,7 +36,10 @@ Normalized expression
 This function was modified from github user kokrah.
 }
 \examples{
-data(skin)
-head(netZooR:::qsmooth(skin,groups=pData(skin)$SMTSD))
+\donttest{
+u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+if(!is.null(skin)) head(netZooR:::qsmooth(skin,groups=pData(skin)$SMTSD))
+}
 
 }

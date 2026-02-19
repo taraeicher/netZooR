@@ -28,8 +28,11 @@ The main use case for this function is the removal of sex-chromosome genes.
 Alternatively, filter genes that are not protein-coding.
 }
 \examples{
-data(skin)
-filterGenes(skin,labels = c('X','Y','MT'),featureName='chromosome_name')
-filterGenes(skin,labels = 'protein_coding',featureName='gene_biotype',keepOnly=TRUE)
+\donttest{
+u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+if(!is.null(skin)) filterGenes(skin,labels=c('X','Y','MT'),featureName='chromosome_name')
+if(!is.null(skin)) filterGenes(skin,labels='protein_coding',featureName='gene_biotype',keepOnly=TRUE)
+}
 
 }
