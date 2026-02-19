@@ -29,6 +29,8 @@ test_that("seahorse function works", {
   # Verify structure
   expect_type(results, "list")
   expect_true(length(results) > 0)
-  # Check that results contain pathway-level enrichment
-  expect_true(all(c("sex", "height") %in% names(results)))
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("sex", "height") %in% names(results$GSEA)))
   })

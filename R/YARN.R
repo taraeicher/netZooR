@@ -18,6 +18,7 @@
 #' @importClassesFrom Biobase ExpressionSet
 #'
 #' @examples
+#' \dontrun{
 #' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/'
 #' bladder <- paste0(u, 'yarn/bladder.rdata')
 #' skin <- paste0(u, 'yarn/skin.rdata')
@@ -31,6 +32,7 @@
 #' genes <- sapply(strsplit(rownames(skin),split="\\."),function(i)i[1])
 #' newskin <-annotateFromBiomart(skin,genes=genes,biomart=biomart)
 #' head(fData(newskin)[,7:11])
+#' }
 #'
 annotateFromBiomart <- function(obj,genes=featureNames(obj),filters="ensembl_gene_id",
                                 attributes=c("ensembl_gene_id","hgnc_symbol","chromosome_name","start_position","end_position"),
@@ -351,7 +353,7 @@ filterLowGenes <- function(obj, groups, threshold = 1, minSamples = NULL,
 filterMissingGenes <- function(obj, threshold = 0) {
   sumGenes <- rowSums(exprs(obj))
   throwAwayGenes <- which(sumGenes <= threshold)
-  if (length(which(sumGenes <= 0)) > 0) {
+  if (length(throwAwayGenes) > 0) {
     obj <- obj[-throwAwayGenes, ]
   }
   obj

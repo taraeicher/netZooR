@@ -1037,7 +1037,7 @@ monsterMonsterNI <- function(motif.data,
         # Penalized Logistic Reg
         
         
-        predict(z, expr.data)
+        penalized::predict(z, expr.data)
       }))
     }
     

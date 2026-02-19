@@ -46,20 +46,20 @@ test_that("filterMissingGenes() removes zero-sum genes", {
   Biobase::exprs(obj)[1:3, ] <- 0
 
   filtered <- filterMissingGenes(obj)
-  expect_equal(nrow(filtered), 17)
+  expect_equal(unname(nrow(filtered)), 17L)
 })
 
 test_that("filterMissingGenes() respects threshold", {
   obj <- make_tiny_eset()
   # With a very high threshold, most genes should be filtered
   filtered <- filterMissingGenes(obj, threshold = 1e6)
-  expect_true(nrow(filtered) < nrow(obj))
+  expect_true(unname(nrow(filtered)) < unname(nrow(obj)))
 })
 
 test_that("filterSamples() removes specified samples by name", {
   obj <- make_tiny_eset()
   filtered <- filterSamples(obj, ids = c("sample1", "sample2"))
-  expect_equal(ncol(filtered), 8)
+  expect_equal(unname(ncol(filtered)), 8L)
   expect_true(!any(colnames(filtered) %in% c("sample1", "sample2")))
 })
 
@@ -83,7 +83,7 @@ test_that("plotCMDS() returns coordinates without plotting", {
   coords <- plotCMDS(obj, comp = 1:2, plotFlag = FALSE)
   expect_true(is.matrix(coords) || is.data.frame(coords))
   expect_equal(ncol(coords), 2)
-  expect_equal(nrow(coords), ncol(obj))
+  expect_equal(unname(nrow(coords)), unname(ncol(obj)))
 })
 
 test_that("checkMisAnnotation() returns coordinates without error", {

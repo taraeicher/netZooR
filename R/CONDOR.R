@@ -92,7 +92,7 @@ condorCluster <- function(condor.object,cs.method="LCS",project=TRUE,low.memory=
     #if(clusters(G1)$no > 1){print("Warning more than one component! May cause indexing error")}
     #V(G1)$name <- sort(unique(as.vector(esub[,2])))
     #remove loops and multiple edges
-    gcc.initialize = simplify(max.component(G1))
+    gcc.initialize = simplify(condorMaxComponent(G1))
     project.weights <- edge.attributes(gcc.initialize)$weight
   }
   

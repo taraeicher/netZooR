@@ -32,3 +32,6 @@ vignettes/yarn.Rmd
 notes.md
 R/createDiffPandaStyle.R
 R/visDiffPandaInCytoscape.R
+^env$
+^\.venv$
+netZooR\.code-workspace$

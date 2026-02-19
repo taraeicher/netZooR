@@ -66,6 +66,10 @@ puma <- function(motif,expr=NULL,ppi=NULL,alpha=0.1,mir_file,hamming=0.001,
   if (is.null(expr)){
     # Use only the motif data here for the gene list
     num.conditions <- 0
+    gene.names <- sort(unique(motif[, 2]))
+    tf.names   <- sort(unique(motif[, 1]))
+    num.TFs    <- length(tf.names)
+    num.genes  <- length(gene.names)
     if (randomize!="None"){
       warning("Randomization ignored because gene expression is not used.")
       randomize <- "None"

@@ -52,6 +52,7 @@ test_that("spider() works without epifilter", {
   expr <- matrix(rnorm(50), nrow = 5,
                  dimnames = list(genes, paste0("S", 1:10)))
 
+  # spider() with epifilter=NULL falls back to PANDA-like behavior
   result <- spider(motif, expr, epifilter = NULL, ppi = NULL,
                    alpha = 0.1, hamming = 0.5, progress = FALSE)
 

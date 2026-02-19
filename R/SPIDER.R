@@ -64,8 +64,10 @@ spider <- function(motif,expr=NULL,epifilter=NULL,ppi=NULL,alpha=0.1,hamming=0.0
   if(progress)
     print('Initializing and validating')
   
-  if(any(epifilter[,c(1,2)] != motif[,c(1,2)])){
-    stop('Chromatin accessibility data does not match motif data size and order.')
+  if(!is.null(epifilter)){
+    if(any(epifilter[,c(1,2)] != motif[,c(1,2)])){
+      stop('Chromatin accessibility data does not match motif data size and order.')
+    }
   }
   
   if(is(expr, "ExpressionSet"))
