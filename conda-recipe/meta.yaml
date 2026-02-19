@@ -1,0 +1,73 @@
+{% set version = "1.6.3" %}
+{% set github_org = "netZoo" %}
+{% set github_repo = "netZooR" %}
+
+package:
+  name: bioconductor-netzoor
+  version: {{ version }}
+
+source:
+  url: https://github.com/{{ github_org }}/{{ github_repo }}/archive/refs/tags/v{{ version }}.tar.gz
+  # Alternative: build from Bioconductor
+  # url: https://bioconductor.org/packages/release/bioc/src/contrib/netZooR_{{ version }}.tar.gz
+  # sha256: <fill after release>
+
+build:
+  number: 0
+  noarch: generic
+  rpaths:
+    - lib/R/lib/
+    - lib/
+
+requirements:
+  host:
+    - r-base >=4.2.0
+    - r-igraph
+    - r-reticulate
+    - r-matrix
+    - r-matrixstats
+    - r-mass
+    - r-reshape
+    - r-doparallel
+    - r-foreach
+    - bioconductor-biobase
+    - bioconductor-pandar
+  run:
+    - r-base >=4.2.0
+    - r-igraph
+    - r-reticulate
+    - r-matrix
+    - r-matrixstats
+    - r-mass
+    - r-reshape
+    - r-doparallel
+    - r-foreach
+    - bioconductor-biobase
+    - bioconductor-pandar
+
+test:
+  commands:
+    - $R -e "library('netZooR')"
+
+about:
+  home: https://github.com/netZoo/netZooR
+  license: GPL-3.0-only
+  license_family: GPL3
+  license_file: LICENSE
+  summary: >
+    Unified implementations of Network Zoo methods for gene regulatory network
+    inference and analysis including PANDA, LIONESS, EGRET, CONDOR, ALPACA,
+    CRANE, MONSTER, YARN, and SAMBAR.
+  description: |
+    netZooR unifies the implementations of several Network Zoo methods
+    (netzoo.github.io) into a single package by creating interfaces between
+    network inference and network analysis methods. Network inference methods
+    include PANDA, OTTER, LIONESS, and EGRET. Network analysis methods include
+    CONDOR, ALPACA, CRANE, and MONSTER. YARN processes gene expression data for
+    tissue-specific analyses and SAMBAR infers missing mutation data.
+  doc_url: https://netzoo.github.io/
+  dev_url: https://github.com/netZoo/netZooR
+
+extra:
+  recipe-maintainers:
+    - marouenbg

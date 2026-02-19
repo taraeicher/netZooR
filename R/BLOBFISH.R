@@ -252,6 +252,9 @@ CalculatePValues <- function(network, nullDistribution, pValueChunks = 100,
     # Otherwise, calculate the empirical p-value.
     pValues[startIndex:endIndex] <- NA
     if(ncol(ourEdgeVals) > 1){
+      if(!requireNamespace("matrixTests", quietly = TRUE)){
+        stop("Package 'matrixTests' is needed for CalculatePValues with multiple networks. Please install it.", call. = FALSE)
+      }
       pValues[startIndex:endIndex] <- matrixTests::row_wilcoxon_twosample(x = ourEdgeVals, 
                                                                           y = nullEdgeVals, 
                                                                           alternative = "greater")$pvalue

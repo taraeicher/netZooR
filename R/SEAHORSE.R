@@ -10,7 +10,6 @@
 #'               for a numerical phenotype is Pearson correlation and
 #'               for a categorical phenotype is the p-value of an ANOVA test
 #'              
-#' @import fgsea
 #' @param expression : gene expression matrix (normalized, and filtered) 
 #'                     with rows as genes and columns as samples.
 #'                     Row and column names must be present.
@@ -53,6 +52,9 @@
 #'  
 #' @export
 seahorse <- function(expression, phenotype, phenotype_dictionary, pathways){
+  if (!requireNamespace("fgsea", quietly = TRUE)) {
+    stop("Package 'fgsea' is required but not installed.")
+  }
   set.seed(0)
   
   results = list()
@@ -88,9 +90,10 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways){
 #' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
 #' @export
-#' @import fgsea
-
 gsea_numeric <- function(expression, pheno, pathways){
+  if (!requireNamespace("fgsea", quietly = TRUE)) {
+    stop("Package 'fgsea' is required but not installed.")
+  }
   output_seahorse = list()
   output_seahorse$cor = list()
   output_seahorse$GSEA = list()
@@ -101,14 +104,13 @@ gsea_numeric <- function(expression, pheno, pathways){
   
   # Run GSEA
   cor_rank = sort(cor, decreasing = T)
-  fgseaRes <- fgsea(pathways, cor_rank, minSize=15, maxSize=500)
+  fgseaRes <- fgsea::fgsea(pathways, cor_rank, minSize=15, maxSize=500)
   output_seahorse$GSEA = fgseaRes
   
   return(output_seahorse)
 }
 
 #' Function to run GSEA for a categorical phenotype
-#' @import fgsea
 #' @param expression : gene expression matrix (normalized, and filtered) 
 #'                     with rows as genes and columns as samples.
 #'                     Row and column names must be present.
@@ -120,6 +122,9 @@ gsea_numeric <- function(expression, pheno, pathways){
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
 #' @export
 gsea_categorical <- function(expression, pheno, pathways){
+  if (!requireNamespace("fgsea", quietly = TRUE)) {
+    stop("Package 'fgsea' is required but not installed.")
+  }
   output_seahorse = list()
   output_seahorse$cor = list()
   output_seahorse$GSEA = list()
@@ -130,7 +135,7 @@ gsea_categorical <- function(expression, pheno, pathways){
   
   # Run GSEA
   cor_rank = sort(cor, decreasing = T)
-  fgseaRes <- fgsea(pathways, cor_rank, minSize=15, maxSize=500, scoreType = "pos")
+  fgseaRes <- fgsea::fgsea(pathways, cor_rank, minSize=15, maxSize=500, scoreType = "pos")
   output_seahorse$GSEA = fgseaRes
   
   return(output_seahorse)

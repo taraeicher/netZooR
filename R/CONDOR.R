@@ -190,7 +190,7 @@ condorCoreEnrich = function(test_nodes,q,perm=FALSE,plot.hist=FALSE,nsamp=1000){
                 perm.scores=perm.scores,true.scores=true.scores)
   }
   if(!perm){out=cbind.data.frame(ks.pvalue=ks_out$p.value,wilcox.pvalue=w_out$p.value)}
-  if(perm && plot.hist){plot.enrich.hist(qik_enrich_out=out)}
+  if(perm && plot.hist){condorPlotEnrichHist(qik_enrich_out=out)}
   
   return(out)
 }
@@ -237,7 +237,7 @@ perm.pval = function(stat_true,stat_random){
   return(pval)
 }
 
-plot.enrich.hist = function(qik_enrich_out,ks=TRUE,wilcoxon=TRUE,...){
+condorPlotEnrichHist = function(qik_enrich_out,ks=TRUE,wilcoxon=TRUE,...){
   if(ks & wilcoxon){
     par(mfrow=c(1,2))
     par(mar=c(3,4,3,1),oma=c(1,1,1,1))
@@ -323,7 +323,6 @@ plot.enrich.hist = function(qik_enrich_out,ks=TRUE,wilcoxon=TRUE,...){
 #' #randomly assign blues to their own community
 #' T0 <- data.frame(nodes=blues,coms=seq_len(4))
 #' condor.object <- condorMatrixModularity(condor.object,T0=T0)
-#' @import nnet
 #' @export
 #' 
 condorMatrixModularity = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),weights=1,deltaQmin="default"){
@@ -355,8 +354,9 @@ condorMatrixModularity = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),we
   machine.which.is.max = function(X){
     thresh <- .Machine$double.eps
     X[abs(X) <= thresh] <- 0
-    true_max <- which.is.max(X)
-    return(true_max)
+    maxval <- max(X)
+    candidates <- which(X == maxval)
+    if (length(candidates) == 1L) candidates else sample(candidates, 1L)
   }
   #Convert the edgelist to a sparseMatrix object
   esub <- condor.object$edges
@@ -547,7 +547,6 @@ condorMatrixModularity = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),we
 #' T0 <- data.frame(nodes=blues,coms=1)
 #' condor.object <- condorModularityMax(condor.object,T0=T0)
 #' @import Matrix
-#' @import nnet
 #' @export
 #' 
 condorModularityMax = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),weights=1,deltaQmin="default"){
@@ -722,9 +721,9 @@ condorModularityMax = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),weigh
 #' @param xlab x axis label
 #' @param ylab y axis label
 #' @return produces a \code{\link[graphics]{plot}} output.
-#' @references \url{http://tools.medialab.sciences-po.fr/iwanthue/} for 
+#' @references \url{https://medialab.github.io/iwanthue/} for 
 #'  a nice color generator at 
-#' @note For the condor paper \url{http://arxiv.org/abs/1509.02816}, I used
+#' @note For the condor paper \url{https://arxiv.org/abs/1509.02816}, I used
 #'   35 colors from the "Tarnish" palette with "hard" clustering
 #' @examples
 #' r = c(1,1,1,2,2,2,3,3,3,4,4);
@@ -737,23 +736,26 @@ condorModularityMax = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),weigh
 #' condorPlotCommunities(condor.object,
 #' color_list=c("darkgreen","darkorange"),point.size=2,
 #' xlab="Women",ylab="Men")
-#' @rawNamespace import(data.table, except= c(dcast,melt))
 #' @importFrom graphics axis box hist mtext par plot points rect
 #' @export
 #'  
 condorPlotCommunities = function(condor.object,color_list,point.size=0.01,
                                    xlab="SNP",ylab="Gene"){
-  
-  dt0 <- data.table(condor.object$edges)
-  setnames(dt0,seq_len(2),c("SNP","gene"))
-  dt1 <- data.table(condor.object$red.memb)
-  setnames(dt1,c("SNP","red.memb"))
-  dt2 <- data.table(condor.object$blue.memb)
-  setnames(dt2,c("gene","blue.memb"))
+
+  if (!requireNamespace("data.table", quietly = TRUE)) {
+      stop("Package 'data.table' is required. Install it with: install.packages('data.table')")
+  }
+
+  dt0 <- data.table::data.table(condor.object$edges)
+  data.table::setnames(dt0,seq_len(2),c("SNP","gene"))
+  dt1 <- data.table::data.table(condor.object$red.memb)
+  data.table::setnames(dt1,c("SNP","red.memb"))
+  dt2 <- data.table::data.table(condor.object$blue.memb)
+  data.table::setnames(dt2,c("gene","blue.memb"))
   dt3 <- merge(dt0,dt1,by="SNP",all.x=TRUE)    
   eqtl_object <- merge(dt3,dt2,by="gene",all.x=TRUE)
-  setkey(eqtl_object,"SNP")
-  eqtl_all <- data.table(eqtl_object[!is.na(SNP)])
+  data.table::setkey(eqtl_object,"SNP")
+  eqtl_all <- data.table::data.table(eqtl_object[!is.na(SNP)])
   #this groups red and blue nodes in the same community. very important
   eqtl_block <- eqtl_all[blue.memb==red.memb]
   # coerce non-factor inpout
@@ -766,14 +768,14 @@ condorPlotCommunities = function(condor.object,color_list,point.size=0.01,
   if(nlevels(eqtl_block$SNP) != length(unique(eqtl_block$SNP))){
     print("warning: empty levels in SNP column. This may cause silent issues with plotting.")}
   #select all links that connect nodes in the same community
-  setkey(eqtl_block,"blue.memb","red.memb")
+  data.table::setkey(eqtl_block,"blue.memb","red.memb")
   #make new index for each node that will correspond to it's row/col number
-  red_tmp <- data.table(rindx=seq_len(nlevels(eqtl_block$SNP)),SNP=unique(eqtl_block$SNP))
+  red_tmp <- data.table::data.table(rindx=seq_len(nlevels(eqtl_block$SNP)),SNP=unique(eqtl_block$SNP))
   red_indx <- merge(red_tmp,unique(eqtl_block,by="SNP")[,c("SNP","red.memb"),with=FALSE],by="SNP")
   red_indx[,red.com.size:=length(unique(SNP)),by=red.memb]
   red_indx[red.com.size > 1,rindx:=sample(x=rindx),by=red.memb][,red.memb:=NULL,]
   setkey(red_indx,"SNP")
-  blue_tmp <- data.table(bindx=seq_len(nlevels(eqtl_block$gene)),gene=unique(eqtl_block$gene))
+  blue_tmp <- data.table::data.table(bindx=seq_len(nlevels(eqtl_block$gene)),gene=unique(eqtl_block$gene))
   blue_indx <- merge(blue_tmp,unique(eqtl_block,by="gene")[,c("gene","blue.memb"),with=FALSE],by="gene")
   #shuffle nodes within each community to make density homogeneous
   blue_indx[,blue.com.size:=length(unique(gene)),by=blue.memb]
@@ -830,10 +832,13 @@ condorPlotCommunities = function(condor.object,color_list,point.size=0.01,
 #' condor.object <- createCondorObject(small1976)
 #' condor.object <- condorCluster(condor.object, project=FALSE)
 #' condorPlotHeatmap(condor.object)
-#' @import gplots
 #' @export
 #'  
 condorPlotHeatmap = function(condor.object, main="", xlab="blues", ylab="reds"){
+
+  if (!requireNamespace("gplots", quietly = TRUE)) {
+      stop("Package 'gplots' is required. Install it with: install.packages('gplots')")
+  }
   bo <- condor.object
   # convert edge lists to adjacency matrices (n reds x m blues)
   adj = as_adjacency_matrix(bo$G, attr="weight", sparse=FALSE)
@@ -849,8 +854,8 @@ condorPlotHeatmap = function(condor.object, main="", xlab="blues", ylab="reds"){
   labCol[duplicated(labCol)] <- ""
   labRow <- as.character(sort(bo$red.memb[,2]))
   labRow[duplicated(labRow)] <- ""
-  heatmap.2(adj, Rowv=FALSE, Colv=FALSE, dendrogram="none", keysize=1.25,
-            col=colorpanel(10, "white", "black"), scale="none",
+  gplots::heatmap.2(adj, Rowv=FALSE, Colv=FALSE, dendrogram="none", keysize=1.25,
+            col=gplots::colorpanel(10, "white", "black"), scale="none",
             key=TRUE, symkey=FALSE, density.info="none", trace="none",
             main=main, sepcolor ="#DDDDDD", colsep=colsep, rowsep=rowsep,
             sepwidth = c(0.025, 0.025), ylab=ylab, xlab=xlab, margins=c(3,3),
@@ -1007,7 +1012,7 @@ createCondorObject <- function(edgelist,return.gcc=TRUE){
   }
   
   if(!return.gcc){ g.out <- g}
-  if(return.gcc){ gcc <- max.component(g); g.out <- gcc }
+  if(return.gcc){ gcc <- condorMaxComponent(g); g.out <- gcc }
   blue.names <- V(g.out)$name[V(g.out)$name %in% unique(edgelist[, 2])]
   red.names <- V(g.out)$name[V(g.out)$name %in% unique(edgelist[, 1])]
   edges <- edgelist[edgelist[, 2] %in% blue.names,]
@@ -1017,7 +1022,7 @@ createCondorObject <- function(edgelist,return.gcc=TRUE){
   }
 
 
-max.component = function(g){
+condorMaxComponent = function(g){
   # return largest connected component of the iGraph graph object g
   g.clust = components(g);
   maxclust.id = which(g.clust$csize == max(g.clust$csize))[1];
@@ -1038,7 +1043,7 @@ max.component = function(g){
 #' }
 #'
 #' @docType data
-#' @references \url{https://www.nceas.ucsb.edu/interactionweb/html/small_1976.html}
+#' @references Small (1976) Pollinator-plant interactions dataset.
 #' @keywords datasets
 #' @name small1976
 #' @usage data(small1976)
