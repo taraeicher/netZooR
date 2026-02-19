@@ -58,11 +58,11 @@ jobs:
             libglpk-dev \
             python3-venv
 
-      # Install BiocManager and set the correct Bioc version
+      # Install BiocManager — version auto-detected from R version
       - name: Install BiocManager
         run: |
           install.packages("BiocManager", repos = "https://cloud.r-project.org")
-          BiocManager::install(version = "${{ matrix.bioc-version }}", ask = FALSE)
+          BiocManager::install(ask = FALSE, update = FALSE)
           cat("Bioc version:", as.character(BiocManager::version()), "\n")
         shell: Rscript {0}
 
@@ -150,7 +150,7 @@ jobs:
       - name: Install dependencies
         run: |
           install.packages("BiocManager", repos = "https://cloud.r-project.org")
-          BiocManager::install(version = "release", ask = FALSE)
+          BiocManager::install(ask = FALSE, update = FALSE)
           BiocManager::install("remotes", ask = FALSE, update = FALSE)
           remotes::install_deps(dependencies = TRUE, repos = BiocManager::repositories())
           BiocManager::install("covr", ask = FALSE, update = FALSE)
