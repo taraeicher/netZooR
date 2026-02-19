@@ -71,7 +71,6 @@ Imports:
     methods,
     dplyr,
     graphics,
-    cmdstanr,
     GeneNet,
     loo,
     rARPACK,
@@ -95,8 +94,9 @@ Suggests:
     rmarkdown,
     pkgdown,
     dorothea,
+    cmdstanr
 VignetteEngine: knitr
 VignetteBuilder: knitr
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 BugReports: https://github.com/netZoo/netZooR/issues
 URL: https://github.com/netZoo/netZooR, https://netzoo.github.io/
