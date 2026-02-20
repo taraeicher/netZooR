@@ -40,8 +40,10 @@ test_that("puma() works without expression data", {
     score = rbinom(15, 1, 0.5)
   )
 
-  result <- puma(motif, expr = NULL, ppi = NULL, mir_file = tfs,
-                 alpha = 0.1, hamming = 0.5, progress = FALSE)
+  result <- expect_warning(
+    puma(motif, expr = NULL, ppi = NULL, mir_file = tfs,
+         alpha = 0.1, hamming = 0.5, progress = FALSE),
+    "No expression data given")
 
   expect_s4_class(result, "panda")
 })

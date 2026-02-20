@@ -740,7 +740,7 @@ monsterdTFIPlot <- function(monsterObj, rescale='none', plot.title=NA, highlight
     ggplot2::scale_x_discrete(limits = x.axis.order[seq_len(nTFs)] ) +
     ggplot2::theme_classic() +
     ggplot2::theme(legend.title=ggplot2::element_blank(),
-          axis.text.x = ggplot2::element_text(colour = 1+x.axis.order%in%highlight.tfs, 
+          axis.text.x = ggplot2::element_text(
                                      angle = 90, hjust = 1, 
                                      size=x.axis.size,face="bold")) +
     ggplot2::ylab("dTFI") +

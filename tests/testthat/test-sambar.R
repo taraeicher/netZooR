@@ -2,7 +2,7 @@ context("test SAMBAR result")
 
 test_that("SAMBAR function works", {
   
-  load("./testDataset.RData")
+  suppressWarnings(load("./testDataset.RData"))
   data("exon.size")
   data("mut.ucec")
   data("genes")

@@ -3,7 +3,7 @@ context("test source PPI")
 test_that("sourcePPI works", {
   skip_if_offline()
   skip_if_not_installed("STRINGdb")
-  load("./testDataset.RData")
+  suppressWarnings(load("./testDataset.RData"))
   tf <- data.frame(matrix(c("Rv0022c","Rv0023","Rv0042c","Rv0043c","Rv0047c","Rv0054"), 
                           nrow=6, byrow=T),stringsAsFactors=FALSE)
   # STRINGdb Version 10
