@@ -60,22 +60,13 @@ jobs:
             libxml2-dev \
             libglpk-dev
 
-      # Install BiocManager — version auto-detected from R version
-      - name: Install BiocManager
-        run: |
-          install.packages("BiocManager", repos = "https://cloud.r-project.org")
-          BiocManager::install(ask = FALSE, update = FALSE)
-          cat("Bioc version:", as.character(BiocManager::version()), "\n")
-        shell: Rscript {0}
-
-      # Install all package dependencies (Imports + Depends + Suggests)
+      # Install dependencies using r-lib/actions (uses pak, handles R-devel well)
       - name: Install dependencies
-        run: |
-          BiocManager::install("remotes", ask = FALSE, update = FALSE)
-          remotes::install_deps(dependencies = TRUE, repos = BiocManager::repositories())
-          # Additional CI tools
-          BiocManager::install(c("BiocCheck", "rcmdcheck"), ask = FALSE, update = FALSE)
-        shell: Rscript {0}
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            any::BiocCheck
+            any::rcmdcheck
 
       # Setup Python for reticulate (cross-platform)
       - name: Setup Python
@@ -153,13 +144,10 @@ jobs:
             libcurl4-openssl-dev libssl-dev libxml2-dev libglpk-dev
 
       - name: Install dependencies
-        run: |
-          install.packages("BiocManager", repos = "https://cloud.r-project.org")
-          BiocManager::install(ask = FALSE, update = FALSE)
-          BiocManager::install("remotes", ask = FALSE, update = FALSE)
-          remotes::install_deps(dependencies = TRUE, repos = BiocManager::repositories())
-          BiocManager::install("covr", ask = FALSE, update = FALSE)
-        shell: Rscript {0}
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            any::covr
 
       - name: Test coverage
         run: |
