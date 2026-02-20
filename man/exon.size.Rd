@@ -26,7 +26,7 @@ A vector of length 23459
 \description{
 A vector of gene lengths. This will be used to normalize the gene mutation scores by the gene's length. This example is based on hg19 gene symbols. The gene length is based on the number of non-overlapping exons.
 Data were downloaded and pre-processed as described in
-\href{https://doi.org/10.1101/228031}{Kuijjer et al.}
+Kuijjer et al. (\doi{10.1101/228031}).
 
 This data is a toy example data for SAMBAR, it contains length of Exons.
 
