@@ -53,14 +53,21 @@
 #' @export
 #'
 #' @examples
-#' data(TIGER_expr)
-#' data(TIGER_prior)
-#' tiger(TIGER_expr,TIGER_prior)
+#' if (requireNamespace("cmdstanr", quietly = TRUE) && tryCatch({
+#' nzchar(cmdstanr::cmdstan_path())}, error = function(e) FALSE)) {
+#'    data(TIGER_expr)
+#'    data(TIGER_prior)
+#'    tiger(TIGER_expr,TIGER_prior)
+#' }
 tiger = function(expr,prior,method="VB",TFexpressed = TRUE,
                  signed=TRUE,baseline=TRUE,psis_loo = FALSE,
                  seed=123,out_path=NULL,out_size = 300,
                  a_sigma=1,b_sigma=1,a_alpha=1,b_alpha=1,
                  sigmaZ=10,sigmaB=1,tol = 0.005){
+  if (!requireNamespace("cmdstanr", quietly = TRUE)) {
+    stop("Package 'cmdstanr' is required for tiger().\n",
+         "Install from: https://mc-stan.org/cmdstanr/", call. = FALSE)
+  }
   # check data
   sample.name = colnames(expr)
   if (TFexpressed){
@@ -186,6 +193,9 @@ tiger = function(expr,prior,method="VB",TFexpressed = TRUE,
   # check model fitting
   if (psis_loo){
     message("Pareto Smooth Importance Sampling...")
+    if (!requireNamespace("loo", quietly = TRUE)) {
+      stop("Package 'loo' is required but not installed.")
+    }
     loocv = loo::loo(fit$draws("log_lik",format = "draws_array"),
                      r_eff=loo::relative_eff(fit$draws("log_lik",format = "draws_array")),
                      moment_match=TRUE)
@@ -289,6 +299,9 @@ adj2regulon = function(adj){
 #' @export
 #'
 priorPp = function(prior,expr){
+  if (!requireNamespace("GeneNet", quietly = TRUE)) {
+    stop("Package 'GeneNet' is required but not installed.")
+  }
   
   # filter tfs and tgs
   tf = intersect(rownames(prior),rownames(expr)) ## TF needs to express

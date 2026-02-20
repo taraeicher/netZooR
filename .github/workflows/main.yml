@@ -9,7 +9,6 @@
 name: netZooR
 
 env:
-    ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
     GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         
@@ -28,8 +27,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 300
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         r-version: [4.4]
 
     steps:
@@ -50,35 +50,27 @@ jobs:
         with:
           cache-version: 2
           extra-packages: |
-             any::reticulate
              any::rcmdcheck
              any::covr
           needs: |
              website
              coverage
 
-      - name: Install blas/lapack
-        run: |
-            La_library()
-            extSoftVersion()["BLAS"]
-        shell: Rscript {0}
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-      - if: matrix.os == 'ubuntu-latest'
+      - name: Install Python packages
         run: |
-          sudo apt-get install python3-venv
           pip install --upgrade pip
-          python3 -m venv env
-          source env/bin/activate
-          echo "VIRTUAL ENV:" $VIRTUAL_ENV
+          pip install numpy scipy pandas joblib
+        shell: bash
 
-      - name: Install reticulate
+      - name: Set RETICULATE_PYTHON
         run: |
-            library("reticulate")
-            py_install("numpy")
-            py_install("scipy")
-            py_install("pandas")
-            py_install("joblib")
-        shell: Rscript {0}
+          echo "RETICULATE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> $GITHUB_ENV
+        shell: bash
 
       - name: Check
         uses: r-lib/actions/check-r-package@v2.11.3

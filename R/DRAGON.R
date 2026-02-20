@@ -175,13 +175,13 @@ estimatePenaltyParameters = function(X1,X2)
   #          + 4.*np.sum(eSqs12))
 
   # T1_1 = -2.*(np.sum(varS1) - np.trace(varS1) + np.sum(eSqs12))
-  T1_1 = -2*(sum(varS1) - matrixcalc::matrix.trace(as.matrix(varS1)) + sum(esqS12))
+  T1_1 = -2*(sum(varS1) - sum(diag(as.matrix(varS1))) + sum(esqS12))
   # T1_2 = -2.*(np.sum(varS2) - np.trace(varS2) + np.sum(eSqs12))
-  T1_2 = -2*(sum(varS2) - matrixcalc::matrix.trace(as.matrix(varS2)) + sum(esqS12))
+  T1_2 = -2*(sum(varS2) - sum(diag(as.matrix(varS2))) + sum(esqS12))
   # T2_1 = np.sum(eSqs1) - np.trace(eSqs1)
-  T2_1 = sum(esqS1) - matrixcalc::matrix.trace(as.matrix(esqS1))
+  T2_1 = sum(esqS1) - sum(diag(as.matrix(esqS1)))
   # T2_2 = np.sum(eSqs2) - np.trace(eSqs2)
-  T2_2 = sum(esqS2) - matrixcalc::matrix.trace(as.matrix(esqS2))
+  T2_2 = sum(esqS2) - sum(diag(as.matrix(esqS2)))
   # T3 = 2.*np.sum(eSqs12)
   T3 = 2*sum(esqS12)
   # T4 = 4.*(np.sum(varS12)-np.sum(eSqs12))
@@ -363,14 +363,12 @@ estimate_p_values_dragon = function(r, n, p1, p2, lambdas, kappa="estimate",seed
 #' @param gradient : method for estimating parameters of p-value distribution, applies only if p-val == TRUE. default = "finite_difference"; other option = "exact"
 #' @param verbose : verbosity level (TRUE/FALSE)
 #' @return A list of model results. cov : the shrunken covariance matrix
-#' \itemize{
-#'  \item{\code{cov}}{  the shrunken covariance matrix}
-#'  \item{\code{prec}}{  the shrunken precision matrix}
-#'  \item{\code{ggm}}{ the shrunken Gaussian graphical model; matrix of partial correlations. Self-edges (diagonal elements) are set to zero.}
-#'  \item{\code{lambdas}}{  Vector of omics-specific tuning parameters (lambda1, lambda2) for \code{layer1} and \code{layer2}}
-#'  \item{\code{gammas}}{  Reparameterized tuning parameters; gamma = 1 - lambda^2}
-#'  \item{\code{risk_grid}}{  Risk grid, for assessing optimization. Grid boundaries are in terms of gamma.}
-#' }
+#' \item{\code{cov}}{  the shrunken covariance matrix}
+#' \item{\code{prec}}{  the shrunken precision matrix}
+#' \item{\code{ggm}}{ the shrunken Gaussian graphical model; matrix of partial correlations. Self-edges (diagonal elements) are set to zero.}
+#' \item{\code{lambdas}}{  Vector of omics-specific tuning parameters (lambda1, lambda2) for \code{layer1} and \code{layer2}}
+#' \item{\code{gammas}}{  Reparameterized tuning parameters; gamma = 1 - lambda^2}
+#' \item{\code{risk_grid}}{  Risk grid, for assessing optimization. Grid boundaries are in terms of gamma.}
 #' 
 #' @export
 dragon = function(layer1,layer2,pval = FALSE,gradient = "finite_difference", verbose = FALSE)

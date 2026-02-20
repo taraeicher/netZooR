@@ -46,10 +46,9 @@ This function plots the MDS coordinates for the "n" features of interest. Potent
 effects or feature relationships.
 }
 \examples{
-data(skin)
-res <- plotCMDS(skin,pch=21,bg=factor(pData(skin)$SMTSD))
 \donttest{
-# library(calibrate)
-# textxy(X=res[,1],Y=res[,2],labs=rownames(res))
+u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+if(!is.null(skin)) res <- plotCMDS(skin,pch=21,bg=factor(pData(skin)$SMTSD))
 }
 }

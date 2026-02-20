@@ -2,7 +2,10 @@ context("test PANDA result")
 
 test_that("panda function works", {
 
-   
+  # Skip if Python or required modules are not available
+  skip_if_not(reticulate::py_module_available("pandas"), "Python pandas module not available")
+  skip_if_not(reticulate::py_module_available("numpy"), "Python numpy module not available")
+
   # test 1: check test error message when empty inputs
    expect_error(pandaPy())
    
@@ -27,7 +30,8 @@ test_that("panda function works", {
    # test 5: check if PANDA result is correct when arguments setting like below:
    # i.e computing = "cpu", save_memory =T , precision="single", save_memory = T, save_tmp=F, keep_expression_matrix = T, modeProcess = 'intersection'
    test2Panda <- pandaPy(T4_expression_file_path, motif_file_path,ppi_file_path,precision = "single", save_memory = T, save_tmp = F,keep_expression_matrix = TRUE, modeProcess = "intersection" )$WAMpanda
-   expect_equal(test2Panda[1,1],2.229422, tolerance=1e-5)
+   test2Panda_mat <- as.matrix(test2Panda)
+   expect_equal(test2Panda_mat[1,1],2.229422, tolerance=1e-5)
   
    # test 6: when processMode = legacy, remove_missing=FALSE
    test3Panda <- pandaPy(T4_expression_file_path, motif_file_path,ppi_file_path, modeProcess = "legacy", remove_missing = FALSE)$panda

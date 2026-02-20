@@ -19,4 +19,5 @@ This function uses the pseudo-inverse to find the optimal linear transformation 
 }
 \examples{
 a <- 1 #place holder
+
 }

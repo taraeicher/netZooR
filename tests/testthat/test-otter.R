@@ -1,7 +1,7 @@
 context("test OTTER result")
 
 test_that("otter function works", {
-   load("./testDataset.RData")
+   suppressWarnings(load("./testDataset.RData"))
    
    # Run OTTER algorithm
    otterW <- otter(W, P, C, Iter = 1, lambda = 0.0035, gamma = 0.335)

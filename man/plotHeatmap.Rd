@@ -26,17 +26,16 @@ coordinates
 This function plots a heatmap of the gene expressions forthe "n" features of interest.
 }
 \examples{
-data(skin)
-tissues <- pData(skin)$SMTSD
-plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10)
-# Even prettier
 \donttest{
-# library(RColorBrewer)
-data(skin)
-tissues <- pData(skin)$SMTSD
-heatmapColColors <- RColorBrewer::brewer.pal(12,"Set3")[as.integer(factor(tissues))]
-heatmapCols <- colorRampPalette(RColorBrewer::brewer.pal(9, "RdBu"))(50)
-plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10,
- col = heatmapCols,ColSideColors = heatmapColColors,cexRow = 0.6,cexCol = 0.6)
+u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+if(!is.null(skin)) {
+  tissues <- pData(skin)$SMTSD
+  plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10)
+  heatmapColColors <- RColorBrewer::brewer.pal(12,"Set3")[as.integer(factor(tissues))]
+  heatmapCols <- colorRampPalette(RColorBrewer::brewer.pal(9, "RdBu"))(50)
+  plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10,
+   col = heatmapCols,ColSideColors = heatmapColColors,cexRow = 0.6,cexCol = 0.6)
+}
 }
 }

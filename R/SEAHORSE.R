@@ -9,9 +9,7 @@
 #'               The measures of association 
 #'               for a numerical phenotype is Pearson correlation and
 #'               for a categorical phenotype is the p-value of an ANOVA test
-#'                
-#'
-#' Inputs:
+#'              
 #' @param expression : gene expression matrix (normalized, and filtered) 
 #'                     with rows as genes and columns as samples.
 #'                     Row and column names must be present.
@@ -24,7 +22,6 @@
 #'                               Types can be either "numeric" or "categorical" 
 #' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
-#'
 #' Outputs:
 #' @return results    : a list containing three objects
 #'         results$coexpression: a gene x gene Pearson correlation matrix.
@@ -41,7 +38,7 @@
 #' colnames(phenotype_data) = c("sex", "height")
 #' rownames(phenotype_data) = colnames(expression_data)
 #' phenotype_data$sex = c(rep("male", nrow(phenotype_data)/2), rep("female", nrow(phenotype_data)/2))
-#' phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = T)
+#' phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = TRUE)
 #' 
 #' phenotype_dictionary = c("categorical", "numeric")
 #' 
@@ -53,57 +50,13 @@
 #' # Run seahorse
 #' results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
 #'  
-#' 
-#'  
-
-
-# Function to run GSEA for a numeric phenotype
-#' @export
-#' @import fgsea
-
-gsea_numeric <- function(expression, pheno, pathways, results){
-  output_seahorse = list()
-  output_seahorse$cor = list()
-  output_seahorse$GSEA = list()
-  
-  phenotype_vector = as.numeric(pheno)
-  cor = unlist(apply(expression, MARGIN=1, function(x){cor(as.numeric(x), phenotype_vector, use="pairwise.complete.obs")}))
-  output_seahorse$cor = cor
-  
-  # Run GSEA
-  cor_rank = sort(cor, decreasing = T)
-  fgseaRes <- fgsea(pathways, cor_rank, minSize=15, maxSize=500)
-  output_seahorse$GSEA = fgseaRes
-  
-  return(output_seahorse)
-}
-
-# Function to run GSEA for a categorical phenotype
-#' @import fgsea
-#' @export
-gsea_categorical <- function(expression, pheno, pathways, results){
-  output_seahorse = list()
-  output_seahorse$cor = list()
-  output_seahorse$GSEA = list()
-  
-  phenotype_vector = factor(as.character(pheno))
-  cor = unlist(apply(expression, MARGIN=1, function(x){anova(lm(as.numeric(x)~phenotype_vector))$`Pr(>F)`[1]}))
-  output_seahorse$cor = cor
-  
-  # Run GSEA
-  cor_rank = sort(cor, decreasing = T)
-  fgseaRes <- fgsea(pathways, cor_rank, minSize=15, maxSize=500, scoreType = "pos")
-  output_seahorse$GSEA = fgseaRes
-  
-  return(output_seahorse)
-}
-
-# Main SEAHORSE function
-#' @import fgsea
 #' @export
 seahorse <- function(expression, phenotype, phenotype_dictionary, pathways){
+  if (!requireNamespace("fgsea", quietly = TRUE)) {
+    stop("Package 'fgsea' is required but not installed.")
+  }
   set.seed(0)
-
+  
   results = list()
   
   # Compute coexpression of genes
@@ -118,10 +71,72 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways){
     pheno_name = colnames(phenotype)[i]
     
     if (phenotype_dictionary[i] == "numeric"){
-      output_seahorse = gsea_numeric(expression, pheno, pathways, results)
-    }else {output_seahorse = gsea_categorical(expression, pheno, pathways, results)}
+      output_seahorse = gsea_numeric(expression, pheno, pathways)
+    }else {output_seahorse = gsea_categorical(expression, pheno, pathways)}
     results$phenotype_association[[pheno_name]] = output_seahorse$cor
     results$GSEA[[pheno_name]] = output_seahorse$GSEA
   }
   return(results)
+}
+
+#' Function to run GSEA for a numeric phenotype
+#' @param expression : gene expression matrix (normalized, and filtered) 
+#'                     with rows as genes and columns as samples.
+#'                     Row and column names must be present.
+#'                     Row names must be HGNC symbols.
+#'                     Column names must match the row names of the phenotype matrix.
+#' @param pheno : phenotype matrix
+#'                    with rows as samples and columns as phenotype variables.
+#' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
+#'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
+#' @export
+gsea_numeric <- function(expression, pheno, pathways){
+  if (!requireNamespace("fgsea", quietly = TRUE)) {
+    stop("Package 'fgsea' is required but not installed.")
+  }
+  output_seahorse = list()
+  output_seahorse$cor = list()
+  output_seahorse$GSEA = list()
+  
+  phenotype_vector = as.numeric(pheno)
+  cor = unlist(apply(expression, MARGIN=1, function(x){cor(as.numeric(x), phenotype_vector, use="pairwise.complete.obs")}))
+  output_seahorse$cor = cor
+  
+  # Run GSEA
+  cor_rank = sort(cor, decreasing = T)
+  fgseaRes <- fgsea::fgsea(pathways, cor_rank, minSize=15, maxSize=500)
+  output_seahorse$GSEA = fgseaRes
+  
+  return(output_seahorse)
+}
+
+#' Function to run GSEA for a categorical phenotype
+#' @param expression : gene expression matrix (normalized, and filtered) 
+#'                     with rows as genes and columns as samples.
+#'                     Row and column names must be present.
+#'                     Row names must be HGNC symbols.
+#'                     Column names must match the row names of the phenotype matrix.
+#' @param pheno : phenotype matrix
+#'                    with rows as samples and columns as phenotype variables.
+#' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
+#'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
+#' @export
+gsea_categorical <- function(expression, pheno, pathways){
+  if (!requireNamespace("fgsea", quietly = TRUE)) {
+    stop("Package 'fgsea' is required but not installed.")
+  }
+  output_seahorse = list()
+  output_seahorse$cor = list()
+  output_seahorse$GSEA = list()
+  
+  phenotype_vector = factor(as.character(pheno))
+  cor = unlist(apply(expression, MARGIN=1, function(x){anova(lm(as.numeric(x)~phenotype_vector))$`Pr(>F)`[1]}))
+  output_seahorse$cor = cor
+  
+  # Run GSEA
+  cor_rank = sort(cor, decreasing = T)
+  fgseaRes <- fgsea::fgsea(pathways, cor_rank, minSize=15, maxSize=500, scoreType = "pos")
+  output_seahorse$GSEA = fgseaRes
+  
+  return(output_seahorse)
 }

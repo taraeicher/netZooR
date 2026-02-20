@@ -3,7 +3,7 @@
 #' \strong{PANDA}(Passing Attributes between Networks for Data Assimilation) is a message-passing model 
 #' to reconstruct gene regulatory network, which integrates multiple sources of biological data-including protein-protein interaction data,
 #' gene expression data, and transcription factor binding motifs data to reconstruct genome-wide, condition-specific regulatory networks.
-#' \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0064832}{[(Glass et al. 2013)])}
+#' \doi{10.1371/journal.pone.0064832}{(Glass et al. 2013)}
 #' This function is designed to run the a derived PANDA implementation in Python Library "netZooPy" \href{https://github.com/netZoo/netZooPy}{netZooPy}.
 #'
 #' @param expr_file Character string indicating the file path of expression values file, with each gene(in rows) across samples(in columns).

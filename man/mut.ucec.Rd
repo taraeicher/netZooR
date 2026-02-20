@@ -20,7 +20,7 @@ A table of 19754 genes by 248 samples
 \description{
 Somatic mutations of Uterine Corpus Endometrial Carcinoma from The Cancer Genome Atlas.
 Data were downloaded and pre-processed as described in
-\href{https://doi.org/10.1101/228031}{Kuijjer et al.}
+Kuijjer et al. (\doi{10.1101/228031}).
 
 This data is a toy example data for SAMBAR, it contains gene annotations
 }

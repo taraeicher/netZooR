@@ -98,7 +98,7 @@ sambarDesparsify <- function(edgx, mutratecorx){ # edgx=edg, mutratecorx=mutrate
 #'
 #' A vector of gene lengths. This will be used to normalize the gene mutation scores by the gene's length. This example is based on hg19 gene symbols. The gene length is based on the number of non-overlapping exons.
 #' Data were downloaded and pre-processed as described in
-#' \href{https://doi.org/10.1101/228031}{Kuijjer et al.}
+#' Kuijjer et al. (\doi{10.1101/228031}).
 #'
 #' @docType data
 #' @keywords datasets
@@ -110,7 +110,7 @@ NULL
 #' Example of a gene list
 #'
 #' List of cancer-associated genes to subset the mutation data to, as described in
-#' \href{https://doi.org/10.1101/228031}{Kuijjer et al.}
+#' Kuijjer et al. (\doi{10.1101/228031}).
 #'
 #' @docType data
 #' @keywords datasets
@@ -123,7 +123,7 @@ NULL
 #'
 #' Somatic mutations of Uterine Corpus Endometrial Carcinoma from The Cancer Genome Atlas.
 #' Data were downloaded and pre-processed as described in
-#' \href{https://doi.org/10.1101/228031}{Kuijjer et al.}
+#' Kuijjer et al. (\doi{10.1101/228031}).
 #'
 #' @docType data
 #' @keywords datasets
@@ -139,7 +139,6 @@ NULL
 #' @param cangenes A vector of genes, for example of cancer-associated genes. This will be used to subset the gene-level mutation data to.
 #' @param kmin The minimum number of subtypes the user wants to assess. Defaults to 2.
 #' @param kmax The maximum number of subtypes the user wants to assess. Defaults to 4.
-#' @rawNamespace import(vegan, except=diversity)
 #' @rawNamespace import(stats, except= c(cov2cor,decompose,toeplitz,lowess,update,spectrum))
 #' @return A list of samples and the subtypes to which these samples are assigned, for each k.
 #' @examples 
@@ -151,6 +150,10 @@ NULL
 #'        cangenes=genes, kmin=2, kmax=4)
 #' @export
 sambar <- function(mutdata=mut.ucec, esize=exon.size, signatureset=system.file("extdata", "h.all.v6.1.symbols.gmt", package = "netZooR", mustWork = TRUE), cangenes=genes, kmin=2, kmax=4){
+  
+  if (!requireNamespace("vegan", quietly = TRUE)) {
+    stop("Package 'vegan' is required for sambar. Install with: install.packages('vegan')")
+  }
   
   # convert gmt file to binary matrix, subset to cancer-associated genes
   edg <- sambarConvertgmt(signature=signatureset, cagenes=cangenes)

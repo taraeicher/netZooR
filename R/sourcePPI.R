@@ -27,12 +27,14 @@
 #' # write out locally then can be used in \code{\link{pandaPy}}.
 #' 
 #' @return A PPI data.frame which contains three columns: "from" and "to" indicating the direction of protein-protein interaction, and "score" indicating the interaction score between two proteins.
-#' @import STRINGdb
 #' @export
 
 sourcePPI <- function(TF, STRING.version="10", species.index, ...){
+  if(!requireNamespace("STRINGdb", quietly = TRUE)){
+    stop("Package 'STRINGdb' is needed for sourcePPI. Please install it.", call. = FALSE)
+  }
   # creat a new STRINGdb class.
-  string_db=STRINGdb$new(version=STRING.version, species=as.numeric(species.index),...)
+  string_db=STRINGdb::STRINGdb$new(version=STRING.version, species=as.numeric(species.index),...)
   # change the colname to "TF"
   colnames(TF) <- "TF"
   # map the TF to STRINGdb dataset
