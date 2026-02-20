@@ -32,6 +32,9 @@ jobs:
           - os: macos-latest
             r-version: "release"
             bioc-version: "release"
+          - os: windows-latest
+            r-version: "release"
+            bioc-version: "release"
 
     steps:
       - name: Checkout repository
@@ -55,8 +58,7 @@ jobs:
             libcurl4-openssl-dev \
             libssl-dev \
             libxml2-dev \
-            libglpk-dev \
-            python3-venv
+            libglpk-dev
 
       # Install BiocManager — version auto-detected from R version
       - name: Install BiocManager
@@ -75,20 +77,21 @@ jobs:
           BiocManager::install(c("BiocCheck", "rcmdcheck"), ask = FALSE, update = FALSE)
         shell: Rscript {0}
 
-      # Setup Python for reticulate
+      # Setup Python for reticulate (cross-platform)
       - name: Setup Python
-        if: runner.os == 'Linux'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Python packages
         run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
           pip install --upgrade pip
           pip install numpy scipy pandas
 
       - name: Configure reticulate
-        if: runner.os == 'Linux'
         run: |
           library(reticulate)
-          use_virtualenv(".venv", required = TRUE)
+          use_python(Sys.which("python"), required = TRUE)
           py_config()
         shell: Rscript {0}
 

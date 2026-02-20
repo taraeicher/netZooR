@@ -27,8 +27,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 300
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         r-version: [4.4]
 
     steps:
@@ -55,22 +56,21 @@ jobs:
              website
              coverage
 
-      - if: matrix.os == 'ubuntu-latest'
-        name: Setup Python venv
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Python packages
         run: |
-          sudo apt-get install -y python3-venv
-          python3 -m venv env
-          source env/bin/activate
           pip install --upgrade pip
-          echo "VIRTUAL ENV:" $VIRTUAL_ENV
-  
-      - name: Install reticulate
+          pip install numpy scipy pandas joblib
+
+      - name: Configure reticulate
         run: |
             library("reticulate")
-            py_install("numpy")
-            py_install("scipy")
-            py_install("pandas")
-            py_install("joblib")
+            use_python(Sys.which("python"), required = TRUE)
+            py_config()
         shell: Rscript {0}
 
       - name: Check
