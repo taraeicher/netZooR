@@ -87,18 +87,18 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install numpy scipy pandas
+        shell: bash
 
-      - name: Configure reticulate
+      - name: Set RETICULATE_PYTHON
         run: |
-          library(reticulate)
-          use_python(Sys.which("python"), required = TRUE)
-          py_config()
-        shell: Rscript {0}
+          echo "RETICULATE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> $GITHUB_ENV
+        shell: bash
 
       # R CMD build (mirrors BBS: build step)
       - name: Build package
         run: |
           R CMD build . --no-build-vignettes
+        shell: bash
 
       # R CMD check (mirrors BBS: check step with --no-vignettes)
       - name: R CMD check
@@ -109,6 +109,7 @@ jobs:
             --no-vignettes \
             --timings \
             --install-args="--build"
+        shell: bash
         env:
           _R_CHECK_CRAN_INCOMING_: false
           _R_CHECK_FORCE_SUGGESTS_: false
@@ -117,6 +118,7 @@ jobs:
         if: always()
         run: |
           cat netZooR.Rcheck/00check.log
+        shell: bash
 
       # BiocCheck (mirrors BBS: BiocCheck step)
       - name: BiocCheck

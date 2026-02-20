@@ -65,13 +65,12 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install numpy scipy pandas joblib
+        shell: bash
 
-      - name: Configure reticulate
+      - name: Set RETICULATE_PYTHON
         run: |
-            library("reticulate")
-            use_python(Sys.which("python"), required = TRUE)
-            py_config()
-        shell: Rscript {0}
+          echo "RETICULATE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> $GITHUB_ENV
+        shell: bash
 
       - name: Check
         uses: r-lib/actions/check-r-package@v2.11.3
