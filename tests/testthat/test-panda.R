@@ -5,8 +5,6 @@ test_that("panda function works", {
   # Skip if Python or required modules are not available
   skip_if_not(reticulate::py_module_available("pandas"), "Python pandas module not available")
   skip_if_not(reticulate::py_module_available("numpy"), "Python numpy module not available")
-  # pandaPy's underlying Python code hardcodes /tmp/ paths
-  skip_on_os("windows")
 
   # test 1: check test error message when empty inputs
    expect_error(pandaPy())

@@ -4,6 +4,7 @@ import pandas as pd
 from scipy.stats import zscore
 import numpy as np
 import os
+import tempfile
 import math
 
 #
@@ -451,10 +452,11 @@ class Panda(object):
         # =====================================================================
         if save_tmp:
             with Timer("Saving expression matrix and normalized networks ..."):
+                _tmpdir = tempfile.gettempdir()
                 if self.expression_data is not None:
-                    np.save("/tmp/expression.npy", self.expression_data.values)
-                np.save("/tmp/motif.normalized.npy", self.motif_matrix)
-                np.save("/tmp/ppi.normalized.npy", self.ppi_matrix)
+                    np.save(os.path.join(_tmpdir, "expression.npy"), self.expression_data.values)
+                np.save(os.path.join(_tmpdir, "motif.normalized.npy"), self.motif_matrix)
+                np.save(os.path.join(_tmpdir, "ppi.normalized.npy"), self.ppi_matrix)
 
         # delete expression data
         del self.expression_data
