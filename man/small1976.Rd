@@ -21,6 +21,6 @@ A dataset containing the number of interactions 34 plants and 13 pollinators. Th
 }
 }
 \references{
-\url{https://www.nceas.ucsb.edu/interactionweb/html/small_1976.html}
+Small (1976) Pollinator-plant interactions dataset.
 }
 \keyword{datasets}

@@ -2,7 +2,10 @@ context("test PANDA result")
 
 test_that("panda function works", {
 
-   
+  # Skip if Python or required modules are not available
+  skip_if_not(reticulate::py_module_available("pandas"), "Python pandas module not available")
+  skip_if_not(reticulate::py_module_available("numpy"), "Python numpy module not available")
+
   # test 1: check test error message when empty inputs
    expect_error(pandaPy())
    

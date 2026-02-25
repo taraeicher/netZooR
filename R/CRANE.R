@@ -565,7 +565,7 @@ elistToAdjMat= function(elist,isBipartite=F){
     elist=elistAddTags(elist)
   }
   colnames(elist)=c('from','to','weight')
-  A_up = as.matrix(get.adjacency(graph.data.frame(elist),attr = 'weight')) # upper triangular matrix
+  A_up = as.matrix(as_adjacency_matrix(graph_from_data_frame(elist),attr = 'weight')) # upper triangular matrix
   A = A_up[rownames(A_up) %in% elist[,1], colnames(A_up) %in% elist[,2]]
   return(A)
 }

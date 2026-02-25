@@ -25,10 +25,14 @@ A density plot for each column in the ExpressionSet object colored by groups
 Plots the density of the columns of a matrix. Wrapper for \code{\link[quantro]{matdensity}}.
 }
 \examples{
-data(skin)
-filtData <- filterLowGenes(skin,"SMTSD")
-plotDensity(filtData,groups="SMTSD",legendPos="topleft")
-# to remove the legend
-plotDensity(filtData,groups="SMTSD")
+\donttest{
+u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+if(!is.null(skin)) {
+  filtData <- filterLowGenes(skin,"SMTSD")
+  plotDensity(filtData,groups="SMTSD",legendPos="topleft")
+  plotDensity(filtData,groups="SMTSD")
+}
+}
 
 }

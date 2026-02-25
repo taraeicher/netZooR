@@ -11,8 +11,6 @@
 #' @return ExpressionSet object with a fuller featureData.
 #' @export
 #'
-#' @importFrom biomaRt useMart
-#' @importFrom biomaRt getBM
 #' @importFrom Biobase featureNames
 #' @importFrom Biobase fData
 #' @importFrom Biobase fData<-
@@ -20,6 +18,7 @@
 #' @importClassesFrom Biobase ExpressionSet
 #'
 #' @examples
+#' \dontrun{
 #' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/'
 #' bladder <- paste0(u, 'yarn/bladder.rdata')
 #' skin <- paste0(u, 'yarn/skin.rdata')
@@ -33,12 +32,16 @@
 #' genes <- sapply(strsplit(rownames(skin),split="\\."),function(i)i[1])
 #' newskin <-annotateFromBiomart(skin,genes=genes,biomart=biomart)
 #' head(fData(newskin)[,7:11])
+#' }
 #'
 annotateFromBiomart <- function(obj,genes=featureNames(obj),filters="ensembl_gene_id",
                                 attributes=c("ensembl_gene_id","hgnc_symbol","chromosome_name","start_position","end_position"),
                                 biomart="ensembl",dataset="hsapiens_gene_ensembl",...){
-  mart <- useMart(biomart=biomart,dataset=dataset,...)
-  anno <- getBM(attributes = attributes, filters = filters,
+  if (!requireNamespace("biomaRt", quietly = TRUE)) {
+    stop("Package 'biomaRt' is required for annotateFromBiomart(). Please install it.", call. = FALSE)
+  }
+  mart <- biomaRt::useMart(biomart=biomart,dataset=dataset,...)
+  anno <- biomaRt::getBM(attributes = attributes, filters = filters,
                 values = genes, mart = mart)
   if(nrow(anno)<length(genes)){
     warning("getBM returned fewer rows than genes queried.")
@@ -70,8 +73,11 @@ annotateFromBiomart <- function(obj,genes=featureNames(obj),filters="ensembl_gen
 #' @export
 #'
 #' @examples
-#' data(bladder)
-#' checkMisAnnotation(bladder,'GENDER',controlGenes='Y',legendPosition='topleft')
+#' \donttest{
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' bladder <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'bladder.rdata'),tmp,quiet=TRUE); local({load(tmp);get('bladder')})}, error=function(e) NULL)
+#' if(!is.null(bladder)) checkMisAnnotation(bladder,'GENDER',controlGenes='Y',legendPosition='topleft')
+#' }
 #'
 checkMisAnnotation <- function(obj, phenotype, controlGenes = "all",
                                columnID = "chromosome_name", plotFlag = TRUE, legendPosition = NULL,
@@ -105,8 +111,11 @@ checkMisAnnotation <- function(obj, phenotype, controlGenes = "all",
 #' @seealso checkTissuesToMerge
 #'
 #' @examples
-#' data(skin)
-#' checkTissuesToMerge(skin,'SMTS','SMTSD')
+#' \donttest{
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) checkTissuesToMerge(skin,'SMTS','SMTSD')
+#' }
 #'
 checkTissuesToMerge <- function(obj, majorGroups, minorGroups,
                                 filterFun = NULL, plotFlag = TRUE, ...) {
@@ -141,9 +150,6 @@ checkTissuesToMerge <- function(obj, majorGroups, minorGroups,
 #' @return Organized ExpressionSet set.
 #' @export
 #'
-#' @importFrom downloader download
-#' @importFrom readr read_tsv
-#' @importFrom readr problems
 #' @importFrom Biobase AnnotatedDataFrame
 #' @importFrom Biobase phenoData<-
 #' @importFrom Biobase pData<-
@@ -151,22 +157,28 @@ checkTissuesToMerge <- function(obj, majorGroups, minorGroups,
 #' @examples
 #' # obj <- downloadGTEx(type='genes',file='~/Desktop/gtex.rds')
 downloadGTEx <- function(type = "genes", file = NULL, ...) {
+  if (!requireNamespace("downloader", quietly = TRUE)) {
+    stop("Package 'downloader' is required for downloadGTEx(). Please install it.", call. = FALSE)
+  }
+  if (!requireNamespace("readr", quietly = TRUE)) {
+    stop("Package 'readr' is required for downloadGTEx(). Please install it.", call. = FALSE)
+  }
   phenoFile <- "http://www.gtexportal.org/static/datasets/gtex_analysis_v6/annotations/GTEx_Data_V6_Annotations_SampleAttributesDS.txt"
   pheno2File <- "http://www.gtexportal.org/static/datasets/gtex_analysis_v6/annotations/GTEx_Data_V6_Annotations_SubjectPhenotypesDS.txt"
   geneFile <- "http://www.gtexportal.org/static/datasets/gtex_analysis_v6/rna_seq_data/GTEx_Analysis_v6_RNA-seq_RNA-SeQCv1.1.8_gene_reads.gct.gz"
   
   message("Downloading and reading files")
   pdFile <- tempfile("phenodat", fileext = ".txt")
-  download(phenoFile, destfile = pdFile)
-  pd <- read_tsv(pdFile)
+  downloader::download(phenoFile, destfile = pdFile)
+  pd <- readr::read_tsv(pdFile)
   pd <- as.matrix(pd)
   rownames(pd) <- pd[, "SAMPID"]
   ids <- sapply(strsplit(pd[, "SAMPID"], "-"), function(i) paste(i[1:2],
                                                                  collapse = "-"))
   
   pd2File <- tempfile("phenodat2", fileext = ".txt")
-  download(pheno2File, destfile = pd2File)
-  pd2 <- read_tsv(pd2File)
+  downloader::download(pheno2File, destfile = pd2File)
+  pd2 <- readr::read_tsv(pd2File)
   pd2 <- as.matrix(pd2)
   rownames(pd2) <- pd2[, "SUBJID"]
   pd2 <- pd2[which(rownames(pd2) %in% unique(ids)), ]
@@ -177,15 +189,15 @@ downloadGTEx <- function(type = "genes", file = NULL, ...) {
   
   if (type == "genes") {
     countsFile <- tempfile("counts", fileext = ".gz")
-    download(geneFile, destfile = countsFile)
-    cnts <- suppressWarnings(read_tsv(geneFile, skip = 2))
+    downloader::download(geneFile, destfile = countsFile)
+    cnts <- suppressWarnings(readr::read_tsv(geneFile, skip = 2))
     genes <- unlist(cnts[, 1])
     geneNames <- unlist(cnts[, 2])
     counts <- cnts[, -c(1:2)]
     counts <- as.matrix(counts)
     rownames(counts) <- genes
-    for (i in 1:nrow(problems(cnts))) {
-      counts[problems(cnts)$row[i], problems(cnts)$col[i]] <- 1e+05
+    for (i in 1:nrow(readr::problems(cnts))) {
+      counts[readr::problems(cnts)$row[i], readr::problems(cnts)$col[i]] <- 1e+05
     }
     throwAway <- which(rowSums(counts) == 0)
     counts <- counts[-throwAway, ]
@@ -232,10 +244,12 @@ downloadGTEx <- function(type = "genes", file = NULL, ...) {
 #' @importFrom Biobase assayData
 #' @return matrix
 #' @examples
-#'
-#' data(skin)
-#' head(netZooR:::extractMatrix(skin,normalized=FALSE,log=TRUE))
-#' head(netZooR:::extractMatrix(skin,normalized=FALSE,log=FALSE))
+#' \donttest{
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) head(netZooR:::extractMatrix(skin,normalized=FALSE,log=TRUE))
+#' if(!is.null(skin)) head(netZooR:::extractMatrix(skin,normalized=FALSE,log=FALSE))
+#' }
 #'
 extractMatrix <- function(obj, normalized = FALSE, log = TRUE) {
   if (is(obj, "ExpressionSet")) {
@@ -273,9 +287,12 @@ extractMatrix <- function(obj, normalized = FALSE, log = TRUE) {
 #' @importFrom Biobase fData
 #'
 #' @examples
-#' data(skin)
-#' filterGenes(skin,labels = c('X','Y','MT'),featureName='chromosome_name')
-#' filterGenes(skin,labels = 'protein_coding',featureName='gene_biotype',keepOnly=TRUE)
+#' \donttest{
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) filterGenes(skin,labels=c('X','Y','MT'),featureName='chromosome_name')
+#' if(!is.null(skin)) filterGenes(skin,labels='protein_coding',featureName='gene_biotype',keepOnly=TRUE)
+#' }
 #'
 filterGenes <- function(obj, labels = c("X", "Y", "MT"), featureName = "chromosome_name",
                         keepOnly = FALSE) {
@@ -302,16 +319,21 @@ filterGenes <- function(obj, labels = c("X", "Y", "MT"), featureName = "chromoso
 #' @return Filtered ExpressionSet object
 #' @export
 #'
-#' @importFrom edgeR cpm
 #' @importFrom Biobase exprs
 #' @importFrom Biobase pData
 #'
 #' @examples
-#' data(skin)
-#' filterLowGenes(skin,'SMTSD')
+#' \donttest{
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) filterLowGenes(skin,'SMTSD')
+#' }
 #'
 filterLowGenes <- function(obj, groups, threshold = 1, minSamples = NULL,
                            ...) {
+  if (!requireNamespace("edgeR", quietly = TRUE)) {
+    stop("Package 'edgeR' is required for filterLowGenes(). Please install it.", call. = FALSE)
+  }
   if (is.null(minSamples)) {
     if (length(groups) == 1) {
       minSamples <- min(table(pData(obj)[, groups]))/2
@@ -319,7 +341,7 @@ filterLowGenes <- function(obj, groups, threshold = 1, minSamples = NULL,
       minSamples <- min(table(groups))/2
     }
   }
-  counts <- cpm(exprs(obj), ...)
+  counts <- edgeR::cpm(exprs(obj), ...)
   keep <- rowSums(counts > threshold) >= minSamples
   obj <- obj[keep, ]
   obj
@@ -339,13 +361,16 @@ filterLowGenes <- function(obj, groups, threshold = 1, minSamples = NULL,
 #' @importFrom Biobase fData
 #'
 #' @examples
-#' data(skin)
-#' filterMissingGenes(skin)
+#' \donttest{
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) filterMissingGenes(skin)
+#' }
 #'
 filterMissingGenes <- function(obj, threshold = 0) {
   sumGenes <- rowSums(exprs(obj))
   throwAwayGenes <- which(sumGenes <= threshold)
-  if (length(which(sumGenes <= 0)) > 0) {
+  if (length(throwAwayGenes) > 0) {
     obj <- obj[-throwAwayGenes, ]
   }
   obj
@@ -365,9 +390,12 @@ filterMissingGenes <- function(obj, threshold = 0) {
 #' @importFrom Biobase pData
 #'
 #' @examples
-#' data(skin)
-#' filterSamples(skin,ids = "Skin - Not Sun Exposed (Suprapubic)",groups="SMTSD")
-#' filterSamples(skin,ids=c("GTEX-OHPL-0008-SM-4E3I9","GTEX-145MN-1526-SM-5SI9T"))
+#' \donttest{
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) filterSamples(skin,ids="Skin - Not Sun Exposed (Suprapubic)",groups="SMTSD")
+#' if(!is.null(skin)) filterSamples(skin,ids=c("GTEX-OHPL-0008-SM-4E3I9","GTEX-145MN-1526-SM-5SI9T"))
+#' }
 #'
 filterSamples <- function(obj, ids, groups = colnames(obj), keepOnly = FALSE) {
   if (length(groups) == 1) {
@@ -401,21 +429,25 @@ filterSamples <- function(obj, ids, groups = colnames(obj), keepOnly = FALSE) {
 #' @source The function qsmooth comes from the qsmooth packages
 #' currently available on github under user 'kokrah'.
 #'
-#' @importFrom limma normalizeQuantiles
 #' @importFrom Biobase storageMode
 #' @importFrom Biobase storageMode<-
 #' @importFrom Biobase assayData
 #' @importFrom Biobase assayData<-
-#' @importFrom preprocessCore normalize.quantiles
 #' @importClassesFrom Biobase eSet
 #' @importClassesFrom Biobase ExpressionSet
 #'
 #' @examples
-#' data(skin)
-#' normalizeTissueAware(skin,"SMTSD")
+#' \donttest{
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) normalizeTissueAware(skin,"SMTSD")
+#' }
 #'
 normalizeTissueAware <- function(obj, groups, normalizationMethod = c("qsmooth",
                                                                       "quantile"), ...) {
+  if (!requireNamespace("preprocessCore", quietly = TRUE)) {
+    stop("Package 'preprocessCore' is required for normalizeTissueAware(). Please install it.", call. = FALSE)
+  }
   normalizationMethod <- match.arg(normalizationMethod)
   if (length(groups) == 1) {
     groups <- factor(pData(obj)[, groups])
@@ -428,7 +460,7 @@ normalizeTissueAware <- function(obj, groups, normalizationMethod = c("qsmooth",
     if(length(unique(groups))>1){
       normalizedMatrix <- sapply(unique(groups), function(i) {
         cnts <- exprs(obj[, which(pData(obj)$our %in% i)])
-        nmat <- normalize.quantiles(cnts)
+        nmat <- preprocessCore::normalize.quantiles(cnts)
         colnames(nmat) <- colnames(cnts)
         nmat
       })
@@ -436,7 +468,7 @@ normalizeTissueAware <- function(obj, groups, normalizationMethod = c("qsmooth",
       normalizedMatrix <- normalizedMatrix[, match(colnames(obj),
                                                    colnames(normalizedMatrix))]
     } else {
-      normalizedMatrix <- normalize.quantiles(exprs(obj))
+      normalizedMatrix <- preprocessCore::normalize.quantiles(exprs(obj))
       colnames(normalizedMatrix) <- colnames(obj)
     }
   }
@@ -469,11 +501,10 @@ normalizeTissueAware <- function(obj, groups, normalizationMethod = c("qsmooth",
 #'
 #' @export
 #' @examples
-#' data(skin)
-#' res <- plotCMDS(skin,pch=21,bg=factor(pData(skin)$SMTSD))
 #' \donttest{
-#' # library(calibrate)
-#' # textxy(X=res[,1],Y=res[,2],labs=rownames(res))
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) res <- plotCMDS(skin,pch=21,bg=factor(pData(skin)$SMTSD))
 #' }
 plotCMDS <- function(obj, comp = 1:2, normalized = FALSE, distFun = dist,
                      distMethod = "euclidian", n = NULL, samples = TRUE, log = TRUE,
@@ -513,25 +544,31 @@ plotCMDS <- function(obj, comp = 1:2, normalized = FALSE, distFun = dist,
 #' @return A density plot for each column in the ExpressionSet object colored by groups
 #' @export
 #'
-#' @importFrom quantro matdensity
 #' @importFrom Biobase assayData
 #' @importFrom Biobase storageMode
 #' @importFrom graphics legend
 #'
 #' @examples
-#' data(skin)
-#' filtData <- filterLowGenes(skin,"SMTSD")
-#' plotDensity(filtData,groups="SMTSD",legendPos="topleft")
-#' # to remove the legend
-#' plotDensity(filtData,groups="SMTSD")
+#' \donttest{
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) {
+#'   filtData <- filterLowGenes(skin,"SMTSD")
+#'   plotDensity(filtData,groups="SMTSD",legendPos="topleft")
+#'   plotDensity(filtData,groups="SMTSD")
+#' }
+#' }
 #'
 plotDensity <- function(obj, groups = NULL, normalized = FALSE,
                         legendPos = NULL, ...) {
+  if (!requireNamespace("quantro", quietly = TRUE)) {
+    stop("Package 'quantro' is required for plotDensity(). Please install it.", call. = FALSE)
+  }
   if (length(groups) == 1) {
     groups <- factor(pData(obj)[, groups])
   }
   mat <- extractMatrix(obj, normalized, log = TRUE)
-  matdensity(mat, groupFactor = groups, ...)
+  quantro::matdensity(mat, groupFactor = groups, ...)
   if (!is.null(legendPos)) {
     legend(legendPos, legend = levels(groups), fill = 1:length(levels(groups)),
            box.col = NA)
@@ -550,27 +587,27 @@ plotDensity <- function(obj, groups = NULL, normalized = FALSE,
 #' @param ... Additional plot arguments for \code{\link[gplots]{heatmap.2}}.
 #' @return coordinates
 #'
-#' @importFrom gplots heatmap.2
-#' @importFrom RColorBrewer brewer.pal
 #' @importFrom stats sd
 #'
 #' @export
 #' @examples
-#' data(skin)
-#' tissues <- pData(skin)$SMTSD
-#' plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10)
-#' # Even prettier
 #' \donttest{
-#' # library(RColorBrewer)
-#' data(skin)
-#' tissues <- pData(skin)$SMTSD
-#' heatmapColColors <- RColorBrewer::brewer.pal(12,"Set3")[as.integer(factor(tissues))]
-#' heatmapCols <- colorRampPalette(RColorBrewer::brewer.pal(9, "RdBu"))(50)
-#' plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10,
-#'  col = heatmapCols,ColSideColors = heatmapColColors,cexRow = 0.6,cexCol = 0.6)
-#'}
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) {
+#'   tissues <- pData(skin)$SMTSD
+#'   plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10)
+#'   heatmapColColors <- RColorBrewer::brewer.pal(12,"Set3")[as.integer(factor(tissues))]
+#'   heatmapCols <- colorRampPalette(RColorBrewer::brewer.pal(9, "RdBu"))(50)
+#'   plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10,
+#'    col = heatmapCols,ColSideColors = heatmapColColors,cexRow = 0.6,cexCol = 0.6)
+#' }
+#' }
 plotHeatmap <- function(obj, n = NULL, fun = stats::sd, normalized = TRUE,
                         log = TRUE, ...) {
+  if (!requireNamespace("gplots", quietly = TRUE)) {
+    stop("Package 'gplots' is required for plotHeatmap(). Please install it.", call. = FALSE)
+  }
   if (is.null(n))
     n <- min(nrow(obj), 100)
   mat <- extractMatrix(obj, normalized, log)
@@ -578,7 +615,7 @@ plotHeatmap <- function(obj, n = NULL, fun = stats::sd, normalized = TRUE,
   geneStats <- apply(mat[genesToKeep, ], 1, fun)
   geneIndices <- genesToKeep[order(geneStats, decreasing = TRUE)[seq_len(n)]]
   mat <- mat[geneIndices, ]
-  heatmap.2(mat, ...)
+  gplots::heatmap.2(mat, ...)
   invisible(mat)
 }
 
@@ -601,8 +638,11 @@ plotHeatmap <- function(obj, n = NULL, fun = stats::sd, normalized = TRUE,
 #'
 #' @source \href{https://raw.githubusercontent.com/kokrah/qsmooth/master/R/qsmooth.r}{Kwame Okrah's qsmooth R package}
 #' @examples
-#' data(skin)
-#' head(netZooR:::qsmooth(skin,groups=pData(skin)$SMTSD))
+#' \donttest{
+#' u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+#' skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+#' if(!is.null(skin)) head(netZooR:::qsmooth(skin,groups=pData(skin)$SMTSD))
+#' }
 #'
 qsmooth <- function(obj, groups, norm.factors = NULL, plot = FALSE,
                     window = 0.05,log=TRUE) {
@@ -717,58 +757,3 @@ qstats <- function(exprs, groups, window) {
        SSB = SSB, SSE = SST - SSB, roughWeights = roughWeights,
        smoothWeights = smoothWeights)
 }
-
-#' Skin RNA-seq data from the GTEx consortium
-#'
-#' Skin RNA-seq data from the GTEx consortium. V6 release. Random selection of 20 skin samples.
-#' 13 of the samples are fibroblast cells, 5 Skin sun exposed, 2 sun unexposed.
-#'
-#' @docType data
-#'
-#' @usage data(skin)
-#'
-#' @format An object of class \code{"ExpressionSet"}; see \code{\link[Biobase]{ExpressionSet}}.
-#'
-#' @keywords datasets
-#'
-#' @return ExpressionSet object
-#'
-#' @references GTEx Consortium, 2015. The Genotype-Tissue Expression (GTEx) pilot analysis: Multitissue gene regulation in humans. Science, 348(6235), pp.648-660.
-#' (\href{http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4547484/}{PubMed})
-#'
-#' @source GTEx Portal
-#' @name skin
-#' @examples
-#' \donttest{data(skin);
-#' checkMisAnnotation(skin,"GENDER");}
-system('wget https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/skin.rdata')
-system('mv skin.rdata data/')
-"skin"
-
-
-
-#' Bladder RNA-seq data from the GTEx consortium
-#'
-#' Bladder RNA-seq data from the GTEx consortium. V6 release.
-#'
-#' @docType data
-#'
-#' @usage data(bladder)
-#'
-#' @format An object of class \code{"ExpressionSet"}; see \code{\link[Biobase]{ExpressionSet}}.
-#'
-#' @keywords datasets
-#'
-#' @references GTEx Consortium, 2015. The Genotype-Tissue Expression (GTEx) pilot analysis: Multitissue gene regulation in humans. Science, 348(6235), pp.648-660.
-#' (\href{http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4547484/}{PubMed})
-#'
-#' @source GTEx Portal
-#'
-#' @return ExpressionSet object
-#' @name bladder
-#' @examples
-#' \donttest{data(bladder);
-#' checkMisAnnotation(bladder, "GENDER");}
-system('wget https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/bladder.rdata')
-system('mv bladder.rdata data/')
-"bladder"

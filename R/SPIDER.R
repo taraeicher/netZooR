@@ -64,8 +64,10 @@ spider <- function(motif,expr=NULL,epifilter=NULL,ppi=NULL,alpha=0.1,hamming=0.0
   if(progress)
     print('Initializing and validating')
   
-  if(any(epifilter[,c(1,2)] != motif[,c(1,2)])){
-    stop('Chromatin accessibility data does not match motif data size and order.')
+  if(!is.null(epifilter)){
+    if(any(epifilter[,c(1,2)] != motif[,c(1,2)])){
+      stop('Chromatin accessibility data does not match motif data size and order.')
+    }
   }
   
   if(is(expr, "ExpressionSet"))
@@ -98,7 +100,11 @@ spider <- function(motif,expr=NULL,epifilter=NULL,ppi=NULL,alpha=0.1,hamming=0.0
       expr <- expr[order(rownames(expr)),]
     }else if(mode=='union'){
       gene.names=unique(union(rownames(expr),unique(motif[,2])))
-      tf.names  =unique(union(unique(ppi[,1]),unique(motif[,1])))
+      if(!is.null(ppi)){
+        tf.names  =unique(union(unique(ppi[,1]),unique(motif[,1])))
+      } else {
+        tf.names  =unique(motif[,1])
+      }
       num.TFs    <- length(tf.names)
       num.genes  <- length(gene.names)
       # gene expression matrix
@@ -107,15 +113,17 @@ spider <- function(motif,expr=NULL,epifilter=NULL,ppi=NULL,alpha=0.1,hamming=0.0
       expr1[which(gene.names%in%rownames(expr)),]=expr[]
       expr=expr1
       #PPI matrix
-      tfCoopNetwork <- matrix(0,num.TFs,num.TFs)
+      tfCoopNetwork <- diag(num.TFs)
       colnames(tfCoopNetwork)=tf.names
       rownames(tfCoopNetwork)=tf.names
-      Idx1 <- match(ppi[,1], tf.names);
-      Idx2 <- match(ppi[,2], tf.names);
-      Idx <- (Idx2-1)*num.TFs+Idx1;
-      tfCoopNetwork[Idx] <- ppi[,3];
-      Idx <- (Idx1-1)*num.TFs+Idx2;
-      tfCoopNetwork[Idx] <- ppi[,3];
+      if(!is.null(ppi)){
+        Idx1 <- match(ppi[,1], tf.names);
+        Idx2 <- match(ppi[,2], tf.names);
+        Idx <- (Idx2-1)*num.TFs+Idx1;
+        tfCoopNetwork[Idx] <- ppi[,3];
+        Idx <- (Idx1-1)*num.TFs+Idx2;
+        tfCoopNetwork[Idx] <- ppi[,3];
+      }
       #Motif matrix
       regulatoryNetwork=matrix(0,num.TFs,num.genes)
       colnames(regulatoryNetwork)=gene.names
@@ -123,10 +131,18 @@ spider <- function(motif,expr=NULL,epifilter=NULL,ppi=NULL,alpha=0.1,hamming=0.0
       Idx1=match(motif[,1], tf.names);
       Idx2=match(motif[,2], gene.names);
       Idx=(Idx2-1)*num.TFs+Idx1;
-      regulatoryNetwork[Idx]=motif[,3]*epifilter[,3]
+      if(!is.null(epifilter)){
+        regulatoryNetwork[Idx]=motif[,3]*epifilter[,3]
+      } else {
+        regulatoryNetwork[Idx]=motif[,3]
+      }
     }else if(mode=='intersection'){
       gene.names=unique(intersect(rownames(expr),unique(motif[,2])))
-      tf.names  =unique(intersect(unique(ppi[,1]),unique(motif[,1])))
+      if(!is.null(ppi)){
+        tf.names  =unique(intersect(unique(ppi[,1]),unique(motif[,1])))
+      } else {
+        tf.names  =unique(motif[,1])
+      }
       num.TFs    <- length(tf.names)
       num.genes  <- length(gene.names)
       # gene expression matrix
@@ -136,19 +152,21 @@ spider <- function(motif,expr=NULL,epifilter=NULL,ppi=NULL,alpha=0.1,hamming=0.0
       expr1[interGeneNames,]=expr[interGeneNames,]
       expr=expr1
       #PPI matrix
-      tfCoopNetwork <- matrix(0,num.TFs,num.TFs)
+      tfCoopNetwork <- diag(num.TFs)
       colnames(tfCoopNetwork)=tf.names
       rownames(tfCoopNetwork)=tf.names
-      Idx1 <- match(ppi[,1], tf.names);
-      Idx2 <- match(ppi[,2], tf.names);
-      Idx <- (Idx2-1)*num.TFs+Idx1;
-      indIdx=!is.na(Idx)
-      Idx=Idx[indIdx] #remove missing TFs
-      tfCoopNetwork[Idx] <- ppi[indIdx,3];
-      Idx <- (Idx1-1)*num.TFs+Idx2;
-      indIdx=!is.na(Idx)
-      Idx=Idx[indIdx] #remove missing TFs
-      tfCoopNetwork[Idx] <- ppi[indIdx,3];
+      if(!is.null(ppi)){
+        Idx1 <- match(ppi[,1], tf.names);
+        Idx2 <- match(ppi[,2], tf.names);
+        Idx <- (Idx2-1)*num.TFs+Idx1;
+        indIdx=!is.na(Idx)
+        Idx=Idx[indIdx] #remove missing TFs
+        tfCoopNetwork[Idx] <- ppi[indIdx,3];
+        Idx <- (Idx1-1)*num.TFs+Idx2;
+        indIdx=!is.na(Idx)
+        Idx=Idx[indIdx] #remove missing TFs
+        tfCoopNetwork[Idx] <- ppi[indIdx,3];
+      }
       #Motif matrix
       regulatoryNetwork=matrix(0,num.TFs,num.genes)
       colnames(regulatoryNetwork)=gene.names
@@ -158,7 +176,11 @@ spider <- function(motif,expr=NULL,epifilter=NULL,ppi=NULL,alpha=0.1,hamming=0.0
       Idx=(Idx2-1)*num.TFs+Idx1;
       indIdx=!is.na(Idx)
       Idx=Idx[indIdx] #remove missing genes
-      regulatoryNetwork[Idx]=motif[indIdx,3]*epifilter[indIdx,3];          
+      if(!is.null(epifilter)){
+        regulatoryNetwork[Idx]=motif[indIdx,3]*epifilter[indIdx,3];
+      } else {
+        regulatoryNetwork[Idx]=motif[indIdx,3];
+      }
     }
     num.conditions <- ncol(expr)
     if (randomize=='within.gene'){

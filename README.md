@@ -1,5 +1,5 @@
-[![master](https://github.com/netZoo/netZooR/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/netZoo/netZooR/actions/workflows/main.yml)
-[![devel](https://github.com/netZoo/netZooR/actions/workflows/main.yml/badge.svg?branch=devel)](https://github.com/netZoo/netZooR/actions/workflows/main.yml)
+[![CI](https://github.com/netZoo/netZooR/actions/workflows/main.yml/badge.svg)](https://github.com/netZoo/netZooR/actions/workflows/main.yml)
+[![BioC Check](https://github.com/netZoo/netZooR/actions/workflows/bioc-check.yml/badge.svg)](https://github.com/netZoo/netZooR/actions/workflows/bioc-check.yml)
 [![codecov](https://codecov.io/gh/netZoo/netZooR/branch/devel/graph/badge.svg)](https://codecov.io/gh/netZoo/netZooR)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 <a href="https://netzoo.github.io/netZooR/"><img src="https://img.shields.io/badge/docs-passing-green"></a>
@@ -8,7 +8,7 @@
 [![discussions](https://img.shields.io/badge/netZooR-discussions-orange)](https://github.com/netZoo/netZooR/discussions)
 [![DOI](https://zenodo.org/badge/190646802.svg)](https://zenodo.org/badge/latestdoi/190646802)
 
-netZooR is tested on: (OS: Ubuntu + Macos) X (Language: R v4.4)
+netZooR is tested on: (OS: Ubuntu + macOS) X (R: release + devel) with Bioconductor release + devel
 
 ## Description
 netZooR is an R package to reconstruct, analyse, and plot biological networks.

@@ -2,7 +2,7 @@ context("test ALPACA result")
 
 test_that("ALPACA works", {
   
-  load("./testDataset.RData")
+  suppressWarnings(load("./testDataset.RData"))
   
   simp.alp <- alpaca(simp.mat,NULL,verbose=F)
   

@@ -36,7 +36,10 @@ Plots a classical multi-dimensional scaling of the 'controlGenes'. Optionally re
 Check for wrong annotation of a sample using classical MDS and control genes.
 }
 \examples{
-data(bladder)
-checkMisAnnotation(bladder,'GENDER',controlGenes='Y',legendPosition='topleft')
+\donttest{
+u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+bladder <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'bladder.rdata'),tmp,quiet=TRUE); local({load(tmp);get('bladder')})}, error=function(e) NULL)
+if(!is.null(bladder)) checkMisAnnotation(bladder,'GENDER',controlGenes='Y',legendPosition='topleft')
+}
 
 }

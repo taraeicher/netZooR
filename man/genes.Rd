@@ -12,6 +12,6 @@ data(genes)
 }
 \description{
 List of cancer-associated genes to subset the mutation data to, as described in
-\href{https://doi.org/10.1101/228031}{Kuijjer et al.}
+Kuijjer et al. (\doi{10.1101/228031}).
 }
 \keyword{datasets}

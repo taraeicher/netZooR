@@ -300,7 +300,6 @@ monster <- function(expr,
 #'
 #' @param expr Gene Expression dataset
 #' @return expr Gene Expression dataset in the proper form (may be the same as input)
-#' @importFrom assertthat assert_that
 #' @importFrom methods is
 #' @export
 #' @examples
@@ -312,7 +311,8 @@ monster <- function(expr,
 #' monsterCheckDataType(yeast$exp.cc)
 #' #TRUE
 monsterCheckDataType <- function(expr){
-  assert_that(is.data.frame(expr)||is.matrix(expr)||is(expr,"ExpressionSet"))
+  if (!(is.data.frame(expr) || is.matrix(expr) || is(expr, "ExpressionSet")))
+    stop("expr must be a data.frame, matrix, or ExpressionSet")
   if("ExpressionSet" %in% class(expr)){
     if (requireNamespace("Biobase", quietly = TRUE)) {
       expr <- Biobase::exprs(expr)
@@ -341,8 +341,6 @@ globalVariables("i")
 #' @param method character specifying which algorithm to use, default='ols'
 #' @return matrix object corresponding to transition matrix
 #' @import MASS
-#' @importFrom penalized optL1
-#' @importFrom reshape2 melt
 #' @export
 #' @examples
 #' data(yeast)
@@ -393,11 +391,13 @@ monsterTransformationMatrix <- function(network.1, network.2, by.tfs=TRUE, stand
     
   }
   if (method == "L1"){
+    if (!requireNamespace("penalized", quietly = TRUE))
+      stop("Package 'penalized' is required for method='L1'. Please install it.")
     net2.star <- vapply(seq_len(ncol(net1)), function(i,x,y){
       lm(y[,i]~x[,i])$resid
     }, x=net1, y=net2, FUN.VALUE = numeric(dim(net1)[1]))
     tf.trans.matrix <- vapply(seq_len(ncol(net1)), function(i){
-      z <- optL1(net2.star[,i], net1, fold=5, minlambda1=1, 
+      z <- penalized::optL1(net2.star[,i], net1, fold=5, minlambda1=1, 
                  maxlambda1=2, model="linear", standardize=TRUE)
       coefficients(z$fullfit, "penalized")
     }, FUN.VALUE = numeric(1))
@@ -458,8 +458,6 @@ kabsch <- function(P,Q){
 #' @param method distance metric for hierarchical clustering.    
 #' Default is "Pearson correlation"
 #' @export
-#' @import ggplot2
-#' @import grid
 #' @rawNamespace import(stats, except= c(cov2cor,decompose,toeplitz,lowess,update,spectrum))
 #' @return ggplot2 object for transition matrix heatmap
 #' @examples
@@ -470,6 +468,14 @@ kabsch <- function(P,Q){
 #' data(monsterRes)
 #' monsterHclHeatmapPlot(monsterRes)
 monsterHclHeatmapPlot <- function(monsterObj, method="pearson"){
+  if (!requireNamespace("ggplot2", quietly = TRUE))
+    stop("Package 'ggplot2' is required for monsterHclHeatmapPlot. Please install it.")
+  if (!requireNamespace("grid", quietly = TRUE))
+    stop("Package 'grid' is required for monsterHclHeatmapPlot. Please install it.")
+  if (!requireNamespace("reshape2", quietly = TRUE))
+    stop("Package 'reshape2' is required for monsterHclHeatmapPlot. Please install it.")
+  if (!requireNamespace("ggdendro", quietly = TRUE))
+    stop("Package 'ggdendro' is required for monsterHclHeatmapPlot. Please install it.")
   x <- monsterObj@tm
   if(method=="pearson"){
     dist.func <- function(y) as.dist(cor(y))
@@ -489,57 +495,57 @@ monsterHclHeatmapPlot <- function(monsterObj, method="pearson"){
   colnames(df) <- xx_names[[2]]
   df$Var1 <- xx_names[[1]]
   df$Var1 <- with(df, factor(Var1, levels=Var1, ordered=TRUE))
-  mdf <- melt(df)
+  mdf <- reshape2::melt(df)
   
   
-  ddata_x <- dendro_data(dd.row)
-  ddata_y <- dendro_data(dd.col)
+  ddata_x <- ggdendro::dendro_data(dd.row)
+  ddata_y <- ggdendro::dendro_data(dd.col)
   
   ### Set up a blank theme
-  theme_none <- theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.background = element_blank(),
-    axis.title.x = element_text(colour=NA),
-    axis.title.y = element_blank(),
-    axis.text.x = element_blank(),
-    axis.text.y = element_blank(),
-    axis.line = element_blank()
+  theme_none <- ggplot2::theme(
+    panel.grid.major = ggplot2::element_blank(),
+    panel.grid.minor = ggplot2::element_blank(),
+    panel.background = ggplot2::element_blank(),
+    axis.title.x = ggplot2::element_text(colour=NA),
+    axis.title.y = ggplot2::element_blank(),
+    axis.text.x = ggplot2::element_blank(),
+    axis.text.y = ggplot2::element_blank(),
+    axis.line = ggplot2::element_blank()
   )
   ### Set up a blank theme
-  theme_heatmap <- theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.background = element_blank(),
-    axis.title.x = element_text(colour=NA),
-    axis.title.y = element_blank(),
-    axis.text.x = element_blank(),
-    axis.text.y = element_blank(),
-    axis.line = element_blank()
+  theme_heatmap <- ggplot2::theme(
+    panel.grid.major = ggplot2::element_blank(),
+    panel.grid.minor = ggplot2::element_blank(),
+    panel.background = ggplot2::element_blank(),
+    axis.title.x = ggplot2::element_text(colour=NA),
+    axis.title.y = ggplot2::element_blank(),
+    axis.text.x = ggplot2::element_blank(),
+    axis.text.y = ggplot2::element_blank(),
+    axis.line = ggplot2::element_blank()
   )
   ### Create plot components ###
   # Heatmap
-  p1 <- ggplot(mdf, aes(x=variable, y=Var1)) +
-    geom_tile(aes(fill=value)) + 
-    scale_fill_gradient2() + 
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  p1 <- ggplot2::ggplot(mdf, ggplot2::aes(x=variable, y=Var1)) +
+    ggplot2::geom_tile(ggplot2::aes(fill=value)) + 
+    ggplot2::scale_fill_gradient2() + 
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1))
   
   # Dendrogram 1
-  p2 <- ggplot(segment(ddata_x)) +
-    geom_segment(aes(x=x, y=y, xend=xend, yend=yend)) +
-    theme_none + theme(axis.title.x=element_blank())
+  p2 <- ggplot2::ggplot(ggdendro::segment(ddata_x)) +
+    ggplot2::geom_segment(ggplot2::aes(x=x, y=y, xend=xend, yend=yend)) +
+    theme_none + ggplot2::theme(axis.title.x=ggplot2::element_blank())
   
   # Dendrogram 2
-  p3 <- ggplot(segment(ddata_y)) +
-    geom_segment(aes(x=x, y=y, xend=xend, yend=yend)) +
-    coord_flip() + theme_none
+  p3 <- ggplot2::ggplot(ggdendro::segment(ddata_y)) +
+    ggplot2::geom_segment(ggplot2::aes(x=x, y=y, xend=xend, yend=yend)) +
+    ggplot2::coord_flip() + theme_none
   
   ### Draw graphic ###
   
-  grid.newpage()
-  print(p1, vp=viewport(0.80, 0.8, x=0.400, y=0.40))
-  print(p2, vp=viewport(0.73, 0.2, x=0.395, y=0.90))
-  print(p3, vp=viewport(0.20, 0.8, x=0.910, y=0.43))
+  grid::grid.newpage()
+  print(p1, vp=grid::viewport(0.80, 0.8, x=0.400, y=0.40))
+  print(p2, vp=grid::viewport(0.73, 0.2, x=0.395, y=0.90))
+  print(p3, vp=grid::viewport(0.20, 0.8, x=0.910, y=0.43))
 }
 
 #' Principal Components plot of transformation matrix
@@ -552,7 +558,6 @@ monsterHclHeatmapPlot <- function(monsterObj, method="pearson"){
 #' @param clusters A vector indicating the number of clusters to compute
 #' @param alpha A vector indicating the level of transparency to be plotted
 #' @return ggplot2 object for transition matrix PCA
-#' @import ggdendro
 #' @export
 #' @examples
 #' # data(yeast)
@@ -568,16 +573,18 @@ monsterHclHeatmapPlot <- function(monsterObj, method="pearson"){
 monsterTransitionPCAPlot <-    function(monsterObj, 
                                          title="PCA Plot of Transition", 
                                          clusters=1, alpha=1){
+  if (!requireNamespace("ggplot2", quietly = TRUE))
+    stop("Package 'ggplot2' is required for monsterTransitionPCAPlot. Please install it.")
   tm.pca <- princomp(monsterObj@tm)
   odsm <- apply(monsterObj@tm,2,function(x){t(x)%*%x})
   odsm.scaled <- 2*(odsm-mean(odsm))/sd(odsm)+4
   scores.pca <- as.data.frame(tm.pca$scores)
   scores.pca <- cbind(scores.pca,'node.names'=rownames(scores.pca))
-  ggplot(data = scores.pca, aes(x = Comp.1, y = Comp.2, label = node.names)) +
-    geom_hline(yintercept = 0, colour = "gray65") +
-    geom_vline(xintercept = 0, colour = "gray65") +
-    geom_text(size = odsm.scaled, alpha=alpha, color=clusters) +
-    ggtitle(title)
+  ggplot2::ggplot(data = scores.pca, ggplot2::aes(x = Comp.1, y = Comp.2, label = node.names)) +
+    ggplot2::geom_hline(yintercept = 0, colour = "gray65") +
+    ggplot2::geom_vline(xintercept = 0, colour = "gray65") +
+    ggplot2::geom_text(size = odsm.scaled, alpha=alpha, color=clusters) +
+    ggplot2::ggtitle(title)
 }
 
 #' This function uses igraph to plot the transition matrix (directed graph) as a network.
@@ -611,6 +618,8 @@ monsterTransitionPCAPlot <-    function(monsterObj,
 #' monsterTransitionNetworkPlot(monsterRes, rescale='none')
 
 monsterTransitionNetworkPlot <- function(monsterObj, numEdges=100, numTopTFs=10, rescale='significance'){
+  if (!requireNamespace("reshape2", quietly = TRUE))
+    stop("Package 'reshape2' is required for monsterTransitionNetworkPlot. Please install it.")
   ## Calculate p-values for off-diagonals
   transitionSigmas <- function(tm.observed, tm.null){
     tm.null.mean <- apply(simplify2array(tm.null), seq_len(2), mean)
@@ -620,11 +629,11 @@ monsterTransitionNetworkPlot <- function(monsterObj, numEdges=100, numTopTFs=10,
   
   tm.sigmas <- transitionSigmas(monsterObj@tm, monsterObj@nullTM)
   diag(tm.sigmas) <- 0
-  tm.sigmas.melt <- melt(tm.sigmas)
+  tm.sigmas.melt <- reshape2::melt(tm.sigmas)
   
   adjMat <- monsterObj@tm
   diag(adjMat) <- 0
-  adjMat.melt <- melt(adjMat)
+  adjMat.melt <- reshape2::melt(adjMat)
   
   adj.combined <- merge(tm.sigmas.melt, adjMat.melt, by=c("Var1","Var2"))
   
@@ -684,6 +693,10 @@ monsterTransitionNetworkPlot <- function(monsterObj, numEdges=100, numTopTFs=10,
 #' monsterdTFIPlot(monsterRes)
 monsterdTFIPlot <- function(monsterObj, rescale='none', plot.title=NA, highlight.tfs=NA,
                              nTFs=-1){
+  if (!requireNamespace("reshape2", quietly = TRUE))
+    stop("Package 'reshape2' is required for monsterdTFIPlot. Please install it.")
+  if (!requireNamespace("ggplot2", quietly = TRUE))
+    stop("Package 'ggplot2' is required for monsterdTFIPlot. Please install it.")
   if(is.na(plot.title)){
     plot.title <- "Differential TF Involvement"
   }
@@ -716,22 +729,22 @@ monsterdTFIPlot <- function(monsterObj, rescale='none', plot.title=NA, highlight
   if(nTFs==-1){
     nTFs = length(x.axis.order)
   }
-  null.SSODM.melt <- melt(combined.mat)[,-1][,c(2,1)]
+  null.SSODM.melt <- reshape2::melt(combined.mat)[,-1][,c(2,1)]
   null.SSODM.melt$TF<-rep(rownames(monsterObj@nullTM[[1]]),num.iterations+1)
   
   ## Plot the data
-  ggplot(null.SSODM.melt, aes(x=TF, y=value))+
-    geom_point(aes(color=factor(Var2), alpha = .5*as.numeric(factor(Var2))), size=2) +
-    scale_color_manual(values = c("blue", "red")) +
-    scale_alpha(guide = "none") +
-    scale_x_discrete(limits = x.axis.order[seq_len(nTFs)] ) +
-    theme_classic() +
-    theme(legend.title=element_blank(),
-          axis.text.x = element_text(colour = 1+x.axis.order%in%highlight.tfs, 
+  ggplot2::ggplot(null.SSODM.melt, ggplot2::aes(x=TF, y=value))+
+    ggplot2::geom_point(ggplot2::aes(color=factor(Var2), alpha = .5*as.numeric(factor(Var2))), size=2) +
+    ggplot2::scale_color_manual(values = c("blue", "red")) +
+    ggplot2::scale_alpha(guide = "none") +
+    ggplot2::scale_x_discrete(limits = x.axis.order[seq_len(nTFs)] ) +
+    ggplot2::theme_classic() +
+    ggplot2::theme(legend.title=ggplot2::element_blank(),
+          axis.text.x = ggplot2::element_text(
                                      angle = 90, hjust = 1, 
                                      size=x.axis.size,face="bold")) +
-    ylab("dTFI") +
-    ggtitle(plot.title)
+    ggplot2::ylab("dTFI") +
+    ggplot2::ggtitle(plot.title)
   
 }
 
@@ -854,9 +867,6 @@ globalVariables(c("Var1", "Var2","value","variable","xend","yend","y","Comp.1", 
 #' @param cpp logical use C++ for maximum speed, set to false if unable to run.
 #' @export
 #' @return matrix for inferred network between TFs and genes
-#' @importFrom tidyr spread
-#' @importFrom penalized penalized
-#' @importFrom reshape2 dcast
 #' @examples
 #' data(yeast)
 #' cc.net <- monsterMonsterNI(yeast$motif,yeast$exp.cc)
@@ -936,7 +946,9 @@ monsterMonsterNI <- function(motif.data,
   # Convert 3 column format to matrix format
   colnames(motif.data) <- c('TF','GENE','value')
   if( method != "BERE"){
-    regulatory.network <- spread(motif.data, GENE, value, fill=0)
+    if (!requireNamespace("tidyr", quietly = TRUE))
+      stop("Package 'tidyr' is required for this method. Please install it.")
+    regulatory.network <- tidyr::spread(motif.data, GENE, value, fill=0)
     rownames(regulatory.network) <- regulatory.network[,1]
     # sort the TFs (rows), and remove redundant first column
     regulatory.network <- regulatory.network[order(rownames(regulatory.network)),-1]
@@ -957,9 +969,11 @@ monsterMonsterNI <- function(motif.data,
   result <- NULL
   ########################################
   if (method=="BERE"){
+    if (!requireNamespace("reshape2", quietly = TRUE))
+      stop("Package 'reshape2' is required for the BERE method. Please install it.")
     
     expr.data <- data.frame(expr.data)
-    tfdcast <- dcast(motif.data,TF~GENE,fill=0)
+    tfdcast <- reshape2::dcast(motif.data,TF~GENE,fill=0)
     rownames(tfdcast) <- tfdcast[,1]
     tfdcast <- tfdcast[,-1]
     
@@ -1012,7 +1026,9 @@ monsterMonsterNI <- function(motif.data,
           }
           
         } else {
-          z <- penalized(tfTargets, expr.data,
+          if (!requireNamespace("penalized", quietly = TRUE))
+            stop("Package 'penalized' is required for penalized regularization. Please install it.")
+          z <- penalized::penalized(tfTargets, expr.data,
                          lambda2=10, model="logistic", standardize=TRUE)
           # z <- optL1(tfTargets, expr.data, minlambda1=25, fold=5)
           
@@ -1021,7 +1037,7 @@ monsterMonsterNI <- function(motif.data,
         # Penalized Logistic Reg
         
         
-        predict(z, expr.data)
+        penalized::predict(z, expr.data)
       }))
     }
     
@@ -1086,8 +1102,6 @@ monsterMonsterNI <- function(motif.data,
 #' @param lambda if using penalized, the lambda parameter in the penalized logistic regression
 #' @param score String to indicate whether motif information will 
 #' be readded upon completion of the algorithm
-#' @importFrom reshape2 dcast
-#' @importFrom penalized predict
 #' @export
 #' @return An matrix or data.frame
 #' @examples
@@ -1098,9 +1112,13 @@ monsterBereFull <- function(motif.data,
                              alpha=.5, 
                              lambda=10, 
                              score="motifincluded"){
+  if (!requireNamespace("reshape2", quietly = TRUE))
+    stop("Package 'reshape2' is required for monsterBereFull. Please install it.")
+  if (!requireNamespace("penalized", quietly = TRUE))
+    stop("Package 'penalized' is required for monsterBereFull. Please install it.")
   
   expr.data <- data.frame(expr.data)
-  tfdcast <- dcast(motif.data,TF~GENE,fill=0)
+  tfdcast <- reshape2::dcast(motif.data,TF~GENE,fill=0)
   rownames(tfdcast) <- tfdcast[,1]
   tfdcast <- tfdcast[,-1]
   
@@ -1134,12 +1152,12 @@ monsterBereFull <- function(motif.data,
     
     # Penalized Logistic Reg
     expr.data[is.na(expr.data)] <- 0
-    z <- penalized(response=tfTargets, penalized=expr.data, unpenalized=~0,
+    z <- penalized::penalized(response=tfTargets, penalized=expr.data, unpenalized=~0,
                    lambda2=lambda, model="logistic", standardize=TRUE)
     #z <- optL1(tfTargets, expr.data, minlambda1=25, fold=5)
     
     
-    predict(z, expr.data)
+    penalized::predict(z, expr.data)
   }))
   
   ## Convert values to ranks

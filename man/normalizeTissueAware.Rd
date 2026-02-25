@@ -35,7 +35,10 @@ normalized matrix. qsmooth is a normalization approach that normalizes samples i
 a condition aware manner.
 }
 \examples{
-data(skin)
-normalizeTissueAware(skin,"SMTSD")
+\donttest{
+u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+if(!is.null(skin)) normalizeTissueAware(skin,"SMTSD")
+}
 
 }

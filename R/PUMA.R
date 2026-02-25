@@ -66,6 +66,30 @@ puma <- function(motif,expr=NULL,ppi=NULL,alpha=0.1,mir_file,hamming=0.001,
   if (is.null(expr)){
     # Use only the motif data here for the gene list
     num.conditions <- 0
+    gene.names <- sort(unique(motif[, 2]))
+    tf.names   <- sort(unique(motif[, 1]))
+    num.TFs    <- length(tf.names)
+    num.genes  <- length(gene.names)
+    # Build regulatory network from motif
+    regulatoryNetwork <- matrix(0, num.TFs, num.genes)
+    colnames(regulatoryNetwork) <- gene.names
+    rownames(regulatoryNetwork) <- tf.names
+    Idx1 <- match(motif[, 1], tf.names)
+    Idx2 <- match(motif[, 2], gene.names)
+    Idx <- (Idx2 - 1) * num.TFs + Idx1
+    regulatoryNetwork[Idx] <- motif[, 3]
+    # Build PPI network (identity if no ppi)
+    tfCoopNetwork <- diag(num.TFs)
+    colnames(tfCoopNetwork) <- tf.names
+    rownames(tfCoopNetwork) <- tf.names
+    if (!is.null(ppi)) {
+      Idx1 <- match(ppi[, 1], tf.names)
+      Idx2 <- match(ppi[, 2], tf.names)
+      Idx <- (Idx2 - 1) * num.TFs + Idx1
+      tfCoopNetwork[Idx] <- ppi[, 3]
+      Idx <- (Idx1 - 1) * num.TFs + Idx2
+      tfCoopNetwork[Idx] <- ppi[, 3]
+    }
     if (randomize!="None"){
       warning("Randomization ignored because gene expression is not used.")
       randomize <- "None"

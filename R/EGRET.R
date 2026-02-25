@@ -63,6 +63,13 @@
 
 runEgret <- function(b,v,q,m,e,p,g,t){
   
+  if (!requireNamespace("dplyr", quietly = TRUE)) {
+    stop("Package 'dplyr' is required for runEgret. Install with: install.packages('dplyr')")
+  }
+  if (!requireNamespace("tidyr", quietly = TRUE)) {
+    stop("Package 'tidyr' is required for runEgret. Install with: install.packages('tidyr')")
+  }
+  
   # set the inputs
   qbic <- q
   vcf <- v
