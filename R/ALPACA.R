@@ -14,7 +14,6 @@
 #' @import igraph
 #' @import Matrix
 #' @importFrom utils write.table
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' @export
 #' 
@@ -114,7 +113,6 @@ alpaca <- function(net.table,file.stem,verbose=FALSE)
 #' alpacaExtractTopGenes(simp.alp, set.lengths=c(2,2))
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' @export
 
@@ -153,7 +151,6 @@ alpacaExtractTopGenes <- function(module.result,set.lengths)
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' @import GO.db
 #' 
@@ -188,7 +185,6 @@ alpacaGOtabtogenes <- function(go.result,dm.top)
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -215,7 +211,6 @@ alpacaTopEnsembltoTopSym <- function(mod.top,annot.vec)
 #' @import igraph
 #' @import Matrix
 #' @importFrom utils write.table
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -261,7 +256,6 @@ alpacaDeltaZAnalysis <- function(net.table,file.stem)
 #' @import igraph
 #' @import Matrix
 #' @importFrom utils write.table
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -298,7 +292,6 @@ alpacaDeltaZAnalysisLouvain <- function(net.table,file.stem)
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -336,7 +329,6 @@ alpacaRotationAnalysis <- function(net.table)
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -368,7 +360,6 @@ alpacaRotationAnalysisLouvain <- function(net.table)
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -424,7 +415,6 @@ alpacaWBMlouvain <- function(net.frame)
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -455,7 +445,6 @@ alpacaComputeWBMmat <- function(edge.mat)
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -473,9 +462,7 @@ alpacaNodeToGene <- function(x){strsplit(x,split="_")[[1]][1]}
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
-#' @rawNamespace import(AnnotationDbi, except= select)
 #' @export
 
 alpacaListToGo <- function(gene.list,univ.vec,comm.nums){
@@ -495,9 +482,9 @@ alpacaListToGo <- function(gene.list,univ.vec,comm.nums){
     print(i)
     comm.entrez <- base.entrez[base.sym %in% gene.list[[i]]]
     if (length(comm.entrez)>3){
-      params<- new("GOHyperGParams",geneIds = comm.entrez, universeGeneIds = univ.entrez, ontology= "BP", pvalueCutoff = 1, conditional =TRUE, testDirection="over", annotation="org.Hs.eg.db")
-      go.res <- hyperGTest(params)
-      this.df <- summary(go.res)
+      params<- methods::new("GOHyperGParams",geneIds = comm.entrez, universeGeneIds = univ.entrez, ontology= "BP", pvalueCutoff = 1, conditional =TRUE, testDirection="over", annotation="org.Hs.eg.db")
+      go.res <- GOstats::hyperGTest(params)
+      this.df <- GOstats::summary(go.res)
       this.tab <- this.df[this.df[,5]>1,]
       this.df.p <- p.adjust(this.tab[,2],method="BH")
       if (sum(this.df.p<0.05)>0)
@@ -522,7 +509,6 @@ alpacaListToGo <- function(gene.list,univ.vec,comm.nums){
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -557,7 +543,6 @@ alpacaTestNodeRank <- function(node.ordered,true.pos)
 #' @return A ranked list of nodes.
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @examples 
 #' a <- 1 #place holder
 #' @import org.Hs.eg.db
@@ -599,7 +584,6 @@ alpacaCommunityStructureRotation <- function(net1.memb,net2.memb){
 #' a <- 1 # place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -699,7 +683,6 @@ alpacaComputeDWBMmatmScale <- function(edge.mat,ctrl.memb){
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -719,7 +702,6 @@ alpacaMetaNetwork <- function(J,S)
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -743,7 +725,6 @@ alpacaTidyConfig <- function(S)
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -847,7 +828,6 @@ alpacaGenLouvain <- function(B)
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph)
 #' @import org.Hs.eg.db
 #' 
 
@@ -923,10 +903,8 @@ alpacaSimulateNetwork <- function(comm.sizes,edge.mat,num.module,size.module,den
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#' @rawNamespace import(GOstats, except= makeGOGraph) 
 #' @import org.Hs.eg.db
 #' @import GO.db
-#' @rawNamespace import(AnnotationDbi, except= select)
 #' 
 
 alpacaGoToGenes <- function(go.term)
@@ -940,7 +918,7 @@ alpacaGoToGenes <- function(go.term)
   all.entrez <- unique(c(go.entrez,kids.entrez))
   
   hs.sym <- org.Hs.egSYMBOL
-  mapped_genes <- mappedkeys(hs.sym)
+  mapped_genes <- AnnotationDbi::mappedkeys(hs.sym)
   hs.sym1 <- AnnotationDbi::as.list(hs.sym[mapped_genes])
   base.sym <- unlist(hs.sym1)
   base.entrez <- names(hs.sym1)

@@ -151,7 +151,6 @@ condorCluster <- function(condor.object,cs.method="LCS",project=TRUE,low.memory=
 #' @note \code{\link[stats]{ks.test}} and \code{\link[stats]{wilcox.test}}
 #' will throw warnings due to the presence of ties, so the p-values will be 
 #' approximate. See those functions for further details.
-#' @rawNamespace import(stats, except= c(cov2cor,decompose,toeplitz,lowess,update,spectrum))
 #' @examples
 #' r = c(1,1,1,2,2,2,3,3,3,4,4);
 #' b = c(1,2,3,1,2,4,2,3,4,3,4);
@@ -175,11 +174,11 @@ condorCoreEnrich = function(test_nodes,q,perm=FALSE,plot.hist=FALSE,nsamp=1000){
   w_out <- wilcox.test(qtest,qnot_test,exact=FALSE,alternative="greater")
   if(perm){
     qnull <- q[!(q[,1] %in% test_nodes),3]
-    ks_true <- ks.test(qtest,qnull,exact=FALSE,alternative="less")$statistic
+    ks_true <- stats::ks.test(qtest,qnull,exact=FALSE,alternative="less")$statistic
     ks_rand <- ks.permute(qtest,qnull,nsamp=nsamp)
     pv_permuted <- perm.pval(ks_true,ks_rand)
     #now for the wilcox test
-    w_true <- wilcox.test(qtest,qnull,exact=FALSE,alternative="greater")$statistic
+    w_true <- stats::wilcox.test(qtest,qnull,exact=FALSE,alternative="greater")$statistic
     w_rand <- wilcox.permute(qtest,qnull,nsamp=nsamp)
     pvw_permuted <- perm.pval(w_true,w_rand)
     analytical.pvals = cbind.data.frame(ks.pvalue=ks_out$p.value,wilcox.pvalue=w_out$p.value)
@@ -737,23 +736,22 @@ condorModularityMax = function(condor.object,T0=cbind(seq_len(q),rep(1,q)),weigh
 #' condorPlotCommunities(condor.object,
 #' color_list=c("darkgreen","darkorange"),point.size=2,
 #' xlab="Women",ylab="Men")
-#' @rawNamespace import(data.table, except= c(dcast,melt))
 #' @importFrom graphics axis box hist mtext par plot points rect
 #' @export
 #'  
 condorPlotCommunities = function(condor.object,color_list,point.size=0.01,
                                    xlab="SNP",ylab="Gene"){
   
-  dt0 <- data.table(condor.object$edges)
-  setnames(dt0,seq_len(2),c("SNP","gene"))
-  dt1 <- data.table(condor.object$red.memb)
-  setnames(dt1,c("SNP","red.memb"))
-  dt2 <- data.table(condor.object$blue.memb)
-  setnames(dt2,c("gene","blue.memb"))
-  dt3 <- merge(dt0,dt1,by="SNP",all.x=TRUE)    
-  eqtl_object <- merge(dt3,dt2,by="gene",all.x=TRUE)
-  setkey(eqtl_object,"SNP")
-  eqtl_all <- data.table(eqtl_object[!is.na(SNP)])
+  dt0 <- data.table::data.table(condor.object$edges)
+  data.table::setnames(dt0,seq_len(2),c("SNP","gene"))
+  dt1 <- data.table::data.table(condor.object$red.memb)
+  data.table::setnames(dt1,c("SNP","red.memb"))
+  dt2 <- data.table::data.table(condor.object$blue.memb)
+  data.table::setnames(dt2,c("gene","blue.memb"))
+  dt3 <- data.table::merge(dt0,dt1,by="SNP",all.x=TRUE)    
+  eqtl_object <- data.table::merge(dt3,dt2,by="gene",all.x=TRUE)
+  data.table::setkey(eqtl_object,"SNP")
+  eqtl_all <- data.table::data.table(eqtl_object[!is.na(SNP)])
   #this groups red and blue nodes in the same community. very important
   eqtl_block <- eqtl_all[blue.memb==red.memb]
   # coerce non-factor inpout
@@ -766,19 +764,19 @@ condorPlotCommunities = function(condor.object,color_list,point.size=0.01,
   if(nlevels(eqtl_block$SNP) != length(unique(eqtl_block$SNP))){
     print("warning: empty levels in SNP column. This may cause silent issues with plotting.")}
   #select all links that connect nodes in the same community
-  setkey(eqtl_block,"blue.memb","red.memb")
+  data.table::setkey(eqtl_block,"blue.memb","red.memb")
   #make new index for each node that will correspond to it's row/col number
-  red_tmp <- data.table(rindx=seq_len(nlevels(eqtl_block$SNP)),SNP=unique(eqtl_block$SNP))
-  red_indx <- merge(red_tmp,unique(eqtl_block,by="SNP")[,c("SNP","red.memb"),with=FALSE],by="SNP")
+  red_tmp <- data.table::data.table(rindx=seq_len(nlevels(eqtl_block$SNP)),SNP=unique(eqtl_block$SNP))
+  red_indx <- data.table::merge(red_tmp,data.table::unique.data.table(eqtl_block,by="SNP")[,c("SNP","red.memb"),with=FALSE],by="SNP")
   red_indx[,red.com.size:=length(unique(SNP)),by=red.memb]
   red_indx[red.com.size > 1,rindx:=sample(x=rindx),by=red.memb][,red.memb:=NULL,]
-  setkey(red_indx,"SNP")
-  blue_tmp <- data.table(bindx=seq_len(nlevels(eqtl_block$gene)),gene=unique(eqtl_block$gene))
-  blue_indx <- merge(blue_tmp,unique(eqtl_block,by="gene")[,c("gene","blue.memb"),with=FALSE],by="gene")
+  data.table::setkey(red_indx,"SNP")
+  blue_tmp <- data.table::data.table(bindx=seq_len(nlevels(eqtl_block$gene)),gene=unique(eqtl_block$gene))
+  blue_indx <- data.table::merge(blue_tmp,data.table::unique.data.table(eqtl_block,by="gene")[,c("gene","blue.memb"),with=FALSE],by="gene")
   #shuffle nodes within each community to make density homogeneous
   blue_indx[,blue.com.size:=length(unique(gene)),by=blue.memb]
   blue_indx[blue.com.size > 1,bindx:=sample(x=bindx),by=blue.memb][,blue.memb:=NULL,]
-  setkey(blue_indx,"gene")
+  data.table::setkey(blue_indx,"gene")
   
   if(dim(red_indx)[1] != nlevels(eqtl_all$SNP) && dim(blue_indx)[1] != nlevels(eqtl_all$gene)){
     print("Warning! not all nodes in block!")
@@ -787,9 +785,9 @@ condorPlotCommunities = function(condor.object,color_list,point.size=0.01,
   #in the unlikely event a node is only connected to nodes in OTHER comms
   #if(nlevels(eqtl_all$SNP) != nlevels(eqtl_all$SNP)){
   #  tmp = setdiff(levels(eqtl_all$SNP),levels(eqtl_all$SNP))
-  m1 <- merge(eqtl_all,red_indx,by="SNP",all=TRUE)
-  #setkey(m1,"gene")
-  m2 <- merge(m1,blue_indx,by="gene",all=TRUE)
+  m1 <- data.table::merge(eqtl_all,red_indx,by="SNP",all=TRUE)
+  #data.table::setkey(m1,"gene")
+  m2 <- data.table::merge(m1,blue_indx,by="gene",all=TRUE)
   
   #pdf("Community_structure_matrix.pdf",height=7,width=12)
   #setEPS()

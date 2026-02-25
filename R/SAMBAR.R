@@ -139,8 +139,6 @@ NULL
 #' @param cangenes A vector of genes, for example of cancer-associated genes. This will be used to subset the gene-level mutation data to.
 #' @param kmin The minimum number of subtypes the user wants to assess. Defaults to 2.
 #' @param kmax The maximum number of subtypes the user wants to assess. Defaults to 4.
-#' @rawNamespace import(vegan, except=diversity)
-#' @rawNamespace import(stats, except= c(cov2cor,decompose,toeplitz,lowess,update,spectrum))
 #' @return A list of samples and the subtypes to which these samples are assigned, for each k.
 #' @examples 
 #' data("exon.size")
