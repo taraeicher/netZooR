@@ -2,7 +2,8 @@
 context("test BLOBFISH functions")
 
 test_that("[BLOBFISH] SignificantBreadthFirstSearch() function yields expected results", {
-  
+  skip_if_not_installed("matrixTests")
+  set.seed(42)
   # Construct a starting network, which will be modified.
   # Here, we expect genes A and B to be connected after 1 hop via TF2, genes A and D
   # to be connected after 1 hop via TF3, and genes A and C to be connected after 2

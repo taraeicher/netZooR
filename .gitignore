@@ -36,3 +36,4 @@ docs/*.npy
 docs/reference/*.npy
 bladder.rdata
 skin.rdata
+netZooR.code-workspace

@@ -36,7 +36,7 @@ representing within-community links and black dots between-community
 links
 }
 \note{
-For the condor paper \url{http://arxiv.org/abs/1509.02816}, I used
+For the condor paper \url{https://arxiv.org/abs/1509.02816}, I used
   35 colors from the "Tarnish" palette with "hard" clustering
 }
 \examples{
@@ -52,6 +52,6 @@ color_list=c("darkgreen","darkorange"),point.size=2,
 xlab="Women",ylab="Men")
 }
 \references{
-\url{http://tools.medialab.sciences-po.fr/iwanthue/} for 
+\url{https://medialab.github.io/iwanthue/} for 
  a nice color generator at
 }

@@ -18,7 +18,10 @@ Filtered ExpressionSet object
 The main use case for this function is the removal of missing genes.
 }
 \examples{
-data(skin)
-filterMissingGenes(skin)
+\donttest{
+u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
+skin <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE); local({load(tmp);get('skin')})}, error=function(e) NULL)
+if(!is.null(skin)) filterMissingGenes(skin)
+}
 
 }

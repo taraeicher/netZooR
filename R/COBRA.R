@@ -37,6 +37,13 @@ cobra <- function(X, expressionData, method = "pearson"){
     stop("Only Pearson and pcor methods are supported. Please make sure to provide a valid method argument.")
   }
   
+  if(!requireNamespace("rARPACK", quietly = TRUE)){
+    stop("Package 'rARPACK' is needed for cobra. Please install it.", call. = FALSE)
+  }
+  if(method == "pcorsh" && !requireNamespace("corpcor", quietly = TRUE)){
+    stop("Package 'corpcor' is needed for cobra with method='pcorsh'. Please install it.", call. = FALSE)
+  }
+  
   numSamples <- ncol(expressionData)
   if(method != "dragon"){
     N <- min(ncol(expressionData),nrow(expressionData)) 
