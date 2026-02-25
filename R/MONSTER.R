@@ -458,8 +458,7 @@ kabsch <- function(P,Q){
 #' @param method distance metric for hierarchical clustering.    
 #' Default is "Pearson correlation"
 #' @export
-#' @import ggplot2
-#' @import grid
+#' @rawNamespace import(stats, except= c(cov2cor,decompose,toeplitz,lowess,update,spectrum))
 #' @return ggplot2 object for transition matrix heatmap
 #' @examples
 #' # data(yeast)
@@ -479,16 +478,16 @@ monsterHclHeatmapPlot <- function(monsterObj, method="pearson"){
     stop("Package 'ggdendro' is required for monsterHclHeatmapPlot. Please install it.")
   x <- monsterObj@tm
   if(method=="pearson"){
-    dist.func <- function(y) stats::as.dist(stats::cor(y))
+    dist.func <- function(y) as.dist(cor(y))
   } else {
     dist.func <- dist
   }
-  x <- stats::scale(x)
-  dd.col <- stats::as.dendrogram(stats::hclust(dist.func(x)))
-  col.ord <- stats::order.dendrogram(dd.col)
+  x <- scale(x)
+  dd.col <- as.dendrogram(hclust(dist.func(x)))
+  col.ord <- order.dendrogram(dd.col)
   
-  dd.row <- stats::as.dendrogram(stats::hclust(dist.func(t(x))))
-  row.ord <- stats::order.dendrogram(dd.row)
+  dd.row <- as.dendrogram(hclust(dist.func(t(x))))
+  row.ord <- order.dendrogram(dd.row)
   
   xx <- x[col.ord, row.ord]
   xx_names <- attr(xx, "dimnames")

@@ -478,9 +478,9 @@ alpacaListToGo <- function(gene.list,univ.vec,comm.nums){
     print(i)
     comm.entrez <- base.entrez[base.sym %in% gene.list[[i]]]
     if (length(comm.entrez)>3){
-      params<- methods::new("GOHyperGParams",geneIds = comm.entrez, universeGeneIds = univ.entrez, ontology= "BP", pvalueCutoff = 1, conditional =TRUE, testDirection="over", annotation="org.Hs.eg.db")
+      params<- new("GOHyperGParams",geneIds = comm.entrez, universeGeneIds = univ.entrez, ontology= "BP", pvalueCutoff = 1, conditional =TRUE, testDirection="over", annotation="org.Hs.eg.db")
       go.res <- GOstats::hyperGTest(params)
-      this.df <- GOstats::summary(go.res)
+      this.df <- summary(go.res)
       this.tab <- this.df[this.df[,5]>1,]
       this.df.p <- p.adjust(this.tab[,2],method="BH")
       if (sum(this.df.p<0.05)>0)
@@ -676,7 +676,8 @@ alpacaComputeDWBMmatmScale <- function(edge.mat,ctrl.memb){
 #' a <- 1 # example place holder
 #' @import igraph
 #' @import Matrix
-#'
+#' 
+
 alpacaMetaNetwork <- function(J,S)
 {
   PP <- sparseMatrix(i=seq_len(length(S)),j=S,x=1)
