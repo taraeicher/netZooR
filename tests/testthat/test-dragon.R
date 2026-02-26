@@ -112,6 +112,37 @@ test_that("[DRAGON] dragon() exported function works on simulated data",
 
 })
 
+# test that output matrices carry input variable names (issue #319)
+test_that("[DRAGON] output matrices preserve input column names",
+{
+  toy_layer1 = matrix(c(1,2,3,1,5,12),nrow=3,byrow=T)
+  toy_layer2 = matrix(c(9,7,8),nrow=3,byrow=T)
+  colnames(toy_layer1) = c("gene1","gene2")
+  colnames(toy_layer2) = c("methyl1")
+
+  res = dragon(layer1 = toy_layer1, layer2 = toy_layer2, pval = F)
+  expected_names = c("gene1","gene2","methyl1")
+
+  expect_equal(rownames(res$cov), expected_names)
+  expect_equal(colnames(res$cov), expected_names)
+  expect_equal(rownames(res$prec), expected_names)
+  expect_equal(colnames(res$prec), expected_names)
+  expect_equal(rownames(res$ggm), expected_names)
+  expect_equal(colnames(res$ggm), expected_names)
+})
+
+# test that dragon still works when inputs have no column names
+test_that("[DRAGON] output matrices work without input column names",
+{
+  toy_layer1 = matrix(c(1,2,3,1,5,12),nrow=3,byrow=T)
+  toy_layer2 = matrix(c(9,7,8),nrow=3,byrow=T)
+
+  res = dragon(layer1 = toy_layer1, layer2 = toy_layer2, pval = F)
+
+  expect_null(rownames(res$cov))
+  expect_null(colnames(res$cov))
+})
+
 # test log likelihood function
 # test_that("[DRAGON] Log likelihood function for estimation of kappa is correct",{
 #   # log_lik_shrunken = function(kappa, p, lambda, rhos)
