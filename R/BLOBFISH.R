@@ -131,7 +131,7 @@ GenerateNullPANDADistribution <- function(ppiFile, motifFile, sampSize = 20,
 
   # Return the values.
   nullPandasAll <- unlist(nullPandas)
-  return(sample(nullPandasAll, n = length(nullPandasAll)))
+  return(sample(nullPandasAll, size = length(nullPandasAll)))
 }
 
 #' Find the subnetwork of significant edges connecting the genes.
