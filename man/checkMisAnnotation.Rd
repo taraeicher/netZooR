@@ -38,7 +38,9 @@ Check for wrong annotation of a sample using classical MDS and control genes.
 \examples{
 \donttest{
 u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
-bladder <- tryCatch({tmp<-tempfile(); download.file(paste0(u,'bladder.rdata'),tmp,quiet=TRUE); local({load(tmp);get('bladder')})}, error=function(e) NULL)
+bladder <- tryCatch({tmp<-tempfile()
+download.file(paste0(u,'bladder.rdata'),tmp,quiet=TRUE)
+local({load(tmp);get('bladder')})}, error=function(e) NULL)
 if(!is.null(bladder)) checkMisAnnotation(bladder,'GENDER',controlGenes='Y',legendPosition='topleft')
 }
 
