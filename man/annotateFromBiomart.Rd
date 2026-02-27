@@ -38,11 +38,7 @@ Annotate your Expression Set with biomaRt
 }
 \examples{
 \dontrun{
-u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/'
-bladder <- paste0(u, 'yarn/bladder.rdata')
-skin <- paste0(u, 'yarn/skin.rdata')
-download.file(bladder, destfile='netZooR/data/bladder.rdata')
-download.file(skin, destfile='netZooR/data/skin.rdata')
+data(bladder)
 data(skin)
 # subsetting and changing column name just for a silly example
 skin <- skin[1:10,]
