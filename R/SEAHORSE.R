@@ -22,6 +22,7 @@
 #'                               Types can be either "numeric" or "categorical" 
 #' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
+#' @param compute_cor : Whether or not to compute the correlation matrix. Default is TRUE.
 #' Outputs:
 #' @return results    : a list containing three objects
 #'         results$coexpression: a gene x gene Pearson correlation matrix.
@@ -51,7 +52,7 @@
 #' results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
 #'  
 #' @export
-seahorse <- function(expression, phenotype, phenotype_dictionary, pathways){
+seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, compute_cor = TRUE){
   if (!requireNamespace("fgsea", quietly = TRUE)) {
     stop("Package 'fgsea' is required but not installed.")
   }
@@ -60,7 +61,10 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways){
   results = list()
   
   # Compute coexpression of genes
-  results$coexpression = cor(t(expression), use="pairwise.complete.obs")
+  results$coexpression <- NA
+  if(compute_cor == TRUE){
+    results$coexpression = cor(t(expression), use="pairwise.complete.obs")
+  }
   
   # Compute association of gene expression with phenotypes and run GSEA
   results$phenotype_association = list()
