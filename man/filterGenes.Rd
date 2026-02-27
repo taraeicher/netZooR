@@ -29,10 +29,7 @@ Alternatively, filter genes that are not protein-coding.
 }
 \examples{
 \donttest{
-u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
-skin <- tryCatch({tmp<-tempfile()
-download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE)
-local({load(tmp);get('skin')})}, error=function(e) NULL)
+data(skin)
 if(!is.null(skin)){
    filterGenes(skin,labels=c('X','Y','MT'),featureName='chromosome_name')
 }

@@ -27,10 +27,7 @@ This function plots a heatmap of the gene expressions forthe "n" features of int
 }
 \examples{
 \donttest{
-u <- 'https://netzoo.s3.us-east-2.amazonaws.com/netZooR/unittest_datasets/yarn/'
-skin <- tryCatch({tmp<-tempfile()
-download.file(paste0(u,'skin.rdata'),tmp,quiet=TRUE)
-local({load(tmp);get('skin')})}, error=function(e) NULL)
+data(skin)
 if(!is.null(skin)) {
   tissues <- pData(skin)$SMTSD
   plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10)
