@@ -9,14 +9,16 @@ monster(
   design,
   motif,
   nullPerms = 100,
-  ni_method = "BERE",
+  ni_method = "bere",
   ni.coefficient.cutoff = NA,
   numMaxCores = 1,
   outputDir = NA,
   alphaw = 0.5,
   mode = "buildNet",
   method = "ols",
-  remove.diagonal = TRUE
+  remove.diagonal = TRUE,
+  nullModelType = "permutation",
+  nullNetworks = NA
 )
 }
 \arguments{
@@ -57,6 +59,15 @@ networks are supplied in the 'expr' variable as a TF-by-Gene matrix, by concaten
 \item{method}{Method to use in computing the transition matrix. These include "ols" (default),"kabsch","L1", and "orig" (SVD).}
 
 \item{remove.diagonal}{#' Logical for returning a result containing 0s across the diagonal (default = TRUE).}
+
+\item{nullModelType}{Type of null model used. If "permutation" is set as the default, MONSTER permutes expression data when in "buildNet" mode
+and permutes network edges by gene when in "regNet" mode. "nullNetwork" generates null networks from the control network using the edge weights from
+the control network as the mean and the edge weight variances across networks with no true signal as the variance.}
+
+\item{nullNetworks}{This parameter is only used when running in "regNet" mode with the "nullNetwork" option set. This includes a data frame
+with the values from networks with no signal. The first two columns must be the source and target nodes, and the remaining columns must be
+the edge weights from each simulated network. For PANDA networks:
+tf, gene, net1, net2, ..., netn}
 }
 \value{
 An object of class "monsterAnalysis" containing results

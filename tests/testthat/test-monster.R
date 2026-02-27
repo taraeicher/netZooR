@@ -83,6 +83,119 @@ test_that("MONSTER function works", {
 
 })
 
+test_that("GeneratePermutationNull function works", {
+  
+  # Put together MONSTER inputs.
+  set.seed(1)
+  networks <- as.data.frame(matrix(runif(24), nrow = 3))
+  rownames(networks) <- paste0("tf", 1:3)
+  colnames(networks) <- rep(paste0("gene", 1:4), 2)
+  design <- c(rep(0, 4), rep(1, 4))
+  motif <- data.frame(tf = c("tf1", rep("tf2", 4)), gene = c("gene2", "gene1", "gene2", "gene3", "gene4"), score = c(1, 1, rep(0, 3)))
+  
+  # Test that the MONSTER function does not allow GeneratePermutationNull
+  # to be called without the correct inputs.
+  expect_error(monster(expr = networks, design = design, motif = NA, nullModelType = "aj;fdaipofhnweapiofn"),
+               "Only 'permutation' and 'nullNetwork' are permitted values for nullModelType.")
+  
+  # Test that the permutation null has the same format and that
+  # the values are not equal for regNet case.
+  permNull <- GeneratePermutationNull(expr = networks, iterations = 10, mode = "regNet")
+  expect_equal(colnames(permNull[[5]]), colnames(networks))
+  expect_equal(rownames(permNull[[5]]), rownames(networks))
+  expect_true(!identical(permNull[[5]], networks))
+  
+  # Test the same for buildNet case. Note that this requires a different input format.
+  expression <- as.data.frame(matrix(runif(60), nrow = 6))
+  rownames(expression) <- c("tf1", "tf2", paste0("gene", 1:4))
+  colnames(expression) <- paste0("samp", 1:10)
+  design2 <- c(rep(0, 5), rep(1, 5))
+  permNull <- GeneratePermutationNull(expr = expression, iterations = 10, mode = "buildNet")
+  expect_equal(colnames(permNull[[5]]), colnames(expression))
+  expect_equal(rownames(permNull[[5]]), rownames(expression))
+  expect_true(!identical(permNull[[5]], expression))
+  
+  # Test that MONSTER runs without error.
+  expect_no_error(monster(expr = networks, design = design, motif = motif, nullModelType = "permutation",
+                                          mode = "regNet", nullPerms = 10))
+  # We cannot test multi-core processes in the build environment.
+  #expect_no_error(suppressWarnings(monster(expr = networks, design = design, motif = motif, nullModelType = "permutation",
+  #                        mode = "regNet", numMaxCores = 3, nullPerms = 10)))
+  expect_no_error(monster(expr = expression, design = design2, motif = motif, nullModelType = "permutation",
+                          mode = "buildNet", nullPerms = 10))
+  # We cannot test multi-core processes in the build environment.
+  #expect_no_error(suppressWarnings(monster(expr = expression, design = design2, motif = motif, nullModelType = "permutation",
+  #                                         mode = "buildNet", numMaxCores = 3, nullPerms = 10)))
+})
+
+test_that("GenerateNullFromControl function works", {
+  
+  # Set up inputs.
+  set.seed(1)
+  networks <- as.data.frame(matrix(runif(24), nrow = 3))
+  rownames(networks) <- paste0("tf", 1:3)
+  colnames(networks) <- rep(paste0("gene", 1:4), 2)
+  design <- c(rep(0, 4), rep(1, 4))
+  networksIn <- networks
+  networksIn$tf <- rownames(networks)
+  nullNetworks <- reshape2::melt(
+    networksIn[,design == 0],
+    id.vars = "tf",
+    variable.name = "gene",
+    value.name = "score"
+  )
+  nullNetworks$gene <- as.character(nullNetworks$gene)
+  for(i in 3:10){
+    nullNetworks[,i] <- runif(12, min = 0, max = 0.1)
+  }
+  
+  # Test that the MONSTER function does not allow GenerateNullFromControl
+  # to be called without the correct inputs.
+  nullNetworksWrong1 <- nullNetworksWrong2 <- nullNetworksWrong3 <- nullNetworksWrong4 <- nullNetworks
+  nullNetworksWrong1[,1] <- 0
+  nullNetworksWrong2[,2] <- 0
+  nullNetworksWrong3[,3] <- rep("", nrow(nullNetworksWrong3))
+  nullNetworksWrong4[1,1] <- "afpujewipaojefwp"
+  
+  expect_error(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork", mode = "buildNet",
+                       nullNetworks = nullNetworks),
+               "Cannot run 'nullNetwork' model type in buildNet mode")
+  expect_error(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork", mode = "regNet",
+                       nullNetworks = NA),
+               paste("Must provide null networks when null model type is 'nullNetwork'. These can",
+                     "be generated using the function GenerateNullPANDADistribution() if you are",
+                     "using PANDA networks."), fixed = TRUE)
+  expect_error(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork", mode = "regNet",
+                       nullNetworks = nullNetworksWrong1),
+               paste("The null network provided must have source and target nodes in the first two columns",
+                     "and numeric scores in all remaining columns."))
+  expect_error(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork", mode = "regNet",
+                       nullNetworks = nullNetworksWrong2),
+               paste("The null network provided must have source and target nodes in the first two columns",
+                     "and numeric scores in all remaining columns."))
+  expect_error(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork", mode = "regNet",
+                       nullNetworks = nullNetworksWrong3),
+               paste("The null network provided must have source and target nodes in the first two columns",
+                     "and numeric scores in all remaining columns."))
+  expect_error(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork", mode = "regNet",
+                       nullNetworks = nullNetworksWrong4),
+               "The node lists differ between the input networks and the provided null networks.")
+  
+  # Test that the control is still the same and the format is correct.
+  null <- GenerateNullFromControl(concatNet = networks, iterations = 10, design = design, nullNetworks = nullNetworks)
+  expect_equal(colnames(null[[5]]), colnames(networks))
+  expect_equal(rownames(null[[5]]), rownames(networks))
+  expect_true(!identical(null[[5]], networks))
+  expect_true(identical(null[[5]][,design == 0], as.matrix(networks[,design == 0])))
+  
+  # Test that MONSTER runs without error.
+  expect_no_error(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork",
+                          mode = "regNet", nullPerms = 10, nullNetworks = nullNetworks))
+  # We cannot test multi-core processes in the build environment.
+  #expect_no_error(suppressWarnings(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork",
+  #                                         mode = "regNet", numMaxCores = 3, nullPerms = 10, nullNetworks = nullNetworks)))
+})
+
 test_that('domonster runs on toy PANDA data', {
   set.seed(123)
   exp_grn <- matrix(data = rnorm(50, mean = 1), ncol = 10, nrow = 5)
