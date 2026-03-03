@@ -76,11 +76,58 @@ test_that("MONSTER function works", {
   
   # Bipartite Edge Reconstruction from Expression data (composite method with direct/indirect)
   monsterRes_bereFull<- monsterBereFull(yeast$motif, yeast$exp.cc, alpha=.5)
+  monsterRes_bereFull2<- monsterMonsterNI(yeast$motif, yeast$exp.cc, method = "BERE", alphaw = 0.5)
   expect_equal(monsterRes_bereFull[1,1], 105770, tolerance=1e-7)
+  expect_equal(monsterRes_bereFull2[1,1], 105770, tolerance=1e-7)
   
   # summarizes the results of a MONSTER analysis
   expect_error(monsterPrintMonsterAnalysis(monsterRes),NA)
-
+  
+  # Test that MONSTER runs without error (buildNet mode).
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "BERE", mode = "buildNet",
+                                    method = "ols", remove.diagonal = TRUE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "BERE", mode = "buildNet",
+                                    method = "ols", remove.diagonal = FALSE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "BERE", mode = "buildNet",
+                                    method = "kabsch", remove.diagonal = TRUE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "BERE", mode = "buildNet",
+                                    method = "L1", remove.diagonal = TRUE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "BERE", mode = "buildNet",
+                                    method = "orig", remove.diagonal = TRUE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "pearson", mode = "buildNet",
+                                    method = "ols", remove.diagonal = TRUE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "cd", mode = "buildNet",
+                                    method = "ols", remove.diagonal = TRUE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "lda", mode = "buildNet",
+                                    method = "ols", remove.diagonal = TRUE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "wcd", mode = "buildNet",
+                                    method = "ols", remove.diagonal = TRUE))
+  
+  # Test that MONSTER runs without error (regNet mode.)
+  set.seed(123)
+  exp_grn <- matrix(data = rnorm(50, mean = 1), ncol = 10, nrow = 5)
+  control_grn <- matrix(data = rnorm(50, mean = 1), ncol = 10, nrow = 5)
+  colnames(exp_grn) <- paste0('gene', 1:10)
+  colnames(control_grn) <- paste0('gene', 1:10)
+  rownames(exp_grn) <- paste0('tf', 1:5)
+  rownames(control_grn) <- paste0('tf', 1:5)
+  combdf <- as.data.frame(cbind(control_graph, exp_graph))
+  combdes <- c(rep(0, ncol(control_graph)), rep(1, ncol(exp_graph)))
+  testthat::expect_no_error(monster(expr = combdf,
+                                           design = combdes,
+                                           motif = NA,
+                                           mode = 'regNet',
+                                           nullPerms = 3,
+                                           numMaxCores = 3))
 })
 
 test_that('domonster runs on toy PANDA data', {

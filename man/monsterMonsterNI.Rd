@@ -9,7 +9,7 @@ monsterMonsterNI(
   expr.data,
   verbose = FALSE,
   randomize = "none",
-  method = "bere",
+  method = "BERE",
   ni.coefficient.cutoff = NA,
   alphaw = 1,
   regularization = "none",
@@ -29,7 +29,7 @@ factor (column 1) a gene (column 2) and a score (column 3) for the motif.}
 \item{randomize}{logical indicating randomization by genes, within genes or none}
 
 \item{method}{String to indicate algorithm method.  Must be one of 
-"bere","pearson","cd","lda", or "wcd". Default is "bere".
+"BERE","pearson","cd","lda", or "wcd". Default is "BERE".
 Important note: the direct regulatory network observed from gene expression is currently
 implemented as a regular correlation as opposed to the partial correlation described 
 in the paper (please see Schlauch et al., 2017,  https://doi.org/10.1186/s12918-017-0517-y)}
