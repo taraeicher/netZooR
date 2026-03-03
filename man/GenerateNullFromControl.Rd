@@ -2,10 +2,8 @@
 % Please edit documentation in R/MONSTER.R
 \name{GenerateNullFromControl}
 \alias{GenerateNullFromControl}
-\title{Generates null model for MONSTER by sampling "case" networks from a distribution
-where the control network value is the mean and the provided null networks are
-used to calculate the variance. Sampling is done on an edgewise basis, using
-edgewise means and variances.}
+\title{Generates null model for MONSTER by re-centering null networks such that the
+mean values are equivalent to the control network.}
 \usage{
 GenerateNullFromControl(concatNet, iterations, design, nullNetworks)
 }
@@ -22,8 +20,6 @@ GenerateNullFromControl(concatNet, iterations, design, nullNetworks)
 A list of matrices, each one corresponding to one null model
 }
 \description{
-Generates null model for MONSTER by sampling "case" networks from a distribution
-where the control network value is the mean and the provided null networks are
-used to calculate the variance. Sampling is done on an edgewise basis, using
-edgewise means and variances.
+Generates null model for MONSTER by re-centering null networks such that the
+mean values are equivalent to the control network.
 }

@@ -240,9 +240,9 @@ monster <- function(expr,
     # Generate null.
     nullExprAll <- NULL
     if(nullModelType == "permutation" || mode == "buildNet"){
-      nullExprAll <- GeneratePermutationNull(expr = expr, iterations = iters, mode = mode)
+      nullExprAll <- GeneratePermutationNull(expr = expr, iterations = nullPerms, mode = mode)
     }else if(nullModelType == "nullNetwork"){
-      nullExprAll <- GenerateNullFromControl(concatNet = expr, iterations = iters,
+      nullExprAll <- GenerateNullFromControl(concatNet = expr, iterations = nullPerms,
                                           design = design, nullNetworks = nullNetworks)
     }
     for(i in seq_len(iters)){
@@ -282,9 +282,9 @@ monster <- function(expr,
     # Generate null.
     nullExprAll <- NULL
     if(nullModelType == "permutation" || mode == "buildNet"){
-      nullExprAll <- GeneratePermutationNull(expr = expr, iterations = iters, mode = mode)
+      nullExprAll <- GeneratePermutationNull(expr = expr, iterations = nullPerms, mode = mode)
     }else if(nullModelType == "nullNetwork"){
-      nullExprAll <- GenerateNullFromControl(concatNet = expr, iterations = iters,
+      nullExprAll <- GenerateNullFromControl(concatNet = expr, iterations = nullPerms,
                                           design = design, nullNetworks = nullNetworks)
     }
     transMatrices <- foreach(i=seq_len(iters),
@@ -361,19 +361,23 @@ GeneratePermutationNull <- function(expr, iterations, mode){
   return(retvals)
 }
 
-#' Generates null model for MONSTER by sampling "case" networks from a distribution
-#' where the control network value is the mean and the provided null networks are
-#' used to calculate the variance. Sampling is done on an edgewise basis, using
-#' edgewise means and variances.
+#' Generates null model for MONSTER by re-centering null networks such that the
+#' mean values are equivalent to the control network.
 #' @param concatNet The concatenated case and control networks
 #' @param iterations Number of null models to generate
 #' @param design The design matrix
 #' @param nullNetworks The null networks from which to calculate the variance
 #' @return A list of matrices, each one corresponding to one null model
 GenerateNullFromControl <- function(concatNet, iterations, design, nullNetworks){
-  
-  # Set the seed.
-  set.seed(1)
+
+  # Check that the number of iterations is equal to the number of null networks.
+  nullNum <- ncol(nullNetworks) - 2
+  if(iterations != nullNum){
+    warning(paste("Warning: You have specified", iterations, "iterations but",
+                  "provided", nullNum, "null networks. MONSTER",
+                  "will generate", nullNum, "iterations instead."))
+    iterations <- nullNum
+  }
   
   # Separate cases from controls.
   concatNet <- as.data.frame(concatNet)
@@ -393,19 +397,17 @@ GenerateNullFromControl <- function(concatNet, iterations, design, nullNetworks)
   rownames(nullNetworks) <- paste(nullNetworks$tf, nullNetworks$gene, sep = "__")
   controlMelt <- controlMelt[rownames(nullNetworks),]
 
-  # Compute the standard deviations.
+  # Find the difference in means between the control network and the null networks.
   nullNetworkScores <- nullNetworks[,3:ncol(nullNetworks)]
-  nullSD <- apply(nullNetworkScores, 1, sd)
+  nullMeans <- apply(nullNetworkScores, 1, mean)
+  meanDiff <- controlMelt[,3] - nullMeans
 
-  # Sample the values for the null networks.
-  controlNulls <- do.call(rbind, lapply(1:length(nullSD), function(i){
-    sampScores <- stats::rnorm(iterations, mean = controlMelt[i,3], sd = nullSD[i])
-    return(as.data.frame(t(sampScores)))
-  }))
-  controlNulls$tf <- controlMelt$tf
-  controlNulls$gene <- controlMelt$gene
-
-  # Format the null networks for use with MONSTER.
+  # Re-center the null networks.
+  meanDiffMat <- as.data.frame(matrix(rep(meanDiff, (ncol(nullNetworks) - 2)), nrow = length(meanDiff)))
+  controlNulls <- nullNetworks
+  controlNulls[,3:ncol(controlNulls)] <- controlNulls[,3:ncol(controlNulls)] + meanDiffMat
+  
+  # Format as a list of networks.
   nullFormatted <- lapply(setdiff(colnames(controlNulls), c("tf", "gene")), function(c){
     meltedNull <- data.frame(tf = controlNulls$tf, gene = controlNulls$gene, value = controlNulls[,c])
     castNull <- reshape2::acast(meltedNull, tf ~ gene, value.var = "value")

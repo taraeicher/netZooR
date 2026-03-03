@@ -40,7 +40,7 @@ test_that("MONSTER function works", {
   # plots the Off diagonal mass of an observed Transition Matrix compared to a set of null TMs
   expect_error(monsterdTFIPlot(monsterRes), NA)
   
-  monsterCalculateTmStats(monsterRes)
+  stats <- monsterCalculateTmStats(monsterRes)
   stopifnot("monsterCalculateTmStats" %in% ls("package:netZooR"))
 
   # Calculate p-values for a tranformation matrix
@@ -145,7 +145,7 @@ test_that("GenerateNullFromControl function works", {
     value.name = "score"
   )
   nullNetworks$gene <- as.character(nullNetworks$gene)
-  for(i in 3:10){
+  for(i in 3:12){
     nullNetworks[,i] <- runif(12, min = 0, max = 0.1)
   }
   
@@ -194,6 +194,17 @@ test_that("GenerateNullFromControl function works", {
   # We cannot test multi-core processes in the build environment.
   #expect_no_error(suppressWarnings(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork",
   #                                         mode = "regNet", numMaxCores = 3, nullPerms = 10, nullNetworks = nullNetworks)))
+  
+  # Test that a warning is issued when the number of iterations does not match the number of null networks and that the
+  # number of generated null networks matches the input null.
+  numNets <- ncol(nullNetworks) - 2
+  expect_warning(GenerateNullFromControl(concatNet = networks, iterations = 100, design = design, nullNetworks = nullNetworks),
+                 paste("Warning: You have specified", 100, "iterations but",
+                       "provided", numNets, "null networks. MONSTER",
+                       "will generate", numNets, "iterations instead."))
+  null <- suppressWarnings(GenerateNullFromControl(concatNet = networks, iterations = 100, design = design, nullNetworks = nullNetworks))
+  expect_equal(length(null), numNets)
+  
 })
 
 test_that('domonster runs on toy PANDA data', {
