@@ -29,7 +29,7 @@ factor (column 1) a gene (column 2) and a score (column 3) for the motif.}
 \item{randomize}{logical indicating randomization by genes, within genes or none}
 
 \item{method}{String to indicate algorithm method.  Must be one of 
-"BERE","pearson","cd","lda", or "wcd". Default is "BERE".
+"BERE","pearson",or "lda". Default is "BERE".
 Important note: the direct regulatory network observed from gene expression is currently
 implemented as a regular correlation as opposed to the partial correlation described 
 in the paper (please see Schlauch et al., 2017,  https://doi.org/10.1186/s12918-017-0517-y)}

@@ -91,7 +91,7 @@ monsterPrintMonsterAnalysis <- function(x, ...){
 #' @param nullPerms number of random permutations to run (default 100).  Set to 0 to only 
 #' calculate observed transition matrix. When mode is is 'buildNet' it randomly permutes the case and control expression
 #' samples, if mode is 'regNet' it will randomly permute the case and control networks.
-#' @param ni_method String to indicate algorithm method.  Must be one of "BERE","pearson","cd","lda", or "wcd". Default is "BERE"
+#' @param ni_method String to indicate algorithm method.  Must be one of "BERE","pearson",or "lda". Default is "BERE"
 #' @param ni.coefficient.cutoff numeric to specify a p-value cutoff at the network
 #' inference step.  Default is NA, indicating inclusion of all coefficients.
 #' @param numMaxCores requires doParallel, foreach.  Runs MONSTER in parallel computing 
@@ -143,6 +143,10 @@ monster <- function(expr,
                     numMaxCores=1, 
                     outputDir=NA, alphaw=0.5, mode='buildNet',
                     method="ols", remove.diagonal = TRUE){
+  if(!(ni_method %in% c("BERE","pearson", "lda"))){
+    stop(paste("Supported values for ni_method are BERE, pearson, and lda.",
+               ni_method, "is invalid."))
+  }
   if(mode=='regNet'){
     motif=NA
     alphaw=NA
@@ -854,7 +858,7 @@ globalVariables(c("Var1", "Var2","value","variable","xend","yend","y","Comp.1", 
 #' @param expr.data An expression dataset, as a genes (rows) by samples (columns)
 #' @param verbose logical to indicate printing of output for algorithm progress.
 #' @param method String to indicate algorithm method.  Must be one of 
-#' "BERE","pearson","cd","lda", or "wcd". Default is "BERE".
+#' "BERE","pearson",or "lda". Default is "BERE".
 #' Important note: the direct regulatory network observed from gene expression is currently
 #' implemented as a regular correlation as opposed to the partial correlation described 
 #' in the paper (please see Schlauch et al., 2017,  https://doi.org/10.1186/s12918-017-0517-y)

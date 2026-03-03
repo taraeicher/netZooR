@@ -102,14 +102,13 @@ test_that("MONSTER function works", {
   testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
                                     nullPerms=3, ni_method = "pearson", mode = "buildNet",
                                     method = "ols", remove.diagonal = TRUE))
-  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+  testthat::expect_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
                                     nullPerms=3, ni_method = "cd", mode = "buildNet",
-                                    method = "ols", remove.diagonal = TRUE))
+                                    method = "ols", remove.diagonal = TRUE),
+                         paste("Supported values for ni_method are BERE, pearson, and lda.",
+                               "cd is invalid."))
   testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
                                     nullPerms=3, ni_method = "lda", mode = "buildNet",
-                                    method = "ols", remove.diagonal = TRUE))
-  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
-                                    nullPerms=3, ni_method = "wcd", mode = "buildNet",
                                     method = "ols", remove.diagonal = TRUE))
   
   # Test that MONSTER runs without error (regNet mode.)
@@ -120,8 +119,8 @@ test_that("MONSTER function works", {
   colnames(control_grn) <- paste0('gene', 1:10)
   rownames(exp_grn) <- paste0('tf', 1:5)
   rownames(control_grn) <- paste0('tf', 1:5)
-  combdf <- as.data.frame(cbind(control_graph, exp_graph))
-  combdes <- c(rep(0, ncol(control_graph)), rep(1, ncol(exp_graph)))
+  combdf <- as.data.frame(cbind(control_grn, exp_grn))
+  combdes <- c(rep(0, ncol(control_grn)), rep(1, ncol(exp_grn)))
   testthat::expect_no_error(monster(expr = combdf,
                                            design = combdes,
                                            motif = NA,
