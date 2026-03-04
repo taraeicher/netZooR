@@ -127,7 +127,7 @@ test_that("MONSTER function works", {
                                            motif = NA,
                                            mode = 'regNet',
                                            nullPerms = 3,
-                                           numMaxCores = 3, logging = FALSE))
+                                           numMaxCores = 1, logging = FALSE))
 })
 
 test_that('domonster runs on toy PANDA data', {
