@@ -16,7 +16,8 @@ monster(
   alphaw = 0.5,
   mode = "buildNet",
   method = "ols",
-  remove.diagonal = TRUE
+  remove.diagonal = TRUE,
+  logging = TRUE
 )
 }
 \arguments{
@@ -35,7 +36,7 @@ See also `domonster` to use this mode.}
 calculate observed transition matrix. When mode is is 'buildNet' it randomly permutes the case and control expression
 samples, if mode is 'regNet' it will randomly permute the case and control networks.}
 
-\item{ni_method}{String to indicate algorithm method.  Must be one of "bere","pearson","cd","lda", or "wcd". Default is "bere"}
+\item{ni_method}{String to indicate algorithm method.  Must be one of "BERE","pearson",or "lda". Default is "BERE"}
 
 \item{ni.coefficient.cutoff}{numeric to specify a p-value cutoff at the network
 inference step.  Default is NA, indicating inclusion of all coefficients.}
@@ -57,6 +58,8 @@ networks are supplied in the 'expr' variable as a TF-by-Gene matrix, by concaten
 \item{method}{Method to use in computing the transition matrix. These include "ols" (default),"kabsch","L1", and "orig" (SVD).}
 
 \item{remove.diagonal}{#' Logical for returning a result containing 0s across the diagonal (default = TRUE).}
+
+\item{logging}{Whether or not to print logging messages for MONSTER (default is TRUE)}
 }
 \value{
 An object of class "monsterAnalysis" containing results
