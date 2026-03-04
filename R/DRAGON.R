@@ -389,6 +389,14 @@ dragon = function(layer1,layer2,pval = FALSE,gradient = "finite_difference", ver
   precmat = get_precision_matrix_dragon(layer1, layer2, lambdas)
   ggm = get_partial_correlation_dragon(layer1, layer2, lambdas)
   
+  # Propagate variable names from input layers to output matrices
+  all_names = c(colnames(layer1), colnames(layer2))
+  if(!is.null(all_names) && length(all_names) == ncol(shrunken_cov)) {
+    rownames(shrunken_cov) = colnames(shrunken_cov) = all_names
+    rownames(precmat) = colnames(precmat) = all_names
+    rownames(ggm) = colnames(ggm) = all_names
+  }
+  
   # if pval, return pval approx with finite difference
   if(pval)
   {

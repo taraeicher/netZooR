@@ -14,7 +14,13 @@ Description:
               for a numerical phenotype is Pearson correlation and
               for a categorical phenotype is the p-value of an ANOVA test}
 \usage{
-seahorse(expression, phenotype, phenotype_dictionary, pathways)
+seahorse(
+  expression,
+  phenotype,
+  phenotype_dictionary,
+  pathways,
+  compute_cor = TRUE
+)
 }
 \arguments{
 \item{expression}{: gene expression matrix (normalized, and filtered) 
@@ -31,7 +37,9 @@ containing type of each phenotype.
 Types can be either "numeric" or "categorical"}
 
 \item{pathways}{: a list of pathways (e.g. KEGG, GO, Reactome etc. 
-                  downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
+downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
+
+\item{compute_cor}{: Whether or not to compute the correlation matrix. Default is TRUE.
 Outputs:}
 }
 \value{

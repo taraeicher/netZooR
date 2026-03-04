@@ -69,18 +69,65 @@ test_that("MONSTER function works", {
   
   # Bipartite Edge Reconstruction from Expression data with method = "pearson":
   # error here:  Error in rownames(expr.data) %in% tfNames : object 'tfNames' not found 
-  cc.net_pearson <- monsterMonsterNI(yeast$motif, yeast$exp.cc, method = "pearson", score="na")
+  cc.net_pearson <- monsterMonsterNI(yeast$motif, yeast$exp.cc, method = "pearson", score="na",
+                                     logging = FALSE)
   
   # Bipartite Edge Reconstruction from Expression data with other methods:
-  expect_equal(monsterMonsterNI(yeast$motif, yeast$exp.cc, method = "cd"), cc.net_cd, tolerance = 1e-3)
+  expect_equal(monsterMonsterNI(yeast$motif, yeast$exp.cc, method = "cd", logging = FALSE), cc.net_cd, tolerance = 1e-3)
   
   # Bipartite Edge Reconstruction from Expression data (composite method with direct/indirect)
   monsterRes_bereFull<- monsterBereFull(yeast$motif, yeast$exp.cc, alpha=.5)
+  monsterRes_bereFull2<- monsterMonsterNI(yeast$motif, yeast$exp.cc, method = "BERE", alphaw = 0.5)
   expect_equal(monsterRes_bereFull[1,1], 105770, tolerance=1e-7)
+  expect_equal(monsterRes_bereFull2[1,1], 105770, tolerance=1e-7)
   
   # summarizes the results of a MONSTER analysis
   expect_error(monsterPrintMonsterAnalysis(monsterRes),NA)
-
+  
+  # Test that MONSTER runs without error (buildNet mode).
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "BERE", mode = "buildNet",
+                                    method = "ols", remove.diagonal = TRUE, logging = FALSE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "BERE", mode = "buildNet",
+                                    method = "ols", remove.diagonal = FALSE, logging = FALSE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "BERE", mode = "buildNet",
+                                    method = "kabsch", remove.diagonal = TRUE, logging = FALSE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "BERE", mode = "buildNet",
+                                    method = "L1", remove.diagonal = TRUE, logging = FALSE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "BERE", mode = "buildNet",
+                                    method = "orig", remove.diagonal = TRUE, logging = FALSE))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "pearson", mode = "buildNet",
+                                    method = "ols", remove.diagonal = TRUE, logging = FALSE))
+  testthat::expect_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "cd", mode = "buildNet",
+                                    method = "ols", remove.diagonal = TRUE, logging = FALSE),
+                         paste("Supported values for ni_method are BERE, pearson, and lda.",
+                               "cd is invalid."))
+  testthat::expect_no_error(monster(expr = yeast$exp.cc, design = design, motif = yeast$motif, 
+                                    nullPerms=3, ni_method = "lda", mode = "buildNet",
+                                    method = "ols", remove.diagonal = TRUE, logging = FALSE))
+  
+  # Test that MONSTER runs without error (regNet mode.)
+  set.seed(123)
+  exp_grn <- matrix(data = rnorm(50, mean = 1), ncol = 10, nrow = 5)
+  control_grn <- matrix(data = rnorm(50, mean = 1), ncol = 10, nrow = 5)
+  colnames(exp_grn) <- paste0('gene', 1:10)
+  colnames(control_grn) <- paste0('gene', 1:10)
+  rownames(exp_grn) <- paste0('tf', 1:5)
+  rownames(control_grn) <- paste0('tf', 1:5)
+  combdf <- as.data.frame(cbind(control_grn, exp_grn))
+  combdes <- c(rep(0, ncol(control_grn)), rep(1, ncol(exp_grn)))
+  testthat::expect_no_error(monster(expr = combdf,
+                                           design = combdes,
+                                           motif = NA,
+                                           mode = 'regNet',
+                                           nullPerms = 3,
+                                           numMaxCores = 1, logging = FALSE))
 })
 
 test_that("GeneratePermutationNull function works", {
@@ -216,7 +263,7 @@ test_that('domonster runs on toy PANDA data', {
   rownames(exp_grn) <- paste0('tf', 1:5)
   rownames(control_grn) <- paste0('tf', 1:5)
   
-  testthat::expect_no_error(domonster(exp_grn, control_grn, numMaxCores = 1))
+  testthat::expect_no_error(domonster(exp_grn, control_grn, numMaxCores = 1, logging = FALSE))
   
   # # more robust test using the pandaToyData that is unexplainably failing the github checks
   # pandaResult_exp <- panda(pandaToyData$motif, pandaToyData$expression[,1:25], pandaToyData$ppi)

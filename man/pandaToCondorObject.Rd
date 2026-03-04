@@ -20,7 +20,7 @@ a CONDOR object, see \code{\link{createCondorObject}}.
 \description{
 \strong{CONDOR} (COmplex Network Description Of Regulators) implements methods for clustering biapartite networks
 and estimatiing the contribution of each node to its community's modularity, 
-\doi{10.1371/journal.pcbi.1005033}{(Platig et al. 2016)}
+(Platig et al. (2016), \doi{10.1371/journal.pcbi.1005033})
 This function uses the result of PANDA algorithm as the input dataset to run CONDOR algorithm. More about \href{https://github.com/jplatig/condor}{condor} package and usage.
 }
 \examples{
