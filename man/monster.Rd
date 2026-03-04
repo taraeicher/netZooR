@@ -16,7 +16,8 @@ monster(
   alphaw = 0.5,
   mode = "buildNet",
   method = "ols",
-  remove.diagonal = TRUE
+  remove.diagonal = TRUE,
+  logging = TRUE
 )
 }
 \arguments{
@@ -57,6 +58,8 @@ networks are supplied in the 'expr' variable as a TF-by-Gene matrix, by concaten
 \item{method}{Method to use in computing the transition matrix. These include "ols" (default),"kabsch","L1", and "orig" (SVD).}
 
 \item{remove.diagonal}{#' Logical for returning a result containing 0s across the diagonal (default = TRUE).}
+
+\item{logging}{Whether or not to print logging messages for MONSTER (default is TRUE)}
 }
 \value{
 An object of class "monsterAnalysis" containing results

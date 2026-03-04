@@ -14,7 +14,8 @@ monsterMonsterNI(
   alphaw = 1,
   regularization = "none",
   score = "motifincluded",
-  cpp = FALSE
+  cpp = FALSE,
+  logging = TRUE
 )
 }
 \arguments{
@@ -48,6 +49,8 @@ readded upon completion of the algorithm
 to give to indirect compared to direct evidence.  See documentation.}
 
 \item{cpp}{logical use C++ for maximum speed, set to false if unable to run.}
+
+\item{logging}{Whether or not to log progress (default = TRUE)}
 }
 \value{
 matrix for inferred network between TFs and genes
