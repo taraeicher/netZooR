@@ -423,7 +423,7 @@ monsterTransformationMatrix <- function(network.1, network.2, by.tfs=TRUE, stand
     }, x=net1, y=net2, FUN.VALUE = numeric(dim(net1)[1]))
     tf.trans.matrix <- do.call(rbind, lapply(seq_len(ncol(net1)), function(i){
       coef <- NULL
-      capture.output(
+      utils::capture.output(
         l1 <- penalized::optL1(response = net2.star[,i], penalized = net1, fold=5, minlambda1=1, 
                                maxlambda1=2, model="linear", standardize=TRUE),
         z <- penalized::penalized(response = net2.star[,i], penalized = net1, 
@@ -1009,9 +1009,6 @@ monsterMonsterNI <- function(motif.data,
     if (method=="pearson"){
       tfNames = levels(motif.data$TF)
       result <- t(cor(t(expr.data),t(expr.data[rownames(expr.data)%in%tfNames,]))^2)
-      if(score=="motifincluded"){
-        result <- as.matrix(consensus + consensusRange*regulatory.network)
-      }
     } else {
       strt<-Sys.time()
       # Remove NA correlations
@@ -1105,7 +1102,7 @@ monsterBereFull <- function(motif.data,
     # Penalized Logistic Reg
     expr.data[is.na(expr.data)] <- 0
     prediction <- NULL
-    capture.output(
+    utils::capture.output(
       z <-penalized::penalized(response=tfTargets, penalized=expr.data, unpenalized=~0,
                                lambda2=lambda, model="logistic", standardize=TRUE),
       prediction <- penalized::predict(z, expr.data),
