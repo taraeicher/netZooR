@@ -128,6 +128,9 @@ test_that("MONSTER function works", {
                                            mode = 'regNet',
                                            nullPerms = 3,
                                            numMaxCores = 1, logging = FALSE))
+  
+  # Remove data file.
+  unlink("./testDatasetMonster.RData")
 })
 
 test_that("GeneratePermutationNull function works", {
