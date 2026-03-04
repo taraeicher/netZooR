@@ -18,7 +18,7 @@ monster(
   method = "ols",
   remove.diagonal = TRUE,
   nullModelType = "permutation",
-  nullNetworks = NA
+  nullNetworks = NA,
   logging = TRUE
 )
 }
