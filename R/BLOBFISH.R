@@ -96,9 +96,6 @@ GenerateNullPANDADistribution <- function(ppiFile, motifFile, sampSize = 20,
     stop("Null PANDA generation error: outputType must be 'vector' or 'network'.")
   }
   
-  # Set the seed.
-  set.seed(1)
-  
   # Read the motif.
   ppi <- NULL
   motif <- NULL
