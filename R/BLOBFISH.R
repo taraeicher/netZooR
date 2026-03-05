@@ -80,9 +80,6 @@ RunBLOBFISH <- function(geneSet, networks, alpha, hopConstraint, nullDistributio
 GenerateNullPANDADistribution <- function(ppiFile, motifFile, sampSize = 20,
                                           numberOfPandas = 10){
   
-  # Set the seed.
-  set.seed(1)
-  
   # Read the motif.
   motif <- utils::read.table(motifFile, sep = "\t")
   ppi <- utils::read.table(ppiFile, sep = "\t")
