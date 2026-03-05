@@ -5,7 +5,7 @@
 \title{Generates null models for MONSTER by permuting the expression levels
 for the case and control data.}
 \usage{
-GeneratePermutationNull(expr, iterations, mode)
+GeneratePermutationNull(expr, iterations, mode, logging)
 }
 \arguments{
 \item{expr}{Gene expression dataset}
@@ -13,6 +13,8 @@ GeneratePermutationNull(expr, iterations, mode)
 \item{iterations}{Number of null models to generate}
 
 \item{mode}{"buildNet" or "regNet"}
+
+\item{logging}{Whether or not to print logging messages for MONSTER (default is TRUE)}
 }
 \value{
 A list of matrices, each one corresponding to one null model

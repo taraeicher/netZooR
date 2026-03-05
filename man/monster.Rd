@@ -9,7 +9,7 @@ monster(
   design,
   motif,
   nullPerms = 100,
-  ni_method = "bere",
+  ni_method = "BERE",
   ni.coefficient.cutoff = NA,
   numMaxCores = 1,
   outputDir = NA,

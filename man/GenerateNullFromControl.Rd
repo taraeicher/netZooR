@@ -5,7 +5,7 @@
 \title{Generates null model for MONSTER by re-centering null networks such that the
 mean values are equivalent to the control network.}
 \usage{
-GenerateNullFromControl(concatNet, iterations, design, nullNetworks)
+GenerateNullFromControl(concatNet, iterations, design, nullNetworks, logging)
 }
 \arguments{
 \item{concatNet}{The concatenated case and control networks}
@@ -15,6 +15,8 @@ GenerateNullFromControl(concatNet, iterations, design, nullNetworks)
 \item{design}{The design matrix}
 
 \item{nullNetworks}{The null networks from which to calculate the variance}
+
+\item{logging}{Whether or not to print logging messages for MONSTER (default is TRUE)}
 }
 \value{
 A list of matrices, each one corresponding to one null model

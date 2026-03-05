@@ -1,4 +1,4 @@
-monsterAnalysis <- setClass("monsterAnalysis", slots=c("tm","nullTM","numGenes","numSamples"))
+monsterAnalysis <- setClass("monsterAnalysis", slots=c("tm","nullTM","numGenes","numSamples", "logging"))
 setMethod("show","monsterAnalysis",function(object){monsterPrintMonsterAnalysis(object)})
 
 #' monsterGetTm
@@ -48,12 +48,14 @@ monsterPlotMonsterAnalysis <- function(x, ...){
 #' design <- c(rep(1,25),rep(0,10),rep(NA,15))
 #' #monster(yeast$exp.cc,design,yeast$motif, nullPerms=10, numMaxCores=1)
 monsterPrintMonsterAnalysis <- function(x, ...){
-  cat("MONSTER object\n")
-  cat(paste(x@numGenes, "genes\n"))
-  cat(paste(x@numSamples[1],"baseline samples\n"))
-  cat(paste(x@numSamples[2],"final samples\n"))
-  cat(paste("Transition driven by", ncol(x@tm), "transcription factors\n"))
-  cat(paste("Run with", length(x@nullTM), "randomized permutations.\n"))
+  if(x@logging == TRUE){
+    cat("MONSTER object\n")
+    cat(paste(x@numGenes, "genes\n"))
+    cat(paste(x@numSamples[1],"baseline samples\n"))
+    cat(paste(x@numSamples[2],"final samples\n"))
+    cat(paste("Transition driven by", ncol(x@tm), "transcription factors\n"))
+    cat(paste("Run with", length(x@nullTM), "randomized permutations.\n"))
+  }
 }
 
 #' MOdeling Network State Transitions from Expression and Regulatory data (MONSTER)
@@ -145,7 +147,7 @@ monster <- function(expr,
                     design, 
                     motif, 
                     nullPerms=100,
-                    ni_method="bere",
+                    ni_method="BERE",
                     ni.coefficient.cutoff = NA,
                     numMaxCores=1, 
                     outputDir=NA, alphaw=0.5, mode='buildNet',
@@ -249,10 +251,12 @@ monster <- function(expr,
     # Generate null.
     nullExprAll <- NULL
     if(nullModelType == "permutation" || mode == "buildNet"){
-      nullExprAll <- GeneratePermutationNull(expr = expr, iterations = nullPerms, mode = mode)
+      nullExprAll <- GeneratePermutationNull(expr = expr, iterations = nullPerms, mode = mode,
+                                             logging = logging)
     }else if(nullModelType == "nullNetwork"){
       nullExprAll <- GenerateNullFromControl(concatNet = expr, iterations = nullPerms,
-                                          design = design, nullNetworks = nullNetworks)
+                                          design = design, nullNetworks = nullNetworks,
+                                          logging = logging)
     }
     for(i in seq_len(iters)){
       if(logging == TRUE){
@@ -299,10 +303,12 @@ monster <- function(expr,
     # Generate null.
     nullExprAll <- NULL
     if(nullModelType == "permutation" || mode == "buildNet"){
-      nullExprAll <- GeneratePermutationNull(expr = expr, iterations = nullPerms, mode = mode)
+      nullExprAll <- GeneratePermutationNull(expr = expr, iterations = nullPerms, mode = mode,
+                                             logging = logging)
     }else if(nullModelType == "nullNetwork"){
       nullExprAll <- GenerateNullFromControl(concatNet = expr, iterations = nullPerms,
-                                          design = design, nullNetworks = nullNetworks)
+                                          design = design, nullNetworks = nullNetworks,
+                                          logging = logging)
     }
     transMatrices <- foreach(i=seq_len(iters),
                              .packages=c("netZooR","reshape2","penalized","MASS")) %dopar% {
@@ -356,7 +362,8 @@ monster <- function(expr,
       tm=transMatrices[[1]], 
       nullTM=transMatrices[-1], 
       numGenes=numGenes, 
-      numSamples=c(sum(design==0), sum(design==1))))
+      numSamples=c(sum(design==0), sum(design==1)),
+      logging = logging))
 }
 
 #' Generates null models for MONSTER by permuting the expression levels
@@ -364,8 +371,9 @@ monster <- function(expr,
 #' @param expr Gene expression dataset
 #' @param iterations Number of null models to generate
 #' @param mode "buildNet" or "regNet"
+#' @param logging Whether or not to print logging messages for MONSTER (default is TRUE)
 #' @return A list of matrices, each one corresponding to one null model
-GeneratePermutationNull <- function(expr, iterations, mode){
+GeneratePermutationNull <- function(expr, iterations, mode, logging){
   retvals <- NULL
   if(mode == "regNet"){
     retvals <- lapply(1:iterations, function(i){
@@ -379,7 +387,9 @@ GeneratePermutationNull <- function(expr, iterations, mode){
       return(exprMat)
     })
   }
-  print("Finished generating null models")
+  if(logging == TRUE){
+    print("Finished generating null models")
+  }
   return(retvals)
 }
 
@@ -389,8 +399,9 @@ GeneratePermutationNull <- function(expr, iterations, mode){
 #' @param iterations Number of null models to generate
 #' @param design The design matrix
 #' @param nullNetworks The null networks from which to calculate the variance
+#' @param logging Whether or not to print logging messages for MONSTER (default is TRUE)
 #' @return A list of matrices, each one corresponding to one null model
-GenerateNullFromControl <- function(concatNet, iterations, design, nullNetworks){
+GenerateNullFromControl <- function(concatNet, iterations, design, nullNetworks, logging){
 
   # Check that the number of iterations is equal to the number of null networks.
   nullNum <- ncol(nullNetworks) - 2
@@ -440,7 +451,9 @@ GenerateNullFromControl <- function(concatNet, iterations, design, nullNetworks)
   })
 
   # Return.
-  print("Finished generating null models")
+  if(logging == TRUE){
+    print("Finished generating null models")
+  }
   return(nullFormatted)
 }
 
@@ -625,6 +638,7 @@ kabsch <- function(P,Q){
 #' # yeast$exp.cc[is.na(yeast$exp.cc)] <- mean(as.matrix(yeast$exp.cc),na.rm=TRUE)
 #' # monsterRes <- monster(yeast$exp.cc, design, yeast$motif, nullPerms=10, numMaxCores=1)
 #' data(monsterRes)
+#' slot(monsterRes, "logging") <- FALSE
 #' monsterHclHeatmapPlot(monsterRes)
 monsterHclHeatmapPlot <- function(monsterObj, method="pearson"){
   if (!requireNamespace("ggplot2", quietly = TRUE))
@@ -723,6 +737,7 @@ monsterHclHeatmapPlot <- function(monsterObj, method="pearson"){
 #' # yeast$exp.cc[is.na(yeast$exp.cc)] <- mean(as.matrix(yeast$exp.cc),na.rm=TRUE)
 #' # monsterRes <- monster(yeast$exp.cc, design, yeast$motif, nullPerms=100, numMaxCores=4)#' 
 #' data(monsterRes)
+#' slot(monsterRes, "logging") <- FALSE
 #' # Color the nodes according to cluster membership
 #' clusters <- kmeans(monsterGetTm(monsterRes),3)$cluster 
 #' monsterTransitionPCAPlot(monsterRes, 
@@ -772,6 +787,7 @@ monsterTransitionPCAPlot <-    function(monsterObj,
 #' # design <- c(rep(0,20),rep(NA,10),rep(1,20))
 #' # monsterRes <- monster(yeast$exp.cc, design, yeast$motif, nullPerms=100, numMaxCores=4)#' 
 #' data(monsterRes)
+#' slot(monsterRes, "logging") <- FALSE
 #' monsterTransitionNetworkPlot(monsterRes, rescale='significance')
 #' monsterTransitionNetworkPlot(monsterRes, rescale='none')
 
@@ -848,6 +864,7 @@ monsterTransitionNetworkPlot <- function(monsterObj, numEdges=100, numTopTFs=10,
 #' # design <- c(rep(0,20),rep(NA,10),rep(1,20))
 #' # monsterRes <- monster(yeast$exp.cc, design, yeast$motif, nullPerms=100, numMaxCores=4)#' 
 #' data(monsterRes)
+#' slot(monsterRes, "logging") <- FALSE
 #' monsterdTFIPlot(monsterRes)
 monsterdTFIPlot <- function(monsterObj, rescale='none', plot.title=NA, highlight.tfs=NA,
                              nTFs=-1){
@@ -926,6 +943,7 @@ monsterdTFIPlot <- function(monsterObj, rescale='none', plot.title=NA, highlight
 #' # yeast$exp.cc[is.na(yeast$exp.cc)] <- mean(as.matrix(yeast$exp.cc),na.rm=TRUE)
 #' # monsterRes <- monster(yeast$exp.cc, design, yeast$motif, nullPerms=100, numMaxCores=4)
 #' data(monsterRes)
+#' slot(monsterRes, "logging") <- FALSE
 #' monsterCalculateTmStats(monsterRes)
 
 monsterCalculateTmStats <- function(monsterObj, method="z-score"){
@@ -986,6 +1004,7 @@ monsterCalculateTmStats <- function(monsterObj, method="z-score"){
 #' # yeast$exp.cc[is.na(yeast$exp.cc)] <- mean(as.matrix(yeast$exp.cc),na.rm=TRUE)
 #' # monsterRes <- monster(yeast$exp.cc, design, yeast$motif, nullPerms=100, numMaxCores=4)
 #' data(monsterRes)
+#' slot(monsterRes, "logging") <- FALSE
 #' monsterCalculateTmPValues(monsterRes)
 monsterCalculateTmPValues <- function(monsterObj, method="z-score"){
 
@@ -1193,10 +1212,11 @@ monsterBereFull <- function(motif.data,
     stop("Package 'penalized' is required for monsterBereFull. Please install it.")
   
   expr.data <- data.frame(expr.data)
-  tfdcast <- reshape2::dcast(motif.data,TF~GENE,fill=0, value.var = "V3")
+  colnames(motif.data) <- c("TF", "GENE", "score")
+  tfdcast <- reshape2::dcast(motif.data,TF~GENE,fill=0, value.var = "score")
   rownames(tfdcast) <- tfdcast[,1]
   tfdcast <- tfdcast[,-1]
-  
+
   expr.data <- expr.data[sort(rownames(expr.data)),]
   tfdcast <- tfdcast[,sort(colnames(tfdcast)),]
   tfNames <- rownames(tfdcast)[rownames(tfdcast) %in% rownames(expr.data)]
@@ -1204,7 +1224,7 @@ monsterBereFull <- function(motif.data,
   ## Filtering
   # filter out the TFs that are not in expression set
   tfdcast <- tfdcast[rownames(tfdcast)%in%tfNames,]
-  
+
   # Filter out genes that aren't targetted by anything 7/28/15
   commonGenes <- intersect(colnames(tfdcast),rownames(expr.data))
   expr.data <- expr.data[commonGenes,]
@@ -1238,9 +1258,9 @@ monsterBereFull <- function(motif.data,
   }))
   
   ## Convert values to ranks
+
   directCor <- matrix(rank(directCor), ncol=ncol(directCor))
   result <- matrix(rank(result), ncol=ncol(result))
-  
   consensus <- directCor*(1-alpha) + result*alpha
   rownames(consensus) <- rownames(tfdcast)
   colnames(consensus) <- rownames(expr.data)

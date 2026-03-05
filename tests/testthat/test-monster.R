@@ -21,6 +21,7 @@ test_that("MONSTER function works", {
   # to do: Add L1 method in test
   
   data("monsterRes")
+  monsterRes@logging <- FALSE
   
   # Transformation matrix plot
   expect_error(monsterHclHeatmapPlot(monsterRes), NA)
@@ -141,7 +142,9 @@ test_that("GeneratePermutationNull function works", {
   rownames(networks) <- paste0("tf", 1:3)
   colnames(networks) <- rep(paste0("gene", 1:4), 2)
   design <- c(rep(0, 4), rep(1, 4))
-  motif <- data.frame(tf = c("tf1", rep("tf2", 4)), gene = c("gene2", "gene1", "gene2", "gene3", "gene4"), score = c(1, 1, rep(0, 3)))
+  motif <- data.frame(tf = c("tf1", rep("tf2", 4), "tf1", "tf2"), 
+                      gene = c("gene2", "gene1", "gene2", "gene3", "gene4", "tf2", "tf1"), 
+                      score = c(1, 1, rep(0, 3), 1, 1))
   
   # Test that the MONSTER function does not allow GeneratePermutationNull
   # to be called without the correct inputs.
@@ -150,7 +153,7 @@ test_that("GeneratePermutationNull function works", {
   
   # Test that the permutation null has the same format and that
   # the values are not equal for regNet case.
-  permNull <- GeneratePermutationNull(expr = networks, iterations = 10, mode = "regNet")
+  permNull <- GeneratePermutationNull(expr = networks, iterations = 10, mode = "regNet", logging = FALSE)
   expect_equal(colnames(permNull[[5]]), colnames(networks))
   expect_equal(rownames(permNull[[5]]), rownames(networks))
   expect_true(!identical(permNull[[5]], networks))
@@ -160,19 +163,19 @@ test_that("GeneratePermutationNull function works", {
   rownames(expression) <- c("tf1", "tf2", paste0("gene", 1:4))
   colnames(expression) <- paste0("samp", 1:10)
   design2 <- c(rep(0, 5), rep(1, 5))
-  permNull <- GeneratePermutationNull(expr = expression, iterations = 10, mode = "buildNet")
+  permNull <- GeneratePermutationNull(expr = expression, iterations = 10, mode = "buildNet", logging = FALSE)
   expect_equal(colnames(permNull[[5]]), colnames(expression))
   expect_equal(rownames(permNull[[5]]), rownames(expression))
   expect_true(!identical(permNull[[5]], expression))
   
   # Test that MONSTER runs without error.
   expect_no_error(monster(expr = networks, design = design, motif = motif, nullModelType = "permutation",
-                                          mode = "regNet", nullPerms = 10))
+                                          mode = "regNet", nullPerms = 10, logging = FALSE))
   # We cannot test multi-core processes in the build environment.
   #expect_no_error(suppressWarnings(monster(expr = networks, design = design, motif = motif, nullModelType = "permutation",
   #                        mode = "regNet", numMaxCores = 3, nullPerms = 10)))
   expect_no_error(monster(expr = expression, design = design2, motif = motif, nullModelType = "permutation",
-                          mode = "buildNet", nullPerms = 10))
+                          mode = "buildNet", nullPerms = 10, logging = FALSE))
   # We cannot test multi-core processes in the build environment.
   #expect_no_error(suppressWarnings(monster(expr = expression, design = design2, motif = motif, nullModelType = "permutation",
   #                                         mode = "buildNet", numMaxCores = 3, nullPerms = 10)))
@@ -232,7 +235,8 @@ test_that("GenerateNullFromControl function works", {
                "The node lists differ between the input networks and the provided null networks.")
   
   # Test that the control is still the same and the format is correct.
-  null <- GenerateNullFromControl(concatNet = networks, iterations = 10, design = design, nullNetworks = nullNetworks)
+  null <- GenerateNullFromControl(concatNet = networks, iterations = 10, design = design, nullNetworks = nullNetworks,
+                                  logging = FALSE)
   expect_equal(colnames(null[[5]]), colnames(networks))
   expect_equal(rownames(null[[5]]), rownames(networks))
   expect_true(!identical(null[[5]], networks))
@@ -240,7 +244,7 @@ test_that("GenerateNullFromControl function works", {
   
   # Test that MONSTER runs without error.
   expect_no_error(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork",
-                          mode = "regNet", nullPerms = 10, nullNetworks = nullNetworks))
+                          mode = "regNet", nullPerms = 10, nullNetworks = nullNetworks, logging = FALSE))
   # We cannot test multi-core processes in the build environment.
   #expect_no_error(suppressWarnings(monster(expr = networks, design = design, motif = NA, nullModelType = "nullNetwork",
   #                                         mode = "regNet", numMaxCores = 3, nullPerms = 10, nullNetworks = nullNetworks)))
@@ -248,11 +252,13 @@ test_that("GenerateNullFromControl function works", {
   # Test that a warning is issued when the number of iterations does not match the number of null networks and that the
   # number of generated null networks matches the input null.
   numNets <- ncol(nullNetworks) - 2
-  expect_warning(GenerateNullFromControl(concatNet = networks, iterations = 100, design = design, nullNetworks = nullNetworks),
+  expect_warning(GenerateNullFromControl(concatNet = networks, iterations = 100, design = design, nullNetworks = nullNetworks,
+                                         logging = FALSE),
                  paste("Warning: You have specified", 100, "iterations but",
                        "provided", numNets, "null networks. MONSTER",
                        "will generate", numNets, "iterations instead."))
-  null <- suppressWarnings(GenerateNullFromControl(concatNet = networks, iterations = 100, design = design, nullNetworks = nullNetworks))
+  null <- suppressWarnings(GenerateNullFromControl(concatNet = networks, iterations = 100, design = design, nullNetworks = nullNetworks,
+                                                   logging = FALSE))
   expect_equal(length(null), numNets)
   
 })
