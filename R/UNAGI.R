@@ -495,12 +495,12 @@ FindConnectionsForAllHopCountsU <- function(subnetworks, odd = FALSE, verbose = 
 #' @param vertexLabelOffset Number of pixels in the offset when plotting labels.
 #' Default is TRUE.
 #' @export
-PlotNetworkU <- function(network, genesOfInterest,
-                         tfColor = "blue", nodeSize = 1,
+PlotNetworkU <- function(network, genesOfInterest, nodeSize = 1,
                          edgeWidth = 0.5, vertexLabels = NA, vertexLabelSize = 0.7,
                          vertexLabelOffset = 0.5, geneColorMapping = NULL){
   
   # Convert from factor to character.
+  colnames(network)[1:2] <- c("source", "target")
   network$source <- as.character(network$source)
   network$target <- as.character(network$target)
   
@@ -530,9 +530,16 @@ PlotNetworkU <- function(network, genesOfInterest,
   }
   # Add edge attributes.
   if(!is.null(geneColorMapping)){
-    for(gene in rownames(geneColorMapping)){
-      network[which(network$target == 2), "color"] <- geneColorMapping[gene, "color"]
-    }
+    rownames(geneColorMapping) <- geneColorMapping$gene
+    uniqueColors <- unique(geneColorMapping$color)
+    edgeColors <- unlist(lapply(1:nrow(network), function(i){
+      retcol <- "gray"
+      if(geneColorMapping[network$source[i], "color"] == geneColorMapping[network$target[i], "color"]){
+        retcol <- geneColorMapping[network$source[i], "color"]
+      }
+      return(retcol)
+    }))
+    network$color <- edgeColors
   }
   network$width <- edgeWidth
   # Create a graph object.
@@ -540,7 +547,8 @@ PlotNetworkU <- function(network, genesOfInterest,
   V(graph)$type <- V(graph)$name %in% network$source
   
   # Plot.
-  labels <- V(graph)$name
-  whichEmpty <- which(labels %in% setdiff(labels, vertexLabels))
-  labels[whichEmpty] <- rep(NA, length(whichEmpty))
+  if(length(vertexLabels) == 1 && is.na(vertexLabels)){
+    vertexLabels <- V(graph)$name
+  }
+  plot(graph, vertex.label = vertexLabels)
 }

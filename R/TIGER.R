@@ -53,18 +53,23 @@
 #' @export
 #'
 #' @examples
-#' if (requireNamespace("cmdstanr", quietly = TRUE) && tryCatch({
-#' nzchar(cmdstanr::cmdstan_path())}, error = function(e) FALSE)) {
-#'    data(TIGER_expr)
-#'    data(TIGER_prior)
-#'    tiger(TIGER_expr,TIGER_prior)
+#' pkg <- "cmdstanr"
+#' if (requireNamespace(pkg, quietly = TRUE)) {
+#'   cmdstan_path <- getFromNamespace("cmdstan_path", pkg)
+#'   ok <- tryCatch(nzchar(cmdstan_path()), error = function(e) FALSE)
+#'   if (ok) {
+#'     data(TIGER_expr)
+#'     data(TIGER_prior)
+#'     tiger(TIGER_expr, TIGER_prior)
+#'   }
 #' }
 tiger = function(expr,prior,method="VB",TFexpressed = TRUE,
                  signed=TRUE,baseline=TRUE,psis_loo = FALSE,
                  seed=123,out_path=NULL,out_size = 300,
                  a_sigma=1,b_sigma=1,a_alpha=1,b_alpha=1,
                  sigmaZ=10,sigmaB=1,tol = 0.005){
-  if (!requireNamespace("cmdstanr", quietly = TRUE)) {
+  pkg <- "cmdstanr"
+  if (!requireNamespace(pkg, quietly = TRUE)) {
     stop("Package 'cmdstanr' is required for tiger().\n",
          "Install from: https://mc-stan.org/cmdstanr/", call. = FALSE)
   }
@@ -124,9 +129,11 @@ tiger = function(expr,prior,method="VB",TFexpressed = TRUE,
                        a_sigma = a_sigma,b_sigma = b_sigma,a_alpha = a_alpha,b_alpha = b_alpha)
 
   #1. compile stan model, only once
-  f = cmdstanr::write_stan_file(TIGER_C) # save to .stan file in root folder
+  write_stan <- .get_cmdstanr_fun("write_stan_file")
+  f = write_stan(TIGER_C) # save to .stan file in root folder
   #mod = cmdstanr::cmdstan_model(f,cpp_options = list(stan_threads = TRUE)) # compile stan program, allow within-chain parallel
-  mod = cmdstanr::cmdstan_model(f)
+  stan_model <- .get_cmdstanr_fun("cmdstan_model")
+  mod = stan_model(f)
   
   #2. run VB or MCMC
   if (method=="VB"){
@@ -215,7 +222,22 @@ tiger = function(expr,prior,method="VB",TFexpressed = TRUE,
   return(tiger_fit)
 }
 
-
+#' This function exists as a workaround for calling packages from cmdstanr without
+#' triggering package warnings. We cannot use cmdstanr::function() because cmdstanr
+#' is not included in Suggests under the DESCRIPTION file. It cannot be included
+#' under Suggests because it is not supported by Bioconductor.
+#' @keywords internal
+.get_cmdstanr_fun <- function(fun) {
+  pkg <- "cmdstanr"
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    stop(
+      "Optional dependency 'cmdstanr' is not installed.\n",
+      "Install it from the Stan r-universe repo to use this feature.",
+      call. = FALSE
+    )
+  }
+  return(getExportedValue(pkg, fun))
+}
 
 #' Convert bipartite edge list to adjacency mat
 #'

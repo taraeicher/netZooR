@@ -76,10 +76,14 @@ density, which can be used for Bayesian stacking to handle multi-modality later.
 TIGER main function
 }
 \examples{
-if (requireNamespace("cmdstanr", quietly = TRUE) && tryCatch({
-nzchar(cmdstanr::cmdstan_path())}, error = function(e) FALSE)) {
-   data(TIGER_expr)
-   data(TIGER_prior)
-   tiger(TIGER_expr,TIGER_prior)
+pkg <- "cmdstanr"
+if (requireNamespace(pkg, quietly = TRUE)) {
+  cmdstan_path <- getFromNamespace("cmdstan_path", pkg)
+  ok <- tryCatch(nzchar(cmdstan_path()), error = function(e) FALSE)
+  if (ok) {
+    data(TIGER_expr)
+    data(TIGER_prior)
+    tiger(TIGER_expr, TIGER_prior)
+  }
 }
 }
