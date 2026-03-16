@@ -160,4 +160,72 @@ test_that('domonster runs on toy PANDA data', {
   # expect_equal(monster_res1, monster_res3, tolerance=1e-15) 
 })
 
+test_that("monsterCheckDataType() converts data.frame to matrix", {
+  df <- data.frame(a = 1:3, b = 4:6)
+  result <- monsterCheckDataType(df)
+  expect_true(is.matrix(result))
+  expect_equal(dim(result), c(3, 2))
+})
+
+test_that("monsterCheckDataType() passes through matrix unchanged", {
+  mat <- matrix(1:6, nrow = 2)
+  result <- monsterCheckDataType(mat)
+  expect_true(is.matrix(result))
+  expect_equal(result, mat)
+})
+
+test_that("monsterCheckDataType() converts ExpressionSet", {
+  expr_mat <- matrix(rnorm(20), nrow = 4,
+                     dimnames = list(paste0("g", 1:4), paste0("s", 1:5)))
+  eset <- Biobase::ExpressionSet(assayData = expr_mat)
+  result <- monsterCheckDataType(eset)
+  expect_true(is.matrix(result))
+  expect_equal(dim(result), c(4, 5))
+})
+
+test_that("monsterCheckDataType() errors on invalid input", {
+  expect_error(monsterCheckDataType("foo"), "must be a data.frame")
+  expect_error(monsterCheckDataType(42), "must be a data.frame")
+  expect_error(monsterCheckDataType(list(1, 2, 3)), "must be a data.frame")
+})
+
+test_that("kabsch() returns square transformation matrix", {
+  set.seed(42)
+  n <- 20
+  p <- 3
+  P <- matrix(rnorm(n * p), nrow = n, ncol = p)
+  colnames(P) <- paste0("TF", 1:p)
+  
+  # Create Q as a rotation of P with some noise
+  Q <- P %*% matrix(c(0, -1, 0, 1, 0, 0, 0, 0, 1), 3, 3) + matrix(rnorm(n * p, sd = 0.1), nrow = n, ncol = p)
+  colnames(Q) <- paste0("TF", 1:p)
+  
+  W <- kabsch(P, Q)
+  expect_true(is.matrix(W))
+  expect_equal(nrow(W), p)
+  expect_equal(ncol(W), p)
+  expect_true(all(is.finite(W)))
+})
+
+test_that("monsterTransformationMatrix() works with ols method", {
+  data("yeast")
+  yeast$exp.cc[is.na(yeast$exp.cc)] <- mean(as.matrix(yeast$exp.cc), na.rm = TRUE)
+  cc.net.1 <- suppressWarnings(monsterMonsterNI(yeast$motif, yeast$exp.cc[1:1000, 1:20]))
+  cc.net.2 <- suppressWarnings(monsterMonsterNI(yeast$motif, yeast$exp.cc[1:1000, 31:50]))
+  
+  tm <- monsterTransformationMatrix(cc.net.1, cc.net.2, method = "ols")
+  expect_true(is.matrix(tm))
+  expect_equal(nrow(tm), ncol(tm))
+})
+
+test_that("monsterTransformationMatrix() works with kabsch method", {
+  data("yeast")
+  yeast$exp.cc[is.na(yeast$exp.cc)] <- mean(as.matrix(yeast$exp.cc), na.rm = TRUE)
+  cc.net.1 <- suppressWarnings(monsterMonsterNI(yeast$motif, yeast$exp.cc[1:1000, 1:20]))
+  cc.net.2 <- suppressWarnings(monsterMonsterNI(yeast$motif, yeast$exp.cc[1:1000, 31:50]))
+  
+  tm <- monsterTransformationMatrix(cc.net.1, cc.net.2, method = "kabsch")
+  expect_true(is.matrix(tm))
+})
+
 
