@@ -9,7 +9,8 @@ FindEdgesForHopU(geneSet, network, hopConstraint, verbose = FALSE, topX = NULL)
 \arguments{
 \item{geneSet}{A character vector of genes comprising the targets of interest.}
 
-\item{network}{A concatenation of n PANDA-like networks with the following format:}
+\item{network}{A network with the first column ("source") consisting of source nodes,
+the second ("target") consisting of target nodes, and the third ("score") consisting of scores}
 
 \item{hopConstraint}{The maximum number of hops to be considered for a gene.}
 

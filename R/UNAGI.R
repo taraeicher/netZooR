@@ -2,6 +2,8 @@
 #' cutoff for statistical testing, and a hop constraint, UNAGI finds a subnetwork of
 #' significant edges connecting the genes.
 #' @param nodeSet A character vector of genes comprising the targets of interest.
+#' @param network A network with the first column ("source") consisting of source nodes,
+#' the second ("target") consisting of target nodes, and the third ("score") consisting of scores
 #' @param hopConstraint The maximum number of hops to be considered between gene pairs.
 #' @param verbose Whether or not to print detailed information about the run.
 #' @param topX Select the X lowest significant p-values for each gene. NULL by default.
@@ -38,61 +40,11 @@ RunUNAGI <- function(nodeSet, network, hopConstraint,
   return(subnetwork)
 }
 
-BuildUnipartiteClusters <- function(sigEdges, nodeSet, verbose = FALSE) {
-  # === Analogy to BLOBFISH BuildSubnetwork + FindConnections ===
-  
-  clusters <- list()
-  clusterMap <- list()
-  clusterID <- 1
-  
-  for (i in 1:nrow(sigEdges)) {
-    n1 <- sigEdges$source[i]
-    n2 <- sigEdges$target[i]
-    
-    in1 <- n1 %in% names(clusterMap)
-    in2 <- n2 %in% names(clusterMap)
-    
-    if (!in1 && !in2) {
-      # New cluster
-      clusters[[clusterID]] <- c(n1, n2)
-      clusterMap[[n1]] <- clusterID
-      clusterMap[[n2]] <- clusterID
-      clusterID <- clusterID + 1
-    } else if (in1 && !in2) {
-      cid <- clusterMap[[n1]]
-      clusters[[cid]] <- unique(c(clusters[[cid]], n2))
-      clusterMap[[n2]] <- cid} else if (!in1 && in2) {
-        cid <- clusterMap[[n2]]
-        clusters[[cid]] <- unique(c(clusters[[cid]], n1))
-        clusterMap[[n1]] <- cid
-      } else {
-        # Merge clusters
-        cid1 <- clusterMap[[n1]]
-        cid2 <- clusterMap[[n2]]
-        if (cid1 != cid2) {
-          clusters[[cid1]] <- unique(c(clusters[[cid1]], clusters[[cid2]]))
-          for (node in clusters[[cid2]]) {
-            clusterMap[[node]] <- cid1
-          }
-          clusters[[cid2]] <- NULL
-        }
-      }
-  }
-  
-  # Filter to include clusters with at least one node of interest
-  clusters <- Filter(function(cl) any(cl %in% nodeSet), clusters)
-  
-  if (verbose) {
-    message(paste("Final number of clusters with nodes of interest:", length(clusters)))
-  }
-  
-  return(clusters)
-}
-
-#anlogous to BLOBFISH
+#analogous to BLOBFISH
 #' Find the subnetwork of significant edges n / 2 hops away from each gene.
 #' @param geneSet A character vector of genes comprising the targets of interest.
-#' @param network A concatenation of n PANDA-like networks with the following format:
+#' @param network A network with the first column ("source") consisting of source nodes,
+#' the second ("target") consisting of target nodes, and the third ("score") consisting of scores
 #' @param hopConstraint The maximum number of hops to be considered for a gene.
 #' @param verbose Whether or not to print detailed information about the run.
 #' @param topX Select the X lowest significant p-values for each gene. NULL by default.
@@ -162,7 +114,8 @@ FindEdgesForHopU <- function(geneSet, network, hopConstraint,
 
 #' Find all edges adjacent to the starting nodes, excluding the nodes
 #' specified.
-#' @param networks A PANDA-like network
+#' @param networks A network with the first column ("source") consisting of source nodes,
+#' the second ("target") consisting of target nodes, and the third ("score") consisting of scores#' 
 #' @param startingNodes The list of nodes from which to start.
 #' @param nodesToExclude The list of nodes to exclude from the search.
 #' @param verbose Whether or not to print detailed information about the run.
@@ -483,7 +436,6 @@ FindConnectionsForAllHopCountsU <- function(subnetworks, odd = FALSE, verbose = 
 #' @param network A data frame with the following format:
 #' tf,gene
 #' @param genesOfInterest Which genes of interest to highlight
-#' @param tfColor Color for the transcription factors
 #' @param geneColorMapping Color mapping from a set of genes to a color. The
 #' nodes and edges connected to them will be this color. If NULL, all genes and
 #' their edges will be gray. The format is a data frame, where the first column ("gene")

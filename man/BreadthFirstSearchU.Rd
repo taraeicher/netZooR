@@ -14,7 +14,8 @@ BreadthFirstSearchU(
 )
 }
 \arguments{
-\item{networks}{A PANDA-like network}
+\item{networks}{A network with the first column ("source") consisting of source nodes,
+the second ("target") consisting of target nodes, and the third ("score") consisting of scores#'}
 
 \item{startingNodes}{The list of nodes from which to start.}
 

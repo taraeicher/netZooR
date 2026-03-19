@@ -37,8 +37,6 @@ Default is TRUE.}
 nodes and edges connected to them will be this color. If NULL, all genes and
 their edges will be gray. The format is a data frame, where the first column ("gene")
 is the name of the gene and the second ("color") is the color.}
-
-\item{tfColor}{Color for the transcription factors}
 }
 \description{
 Plot the networks, using different colors for transcription factors, genes of interest,

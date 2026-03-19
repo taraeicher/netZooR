@@ -11,6 +11,9 @@ RunUNAGI(nodeSet, network, hopConstraint, verbose = FALSE, topX = NULL)
 \arguments{
 \item{nodeSet}{A character vector of genes comprising the targets of interest.}
 
+\item{network}{A network with the first column ("source") consisting of source nodes,
+the second ("target") consisting of target nodes, and the third ("score") consisting of scores}
+
 \item{hopConstraint}{The maximum number of hops to be considered between gene pairs.}
 
 \item{verbose}{Whether or not to print detailed information about the run.}
