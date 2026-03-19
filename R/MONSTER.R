@@ -106,14 +106,8 @@ monsterPrintMonsterAnalysis <- function(x, ...){
 #' networks are supplied in the 'expr' variable as a TF-by-Gene matrix, by concatenating the TF-by-Gene matrices of case and control, expr has size nTFs x 2nGenes.
 #' @param method Method to use in computing the transition matrix. These include "ols" (default),"kabsch","L1", and "orig" (SVD).
 #' @param remove.diagonal #' Logical for returning a result containing 0s across the diagonal (default = TRUE).
-#' @param nullModelType Type of null model used. If "permutation" is set as the default, MONSTER permutes expression data when in "buildNet" mode
-#' and permutes network edges by gene when in "regNet" mode. "nullNetwork" generates null networks from the control network using the edge weights from
-#' the control network as the mean and the edge weight variances across networks with no true signal as the variance.
-#' @param nullNetworks This parameter is only used when running in "regNet" mode with the "nullNetwork" option set. This includes a data frame
-#' with the values from networks with no signal. The first two columns must be the source and target nodes, and the remaining columns must be
-#' the edge weights from each simulated network. For PANDA networks:
-#' tf, gene, net1, net2, ..., netn
 #' @param logging Whether or not to print logging messages for MONSTER (default is TRUE)
+
 #' @export
 #' @import doParallel
 #' @import parallel
@@ -145,40 +139,15 @@ monster <- function(expr,
                     design, 
                     motif, 
                     nullPerms=100,
-                    ni_method="bere",
+                    ni_method="BERE",
                     ni.coefficient.cutoff = NA,
                     numMaxCores=1, 
                     outputDir=NA, alphaw=0.5, mode='buildNet',
                     method="ols", remove.diagonal = TRUE,
-                    nullModelType = "permutation",
-                    nullNetworks = NA, logging = TRUE){
-  
-  # Check for correct inputs.
+                    logging = TRUE){
   if(!(ni_method %in% c("BERE","pearson", "lda"))){
     stop(paste("Supported values for ni_method are BERE, pearson, and lda.",
                ni_method, "is invalid."))
-  }
-  if(!nullModelType %in% c("permutation", "nullNetwork")){
-    stop("Only 'permutation' and 'nullNetwork' are permitted values for nullModelType.")
-  }
-  if(nullModelType == "nullNetwork"){
-    if(mode == "buildNet"){
-      stop("Cannot run 'nullNetwork' model type in buildNet mode")
-    }
-    if(length(nullNetworks) == 1 && is.na(nullNetworks)){
-      stop(paste("Must provide null networks when null model type is 'nullNetwork'. These can",
-                 "be generated using the function GenerateNullPANDADistribution() if you are",
-                 "using PANDA networks."))
-    }
-    if(!(all(sapply(nullNetworks[1:2], is.character), sapply(nullNetworks[-(1:2)], is.numeric)))){
-      stop(paste("The null network provided must have source and target nodes in the first two columns",
-                 "and numeric scores in all remaining columns."))
-    }
-    exprNodes <- sort(unique(c(rownames(expr[,design == 0]), colnames(expr[,design == 0]))))
-    nullNodes <- sort(unique(c(nullNetworks[,1], nullNetworks[,2])))
-    if(length(setdiff(exprNodes, nullNodes)) > 0 || length(setdiff(nullNodes, exprNodes)) > 0){
-      stop("The node lists differ between the input networks and the provided null networks.")
-    }
   }
   if(mode=='regNet'){
     motif=NA
@@ -244,27 +213,23 @@ monster <- function(expr,
   nullExpr <- expr
   if(numMaxCores == 1){
     transMatrices=list()
-    
-    # Generate null.
-    nullExprAll <- NULL
-    if(nullModelType == "permutation" || mode == "buildNet"){
-      nullExprAll <- GeneratePermutationNull(expr = expr, iterations = iters, mode = mode)
-    }else if(nullModelType == "nullNetwork"){
-      nullExprAll <- GenerateNullFromControl(concatNet = expr, iterations = iters,
-                                          design = design, nullNetworks = nullNetworks)
-    }
     for(i in seq_len(iters)){
       if(logging == TRUE){
         print(paste0("Running iteration ", i))
       }
       if(i!=1){
-        nullExpr <- nullExprAll[[i-1]]
-      }else{
-        nullExpr <- expr
+        if(mode == 'regNet'){
+          # Resample columns of provided network
+          nullExpr[] <- expr[,sample(seq_along(colnames(expr)))]
+        }else if(mode=='buildNet'){
+          # Resample all entries in gene expression matrix then build null network
+          nullExpr[] <- expr[sample(seq_along(c(expr)))]
       }
+    }
       if(mode == 'buildNet'){
         nullExprCases <- nullExpr[,design==1]
         nullExprControls <- nullExpr[,design==0]
+        
         tmpNetCases <- monsterMonsterNI(motif, nullExprCases, 
                                          method=ni_method, regularization="none",
                                          score="none", ni.coefficient.cutoff,
@@ -295,23 +260,19 @@ monster <- function(expr,
       print(Sys.time()-strt)
     }
   }else{
-    # Generate null.
-    nullExprAll <- NULL
-    if(nullModelType == "permutation" || mode == "buildNet"){
-      nullExprAll <- GeneratePermutationNull(expr = expr, iterations = iters, mode = mode)
-    }else if(nullModelType == "nullNetwork"){
-      nullExprAll <- GenerateNullFromControl(concatNet = expr, iterations = iters,
-                                          design = design, nullNetworks = nullNetworks)
-    }
     transMatrices <- foreach(i=seq_len(iters),
                              .packages=c("netZooR","reshape2","penalized","MASS")) %dopar% {
                                if(logging == TRUE){
                                  print(paste0("Running iteration ", i))
                                }
                                if(i!=1){
-                                 nullExpr <- nullExprAll[[i-1]]
-                               }else{
-                                 nullExpr <- expr
+                                 if(mode == 'regNet'){
+                                   # Resample columns of provided network
+                                   nullExpr[] <- expr[,sample(seq_along(colnames(expr)))]
+                                 }else if(mode=='buildNet'){
+                                   # Resample all entries in gene expression matrix then build null network
+                                   nullExpr[] <- expr[sample(seq_along(c(expr)))]
+                                 }
                                }
                                if(mode == 'buildNet'){
                                  nullExprCases <- nullExpr[,design==1]
@@ -356,89 +317,6 @@ monster <- function(expr,
       nullTM=transMatrices[-1], 
       numGenes=numGenes, 
       numSamples=c(sum(design==0), sum(design==1))))
-}
-
-#' Generates null models for MONSTER by permuting the expression levels
-#' for the case and control data.
-#' @param expr Gene expression dataset
-#' @param iterations Number of null models to generate
-#' @param mode "buildNet" or "regNet"
-#' @return A list of matrices, each one corresponding to one null model
-GeneratePermutationNull <- function(expr, iterations, mode){
-  retvals <- NULL
-  if(mode == "regNet"){
-    retvals <- lapply(1:iterations, function(i){
-      expr[] <- expr[,sample(seq_along(colnames(expr)))]
-      return(expr)
-    })
-  }else if(mode == "buildNet"){
-    exprMat <- as.matrix(expr)
-    retvals <- lapply(1:iterations, function(i){
-      exprMat[] <- exprMat[sample(seq_along(c(exprMat)))]
-      return(exprMat)
-    })
-  }
-  print("Finished generating null models")
-  return(retvals)
-}
-
-#' Generates null model for MONSTER by sampling "case" networks from a distribution
-#' where the control network value is the mean and the provided null networks are
-#' used to calculate the variance. Sampling is done on an edgewise basis, using
-#' edgewise means and variances.
-#' @param concatNet The concatenated case and control networks
-#' @param iterations Number of null models to generate
-#' @param design The design matrix
-#' @param nullNetworks The null networks from which to calculate the variance
-#' @return A list of matrices, each one corresponding to one null model
-GenerateNullFromControl <- function(concatNet, iterations, design, nullNetworks){
-  
-  # Set the seed.
-  set.seed(1)
-  
-  # Separate cases from controls.
-  concatNet <- as.data.frame(concatNet)
-  controls = concatNet[,design==0]
-
-  # Format control matrix for comparison with null networks.
-  controlsToMelt <- controls
-  controlsToMelt$tf <- rownames(controls)
-  controlMelt <- reshape2::melt(
-    controlsToMelt,
-    id.vars = "tf",
-    variable.name = "gene",
-    value.name = "score"
-  )
-  controlMelt$gene <- as.character(controlMelt$gene)
-  rownames(controlMelt) <- paste(controlMelt$tf, controlMelt$gene, sep = "__")
-  rownames(nullNetworks) <- paste(nullNetworks$tf, nullNetworks$gene, sep = "__")
-  controlMelt <- controlMelt[rownames(nullNetworks),]
-
-  # Compute the standard deviations.
-  nullNetworkScores <- nullNetworks[,3:ncol(nullNetworks)]
-  nullSD <- apply(nullNetworkScores, 1, sd)
-
-  # Sample the values for the null networks.
-  controlNulls <- do.call(rbind, lapply(1:length(nullSD), function(i){
-    sampScores <- stats::rnorm(iterations, mean = controlMelt[i,3], sd = nullSD[i])
-    return(as.data.frame(t(sampScores)))
-  }))
-  controlNulls$tf <- controlMelt$tf
-  controlNulls$gene <- controlMelt$gene
-
-  # Format the null networks for use with MONSTER.
-  nullFormatted <- lapply(setdiff(colnames(controlNulls), c("tf", "gene")), function(c){
-    meltedNull <- data.frame(tf = controlNulls$tf, gene = controlNulls$gene, value = controlNulls[,c])
-    castNull <- reshape2::acast(meltedNull, tf ~ gene, value.var = "value")
-    castNull <- castNull[rownames(concatNet), colnames(concatNet[,design==0])]
-    concatNet[,design==1] <- castNull
-    concatNetMat <- as.matrix(concatNet)
-    return(concatNetMat)
-  })
-
-  # Return.
-  print("Finished generating null models")
-  return(nullFormatted)
 }
 
 #' Checks that data is something MONSTER can handle
@@ -1036,41 +914,6 @@ monsterMonsterNI <- function(motif.data,
                               alphaw=1.0,
                               regularization="none",
                               score="motifincluded",
-<<<<<<< HEAD
-                              cpp=FALSE){
-  if(verbose)
-    print('Initializing and validating')
-  # Create vectors for TF names and Gene names from Motif dataset
-  tf.names   <- sort(unique(motif.data[,1]))
-  num.TFs    <- length(tf.names)
-  if (is.null(expr.data)){
-    stop("Expression data null")
-  } else {
-    # Use the motif data AND the expr data (if provided) for the gene list
-    gene.names <- sort(intersect(motif.data[,2],rownames(expr.data)))
-    num.genes  <- length(gene.names)
-    
-    # Filter out the expr genes without motif data
-    expr.data <- expr.data[rownames(expr.data) %in% gene.names,]
-
-    # Keep everything sorted alphabetically
-    expr.data      <- expr.data[order(rownames(expr.data)),]
-    num.conditions <- ncol(expr.data);
-    if (randomize=='within.gene'){
-      expr.data <- t(apply(expr.data, 1, sample))
-      if(verbose)
-        print("Randomizing by reordering each gene's expression")
-    } else if (randomize=='by.genes'){
-      rownames(expr.data) <- sample(rownames(expr.data))
-      expr.data           <- expr.data[order(rownames(expr.data)),]
-      if(verbose)
-        print("Randomizing by reordering each gene labels")
-    }
-  }
-  # Bad data checking
-  if (num.genes==0){
-    stop("Validating data.  No matched genes.\n
-=======
                               cpp=FALSE,
                               logging = TRUE){
 
@@ -1110,7 +953,6 @@ monsterMonsterNI <- function(motif.data,
     # Bad data checking
     if (num.genes==0){
       stop("Validating data.  No matched genes.\n
->>>>>>> devel
             Please ensure that gene names in expression 
             file match gene names in motif file.")
     }
@@ -1160,113 +1002,9 @@ monsterMonsterNI <- function(motif.data,
     # store initial motif network (alphabetized for rows and columns)
     #   starting.motifs <- regulatory.network
     
-<<<<<<< HEAD
-    expr.data <- data.frame(expr.data)
-    tfdcast <- reshape2::dcast(motif.data,TF~GENE,fill=0)
-    rownames(tfdcast) <- tfdcast[,1]
-    tfdcast <- tfdcast[,-1]
-    
-    expr.data <- expr.data[sort(rownames(expr.data)),]
-    tfdcast <- tfdcast[,sort(colnames(tfdcast)),]
-    tfNames <- rownames(tfdcast)[rownames(tfdcast) %in% rownames(expr.data)]
-
-    ## Filtering
-    # filter out the TFs that are not in expression set
-    tfdcast <- tfdcast[rownames(tfdcast)%in%tfNames,]
-    
-    # Filter out genes that aren't targetted by anything 7/28/15
-    commonGenes <- intersect(colnames(tfdcast),rownames(expr.data))
-    expr.data <- expr.data[commonGenes,]
-    tfdcast <- tfdcast[,commonGenes]
-    
-    # check that IDs match
-    if (prod(rownames(expr.data)==colnames(tfdcast))!=1){
-      stop("ID mismatch")
-    }
-    
-    ## Get direct evidence
-    if ((1-alphaw)!=0){
-      directCor <- t(cor(t(expr.data),t(expr.data[rownames(expr.data)%in%tfNames,]))^2)
-    }else{
-      directCor = matrix(0L, length(tfNames), length(commonGenes))
-    }
-    
-    ## Get the indirect evidence    
-    if(alphaw==0){
-      result = matrix(0L, length(tfNames), length(commonGenes))
-    }else{
-      result <- t(apply(tfdcast, 1, function(x){
-        cat(".")
-        tfTargets <- as.numeric(x)
-        z <- NULL
-        if(regularization=="none"){
-          z <- glm(tfTargets ~ ., data=expr.data, family="binomial")
-          
-          # 9/10/17
-          # Adding argument to allow cutoffs based on p-values
-          if(is.numeric(ni.coefficient.cutoff)){
-            coefs <- coef(z)
-            coefs[summary(z)$coef[,4]>ni.coefficient.cutoff] <- 0
-            logit.res <- apply(expr.data,1,function(x){coefs[1] + sum(coefs[-1]*x)})
-            return(exp(logit.res)/(1+exp(logit.res)))
-            
-          } else {
-            return(predict(z, expr.data,type='response'))
-          }
-          
-        } else {
-          if (!requireNamespace("penalized", quietly = TRUE))
-            stop("Package 'penalized' is required for penalized regularization. Please install it.")
-          z <- penalized::penalized(tfTargets, expr.data,
-                         lambda2=10, model="logistic", standardize=TRUE)
-          # z <- optL1(tfTargets, expr.data, minlambda1=25, fold=5)
-          
-        }
-        
-        # Penalized Logistic Reg
-        
-        
-        penalized::predict(z, expr.data)
-      }))
-    }
-    
-    ## Convert values to ranks
-    if(alphaw<1 && alphaw>0){
-      directCor <- matrix(rank(directCor), ncol=ncol(directCor))
-      result <- matrix(rank(result), ncol=ncol(result))
-    }
-    consensus <- directCor*(1-alphaw) + result*alphaw
-    rownames(consensus) <- rownames(tfdcast)
-    colnames(consensus) <- rownames(expr.data)
-    consensusRange <- max(consensus)- min(consensus)
-    if(score=="motifincluded"){
-      consensus <- as.matrix(consensus + consensusRange*regulatory.network)
-    }
-    result=consensus
-  } else if (method=="pearson"){
-    tfNames = levels(motif.data$TF)
-    result <- t(cor(t(expr.data),t(expr.data[rownames(expr.data)%in%tfNames,]))^2)
-    if(score=="motifincluded"){
-      result <- as.matrix(consensus + consensusRange*regulatory.network)
-    }
-    result
-  } else {
-    strt<-Sys.time()
-    # Remove NA correlations
-    gene.coreg[is.na(gene.coreg)] <- 0
-    correlation.dif <- sweep(regulatory.network,1,rowSums(regulatory.network),`/`)%*%
-      gene.coreg - 
-      sweep(1-regulatory.network,1,rowSums(1-regulatory.network),`/`)%*%
-      gene.coreg
-    result <- sweep(correlation.dif, 2, apply(correlation.dif, 2, sd),'/')
-    #   regulatory.network <- ifelse(res>quantile(res,1-mean(regulatory.network)),1,0)
-    
-    print(Sys.time()-strt)
-=======
     if(verbose)
       print('Main calculation')
     result <- NULL
->>>>>>> devel
     ########################################
     if (method=="pearson"){
       tfNames = levels(motif.data$TF)
