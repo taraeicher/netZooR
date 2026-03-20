@@ -435,19 +435,20 @@ FindConnectionsForAllHopCountsU <- function(subnetworks, odd = FALSE, verbose = 
 #' and additional genes.
 #' @param network A data frame with the following format:
 #' tf,gene
-#' @param genesOfInterest Which genes of interest to highlight
 #' @param geneColorMapping Color mapping from a set of genes to a color. The
 #' nodes and edges connected to them will be this color. If NULL, all genes and
 #' their edges will be gray. The format is a data frame, where the first column ("gene")
-#' is the name of the gene and the second ("color") is the color.
+#' is the name of the gene and the second ("color") is the color. All nodes must
+#' be included in the color mapping.
 #' @param nodeSize Size of node
 #' @param edgeWidth Width of edges
-#' @param vertexLabels Which vertex labels to include. By default, none are included.
+#' @param vertexLabels Vector of labels to include. Labels that you do not wish to include
+#' should be set to NA.
 #' @param vertexLabelSize The size of label to use for the vertex, as a fraction of the default.
 #' @param vertexLabelOffset Number of pixels in the offset when plotting labels.
 #' Default is TRUE.
 #' @export
-PlotNetworkU <- function(network, genesOfInterest, nodeSize = 1,
+PlotNetworkU <- function(network, nodeSize = 1,
                          edgeWidth = 0.5, vertexLabels = NA, vertexLabelSize = 0.7,
                          vertexLabelOffset = 0.5, geneColorMapping = NULL){
   

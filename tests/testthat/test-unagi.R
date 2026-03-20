@@ -62,6 +62,11 @@ test_that("[UNAGI] BreadthFirstSearchU() function yields expected results", {
                                  nodesToExclude = c("geneA", "geneB", "geneC"))
   expect_setequal(rownames(result2), c("gene3__geneD", "gene4__geneD", "gene1__gene2", "gene1__gene3",
                                        "geneD__gene3", "geneD__gene4", "gene2__gene1", "gene3__gene1"))
+  
+  # Test messaging.
+  expect_message(BreadthFirstSearchU(networks = startingNetworkU,
+                                     startingNodes = c("gene2", "gene3", "gene4"),
+                                     nodesToExclude = c("geneA", "geneB", "geneC"), verbose = TRUE), "Retained 8 edges")
 })
 test_that("[UNAGI] FindEdgesForHopU() function yields expected results",{
   
@@ -212,6 +217,16 @@ test_that("[UNAGI] FindEdgesForHopU() function yields expected results",{
   expect_true(length(setdiff(rownames(subnetworksFullU$geneD[[2]]), rownames(sigEdges$geneD[[2]]))) == 0)
   expect_true(length(setdiff(rownames(subnetworksFullU$geneD[[3]]), rownames(sigEdges$geneD[[3]]))) == 0)
   
+  # Test messaging.
+  expect_message(FindEdgesForHopU(geneSet = c("geneA", "geneB", "geneC", "geneD"),
+                                  network = startingNetworkU,
+                                  hopConstraint = 3, verbose = TRUE), "Evaluating hop 1 for gene geneA")
+  
+  # Test thresholding by p-value.
+  sigEdges <- FindEdgesForHopU(geneSet = c("geneA", "geneB", "geneC", "geneD"),
+                               network = startingNetworkU,
+                               hopConstraint = 3, topX = 0.1)
+  expect_length(rownames(sigEdges$geneA[[1]]), 1)
 })
 test_that("[UNAGI] FindConnectionsForAllHopCountsU() function yields expected results", {
   
@@ -364,6 +379,10 @@ test_that("[UNAGI] FindConnectionsForAllHopCountsU() function yields expected re
                  "gene3__geneD", "gene3__geneA", "gene2__geneB", "geneA__geneD")
   expect_equal(length(setdiff(sortAlphanumeric(result), expResult)), 0)
   expect_equal(length(setdiff(expResult, sortAlphanumeric(result))), 0)
+  
+  # Test messaging.
+  expect_message(FindConnectionsForAllHopCountsU(sigEdges, odd = TRUE, verbose = TRUE), 
+                 "Hop 2 - 1 overlapped between geneA and geneD")
 })
 test_that("[UNAGI] RunUNAGI() function yields expected results",{
   
@@ -403,4 +422,33 @@ test_that("[UNAGI] RunUNAGI() function yields expected results",{
                "Node set must contain at least 2 nodes.")
   expect_no_error(RunUNAGI(nodeSet = c("gene1", "gene2", "gene3"), network = startingNetwork, hopConstraint = 4))
   expect_no_error(RunUNAGI(nodeSet = c("gene1", "gene2", "gene3"), network = startingNetwork, hopConstraint = 7))
+})
+test_that("[UNAGI] PlotNetworkU() function runs without error",{
+  
+  # Create a dummy network.
+  bindWithReversed <- function(dataFrame){
+    reversedDataFrame <- data.frame(source = dataFrame$target, target = dataFrame$source)
+    return(rbind(dataFrame, reversedDataFrame))
+  }
+  startingNetwork <- data.frame(source = c("gene1", "gene1", "gene2", "gene2", "gene3", "gene3", "gene4", "gene4"),
+                                target = c("geneB", "geneC", "geneA", "geneB", "geneA", "geneD", "geneC", "geneD"),
+                                score = c(3, 5, 4, 4, 5, 3, 1, 1))
+  rownames(startingNetwork) <- paste(startingNetwork$source, startingNetwork$target, sep = "__")
+  
+  # Run UNAGI.
+  unagi <- RunUNAGI(nodeSet = c("gene1", "gene2", "gene3"), network = startingNetwork, hopConstraint = 4)
+  
+  # Plot the network.
+  expect_no_error(PlotNetworkU(network = unagi,
+                               vertexLabels = c("gene1", "gene2", "gene3", "gene4", "geneA", "geneB", "geneC", "geneD"),
+               geneColorMapping = data.frame(gene = c("gene1", "gene2", "gene3", "gene4", "geneA", "geneB", "geneC", "geneD"), 
+                                             color = c("red", "green", "blue", "orange", "purple", "yellow", "black", "gray"))))
+  expect_no_error(PlotNetworkU(network = unagi, vertexLabels = NA,
+                               geneColorMapping = data.frame(gene = c("gene1", "gene2", "gene3", "gene4", "geneA", "geneB", "geneC", "geneD"), 
+                                                             color = c("red", "green", "blue", "orange", "purple", "yellow", "black", "gray"))))
+  expect_no_error(PlotNetworkU(network = unagi,  
+                               vertexLabels = c("gene1", "gene2", "gene3", "gene4", "geneA", "geneB", "geneC", "geneD"),
+                               geneColorMapping = NULL))
+  expect_no_error(PlotNetworkU(network = unagi, vertexLabels = NA,
+                               geneColorMapping = NULL))
 })

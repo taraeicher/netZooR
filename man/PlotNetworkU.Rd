@@ -7,7 +7,6 @@ and additional genes.}
 \usage{
 PlotNetworkU(
   network,
-  genesOfInterest,
   nodeSize = 1,
   edgeWidth = 0.5,
   vertexLabels = NA,
@@ -20,13 +19,12 @@ PlotNetworkU(
 \item{network}{A data frame with the following format:
 tf,gene}
 
-\item{genesOfInterest}{Which genes of interest to highlight}
-
 \item{nodeSize}{Size of node}
 
 \item{edgeWidth}{Width of edges}
 
-\item{vertexLabels}{Which vertex labels to include. By default, none are included.}
+\item{vertexLabels}{Vector of labels to include. Labels that you do not wish to include
+should be set to NA.}
 
 \item{vertexLabelSize}{The size of label to use for the vertex, as a fraction of the default.}
 
@@ -36,7 +34,8 @@ Default is TRUE.}
 \item{geneColorMapping}{Color mapping from a set of genes to a color. The
 nodes and edges connected to them will be this color. If NULL, all genes and
 their edges will be gray. The format is a data frame, where the first column ("gene")
-is the name of the gene and the second ("color") is the color.}
+is the name of the gene and the second ("color") is the color. All nodes must
+be included in the color mapping.}
 }
 \description{
 Plot the networks, using different colors for transcription factors, genes of interest,
