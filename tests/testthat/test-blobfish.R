@@ -402,3 +402,87 @@ test_that("[BLOBFISH] RunBLOBFISH() function yields expected results",{
   expect_error(RunBLOBFISH(geneSet = "g1", networks = list(data.frame(tf = NA, gene = NA, score = NA)), 
                            alpha = 1, hopConstraint = 4, nullDistribution = "hi"), "nullDistribution must be numeric.")
 })
+test_that("[BLOBFISH] GenerateNullPANDADistribution() function yields expected results",{
+  
+  # Set toy PPI and prior data.
+  toyPPIpath <- system.file("extdata", "toy_ppi_prior.txt", package = "netZooR", mustWork = TRUE)
+  toyPriorPath <- system.file("extdata", "toy_motif_prior.txt", package = "netZooR", mustWork = TRUE)
+  colChar <- c("a", "b", "c")
+  colNum <- seq(1:3)
+  inputWrong1 <- "wrong1.txt"
+  write.table("b oyug yiufd itduryd utd", inputWrong1)
+  inputWrong2 <- "wrong2.txt"
+  write.table(data.frame(c1 = colNum, c2 = colChar, c3 = colNum), inputWrong2)
+  inputWrong3 <- "wrong3.txt"
+  write.table(data.frame(c1 = colChar, c2 = colNum, c3 = colNum), inputWrong3)
+  inputWrong4 <- "wrong4.txt"
+  write.table(data.frame(c1 = colChar, c2 = colChar, c3 = colChar), inputWrong4)
+  
+  # Check errors in input.
+  expect_error(GenerateNullPANDADistribution(ppiFile = toyPPIpath, motifFile = toyPriorPath, 
+                                             sampSize = -1, numberOfPandas = 10, outputType = "vector"),
+               paste("Null PANDA generation error: You must enter a sample size of at least 3."))
+  expect_error(GenerateNullPANDADistribution(ppiFile = toyPPIpath, motifFile = toyPriorPath, 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vect hjobpbnpor"),
+               paste("Null PANDA generation error: outputType must be 'vector' or 'network'."))
+  expect_error(GenerateNullPANDADistribution(ppiFile = toyPPIpath, motifFile = toyPriorPath, 
+                                             sampSize = 10, numberOfPandas = -1, outputType = "vector"),
+               paste("Null PANDA generation error: You must generate at least 3 PANDA networks to compute the null."))
+  expect_error(suppressWarnings(GenerateNullPANDADistribution(ppiFile = "null", motifFile = toyPriorPath, 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vector")),
+               paste("Null PANDA generation error: Could not open PPI file."))
+  expect_error(suppressWarnings(GenerateNullPANDADistribution(ppiFile = toyPPIpath, motifFile = "null", 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vector")),
+               paste("Null PANDA generation error: Could not open motif file."))
+  expect_error(GenerateNullPANDADistribution(ppiFile = toyPPIpath, motifFile = inputWrong1, 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vector"),
+               paste("Null PANDA generation error: Motif format is incorrect. Must include a column with TF labels,",
+                      "a column with gene labels, and a numeric score column."))
+  expect_error(GenerateNullPANDADistribution(ppiFile = toyPPIpath, motifFile = inputWrong2, 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vector"),
+               paste("Null PANDA generation error: Motif format is incorrect. Must include a column with TF labels,",
+                     "a column with gene labels, and a numeric score column."))
+  expect_error(GenerateNullPANDADistribution(ppiFile = toyPPIpath, motifFile = inputWrong3, 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vector"),
+               paste("Null PANDA generation error: Motif format is incorrect. Must include a column with TF labels,",
+                     "a column with gene labels, and a numeric score column."))
+  expect_error(GenerateNullPANDADistribution(ppiFile = toyPPIpath, motifFile = inputWrong4, 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vector"),
+               paste("Null PANDA generation error: Motif format is incorrect. Must include a column with TF labels,",
+                     "a column with gene labels, and a numeric score column."))
+  expect_error(GenerateNullPANDADistribution(ppiFile = inputWrong1, motifFile = toyPriorPath, 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vector"),
+               paste("Null PANDA generation error: PPI format is incorrect. Must include two columns with TF labels",
+                     "and a numeric score column."))
+  expect_error(GenerateNullPANDADistribution(ppiFile = inputWrong2, motifFile = toyPriorPath, 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vector"),
+               paste("Null PANDA generation error: PPI format is incorrect. Must include two columns with TF labels",
+                     "and a numeric score column."))
+  expect_error(GenerateNullPANDADistribution(ppiFile = inputWrong3, motifFile = toyPriorPath, 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vector"),
+               paste("Null PANDA generation error: PPI format is incorrect. Must include two columns with TF labels",
+                     "and a numeric score column."))
+  expect_error(GenerateNullPANDADistribution(ppiFile = inputWrong4, motifFile = toyPriorPath, 
+                                             sampSize = 10, numberOfPandas = 10, outputType = "vector"),
+               paste("Null PANDA generation error: PPI format is incorrect. Must include two columns with TF labels",
+                     "and a numeric score column."))
+  
+  # Delete test files.
+  unlink(inputWrong1)
+  unlink(inputWrong2)
+  unlink(inputWrong3)
+  unlink(inputWrong4)
+  
+  # Check that format returned is correct for both vector and network format.
+  numPandas <- 10
+  vec <- GenerateNullPANDADistribution(ppiFile = toyPPIpath, motifFile = toyPriorPath, 
+                                       sampSize = 10, numberOfPandas = numPandas, outputType = "vector")
+  toyMotif <- read.table(toyPriorPath)
+  # We expect the length of the vector to be equal to the length of all network edges not in the
+  # motif multiplied by the number of simulations.
+  expect_equal(length(vec), ((length(unique(toyMotif[,1])) * length(unique(toyMotif[,2]))) - nrow(toyMotif[which(toyMotif[,3] == 1),])) * numPandas)
+  net <- GenerateNullPANDADistribution(ppiFile = toyPPIpath, motifFile = toyPriorPath, 
+                                       sampSize = 10, numberOfPandas = numPandas, outputType = "network")
+  expect_equal(rownames(net), paste(net[,1], net[,2], sep = "__"))
+  expect_equal(colnames(net), c("tf", "gene", paste0("net", 1:numPandas)))
+})
