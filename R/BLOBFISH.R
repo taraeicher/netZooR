@@ -76,15 +76,54 @@ RunBLOBFISH <- function(geneSet, networks, alpha, hopConstraint, nullDistributio
 #' binding motif is in the gene promoter region.
 #' @param sampSize Number of samples to simulate
 #' @param numberOfPandas Number of null PANDA networks to generate
+#' @param outputType Type of output desired. Default is "vector", which returns a vector
+#' of null edge weights. Another acceptable output is "network", which outputs an edge list
+#' with the edge values across all null networks. Use "vector" if you wish to filter
+#' edge weights agnostic of TF-gene pair and "network" if you wish to account for a
+#' TF-gene pair's proximity to the prior.
 #' @export
 GenerateNullPANDADistribution <- function(ppiFile, motifFile, sampSize = 20,
-                                          numberOfPandas = 10){
+                                          numberOfPandas = 10, outputType = "vector"){
+  
+  # Check output type, sample size, and number of PANDAs.
+  if(sampSize < 3){
+    stop("Null PANDA generation error: You must enter a sample size of at least 3.")
+  }
+  if(numberOfPandas < 3){
+    stop("Null PANDA generation error: You must generate at least 3 PANDA networks to compute the null.")
+  }
+  if(!(outputType %in% c("vector", "network"))){
+    stop("Null PANDA generation error: outputType must be 'vector' or 'network'.")
+  }
   
   # Read the motif.
-  motif <- utils::read.table(motifFile, sep = "\t")
-  ppi <- utils::read.table(ppiFile, sep = "\t")
+  ppi <- NULL
+  motif <- NULL
+  tryCatch({
+    motif <- utils::read.table(motifFile, sep = "\t")
+  }, error = function(cond){
+    stop("Null PANDA generation error: Could not open motif file.")
+  })
+  tryCatch({
+    ppi <- utils::read.table(ppiFile, sep = "\t")
+  }, error = function(cond){
+    stop("Null PANDA generation error: Could not open PPI file.")
+  })
   
-  # Generate the null PANDA edges.
+  # Check motif format.
+  if(ncol(motif) != 3 || !is.character(motif[,1]) || !is.character(motif[,2])
+     || !is.numeric(motif[,3])){
+    stop(paste("Null PANDA generation error: Motif format is incorrect. Must include a column with TF labels,",
+              "a column with gene labels, and a numeric score column."))
+  }
+  if(ncol(ppi) != 3 || !is.character(ppi[,1]) || !is.character(ppi[,2])
+     || !is.numeric(ppi[,3])){
+    stop(paste("Null PANDA generation error: PPI format is incorrect. Must include two columns with TF labels",
+               "and a numeric score column."))
+  }
+  
+  
+  # Generate the null PANDAs.
   nullPandas <- lapply(1:numberOfPandas, function(i){
     
     # Generate a random matrix of expression values, where any correlation that exists
@@ -100,35 +139,58 @@ GenerateNullPANDADistribution <- function(ppiFile, motifFile, sampSize = 20,
     
     # Run PANDA.
     nullPanda <- pandaPy(expr_file = fname, motif_file=motifFile, ppi_file=ppiFile, save_tmp=FALSE,
-                         save_memory=TRUE)$panda
-    rownames(nullPanda) <- paste(nullPanda$TF, nullPanda$Gene, sep = "__")
-    hist(nullPanda[,3])
+                         save_memory=TRUE)$WAMpanda
+    idx_raw <- attr(nullPanda, "pandas.index")
+    idx <- reticulate::py_to_r(idx_raw$tolist())
+    idx <- as.character(idx)
+    rownames(nullPanda) <- idx
+    nullPanda$tf <- rownames(nullPanda)
+    nullPandaMelt <- reshape2::melt(
+      nullPanda,
+      id.vars = "tf",
+      variable.name = "gene",
+      value.name = "score"
+    )
+    nullPandaMelt$gene <- as.character(nullPandaMelt$gene)
+    rownames(nullPandaMelt) <- paste(nullPandaMelt$tf, nullPandaMelt$gene, sep = "__")
 
     # Remove file.
     unlink(fname)
     
     # Return null results.
-    rownames(motif) <- paste(motif[,1], motif[,2], sep = "__")
-    rowsToExclude <- unlist(lapply(rownames(motif), function(edge){
+    toReturn <- NULL
+    if(outputType == "vector"){
       
-      # Find other transcription factors that interact with this one.
-      tf <- strsplit(edge, "__")[[1]][1]
-      interactingTF <- unique(c(ppi[which(ppi[,2] == tf),1], ppi[which(ppi[,1] == tf),2]))
-      
-      # Create new edges including other transcription factors.
-      newEdges <- paste(interactingTF, edge, sep = "__")
-
-      # Return the old and new edges.
-      return(c(edge, newEdges))
-    }))
-    
-    # Return the scores for all tf-gene relationships not in the original motif.
-    return(nullPanda[setdiff(rownames(nullPanda), rowsToExclude),"Score"])
+      # Exclude the motif.
+      rownames(motif) <- paste(motif[,1], motif[,2], sep = "__")
+      motifSubset <- motif[which(motif[,3] == 1),]
+      toReturn <- nullPandaMelt[setdiff(rownames(nullPandaMelt), rownames(motifSubset)),"score"]
+    }else if(outputType == "network"){
+      toReturn <- nullPandaMelt
+    }
+    return(toReturn)
   })
 
-  # Return the values.
-  nullPandasAll <- unlist(nullPandas)
-  return(sample(nullPandasAll, size = length(nullPandasAll)))
+  # Concatenate the null PANDA networks.
+  finalNull <- NULL
+  if(outputType == "vector"){
+    nullPandasAll <- unlist(nullPandas)
+    finalNull <- sample(nullPandasAll, size = length(nullPandasAll))
+  }
+  else if(outputType == "network"){
+    
+    # Concatenate just the score columns.
+    valsOnly <- do.call(cbind, lapply(nullPandas, function(net){
+      return(as.data.frame(net[,3]))
+    }))
+    colnames(valsOnly) <- paste0("net", 1:length(nullPandas))
+    
+    # Add the TF and gene columns.
+    finalNull <- cbind(nullPandas[[1]][,1:2], valsOnly)
+  }
+
+  # Return the null.
+  return(finalNull)
 }
 
 #' Find the subnetwork of significant edges connecting the genes.

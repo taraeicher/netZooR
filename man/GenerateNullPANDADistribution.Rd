@@ -13,7 +13,8 @@ GenerateNullPANDADistribution(
   ppiFile,
   motifFile,
   sampSize = 20,
-  numberOfPandas = 10
+  numberOfPandas = 10,
+  outputType = "vector"
 )
 }
 \arguments{
@@ -29,6 +30,12 @@ binding motif is in the gene promoter region.}
 \item{sampSize}{Number of samples to simulate}
 
 \item{numberOfPandas}{Number of null PANDA networks to generate}
+
+\item{outputType}{Type of output desired. Default is "vector", which returns a vector
+of null edge weights. Another acceptable output is "network", which outputs an edge list
+with the edge values across all null networks. Use "vector" if you wish to filter
+edge weights agnostic of TF-gene pair and "network" if you wish to account for a
+TF-gene pair's proximity to the prior.}
 }
 \description{
 Generate a null distribution of edge scores for PANDA-like networks; that is,
