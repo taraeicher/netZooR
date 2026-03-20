@@ -447,6 +447,7 @@ test_that("[BLOBFISH] CalculatePValues() with verbose=FALSE works", {
                               nullDistribution = null, verbose = FALSE)
   expect_true(is.numeric(pvalues))
   expect_equal(length(pvalues), nrow(startingNetwork))
+})
 test_that("[BLOBFISH] GenerateNullPANDADistribution() function yields expected results",{
   
   # Set toy PPI and prior data.
