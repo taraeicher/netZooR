@@ -402,6 +402,51 @@ test_that("[BLOBFISH] RunBLOBFISH() function yields expected results",{
   expect_error(RunBLOBFISH(geneSet = "g1", networks = list(data.frame(tf = NA, gene = NA, score = NA)), 
                            alpha = 1, hopConstraint = 4, nullDistribution = "hi"), "nullDistribution must be numeric.")
 })
+
+test_that("[BLOBFISH] PlotNetwork() generates a plot without error", {
+  network <- data.frame(
+    tf = c("tf1", "tf2", "tf2", "tf3"),
+    gene = c("geneA", "geneA", "geneB", "geneC")
+  )
+
+  expect_error(
+    PlotNetwork(network, genesOfInterest = c("geneA", "geneB")),
+    NA
+  )
+  graphics.off()
+})
+
+test_that("[BLOBFISH] PlotNetwork() with custom colors", {
+  network <- data.frame(
+    tf = c("tf1", "tf2", "tf2", "tf3"),
+    gene = c("geneA", "geneA", "geneB", "geneC")
+  )
+
+  expect_error(
+    PlotNetwork(network, genesOfInterest = c("geneA", "geneB"),
+                tfColor = "purple", nodeSize = 2, edgeWidth = 1,
+                layoutBipartite = FALSE),
+    NA
+  )
+  graphics.off()
+})
+
+test_that("[BLOBFISH] CalculatePValues() with verbose=FALSE works", {
+  skip_if_not_installed("matrixTests")
+  set.seed(42)
+  startingNetwork <- data.frame(
+    tf = c("tf1", "tf2"),
+    gene = c("geneA", "geneA"),
+    score = c(3, -2)
+  )
+  rownames(startingNetwork) <- paste(startingNetwork$tf, startingNetwork$gene, sep = "__")
+
+  null <- rnorm(100) / 10
+
+  pvalues <- CalculatePValues(network = startingNetwork, pValueChunks = 1,
+                              nullDistribution = null, verbose = FALSE)
+  expect_true(is.numeric(pvalues))
+  expect_equal(length(pvalues), nrow(startingNetwork))
 test_that("[BLOBFISH] GenerateNullPANDADistribution() function yields expected results",{
   
   # Set toy PPI and prior data.
