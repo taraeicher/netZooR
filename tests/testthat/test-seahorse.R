@@ -33,6 +33,7 @@ test_that("seahorse function works", {
   expect_true(all(c("coexpression", "phenotype_association", "GSEA") %in% names(results)))
   # Check that phenotype names appear in sub-lists
   expect_true(all(c("sex", "height") %in% names(results$GSEA)))
+  expect_true(all(!is.na(results$coexpression)))
   
   # Run seahorse without correlation matrix
   results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
@@ -46,4 +47,28 @@ test_that("seahorse function works", {
   # Check that phenotype names appear in sub-lists
   expect_true(all(c("sex", "height") %in% names(results$GSEA)))
   expect_true(is.na(results$coexpression))
-  })
+  
+  # Run SEAHORSE with linear regression.
+  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_cor = FALSE, assoc_method = "linear")
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("(Intercept)", "sexmale", "height") %in% names(results$GSEA)))
+  expect_true(is.na(results$coexpression))
+  
+  # Run SEAHORSE with linear regression and the correlation matrix.
+  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_cor = TRUE, assoc_method = "linear")
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("(Intercept)", "sexmale", "height") %in% names(results$GSEA)))
+  expect_true(all(!is.na(results$coexpression)))
+})
