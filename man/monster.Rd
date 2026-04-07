@@ -65,8 +65,9 @@ networks are supplied in the 'expr' variable as a TF-by-Gene matrix, by concaten
 and permutes network edges by gene when in "regNet" mode. "nullNetwork" generates null networks from the control network using the edge weights from
 the control network as the mean and the edge weight variances across networks with no true signal as the variance.}
 
-\item{nullNetworks}{This parameter is only used when running in "regNet" mode with the "nullNetwork" option set. This includes a data frame
-with the values from networks with no signal. The first two columns must be the source and target nodes, and the remaining columns must be
+\item{nullNetworks}{This parameter is only used when running in "regNet" mode with the "nullNetwork" option set. This includes an H5 format file
+containing an object named "nullNetworks"
+or data frame with the values from networks with no signal. The first two columns must be the source and target nodes, and the remaining columns must be
 the edge weights from each simulated network. For PANDA networks:
 tf, gene, net1, net2, ..., netn}
 

@@ -130,7 +130,72 @@ test_that("MONSTER function works", {
                                            nullPerms = 3,
                                            numMaxCores = 1, logging = FALSE))
   
+  # Test that MONSTER with null generated from control data gives the same
+  # result as MONSTER with null loaded from a file.
+  set.seed(1)
+  networks <- as.data.frame(matrix(runif(50), ncol = 10, nrow = 5))
+  colnames(networks) <- paste0('gene', 1:10)
+  rownames(networks) <- paste0('tf', 1:5)
+  networksIn <- networks
+  networksIn$tf <- rownames(networks)
+  str(networks)
+  nullNetworks <- reshape2::melt(
+    as.matrix(networksIn[,combdes == 0])
+  )
+  colnames(nullNetworks) <- c("tf", "gene", "score")
+  nullNetworks$tf <- as.character(nullNetworks$tf)
+  nullNetworks$gene <- as.character(nullNetworks$gene)
+  for(i in 3:12){
+    nullNetworks[,i] <- runif(50, min = 0, max = 0.1)
+  }
+  monsterControlNull <- monster(expr = combdf,
+                                    design = combdes,
+                                    motif = NA,
+                                    mode = 'regNet', nullNetworks = nullNetworks,
+                                    nullPerms = 10, nullModelType = "nullNetwork",
+                                    numMaxCores = 1, logging = FALSE)
+  # monsterControlNullMultiCore <- monster(expr = combdf,
+  #                               design = combdes,
+  #                               motif = NA,
+  #                               mode = 'regNet', nullNetworks = nullNetworks,
+  #                               nullPerms = 10, nullModelType = "nullNetwork",
+  #                               numMaxCores = 3, logging = FALSE)
+  nullNetworksOffset <- nullNetworks
+  nullNetworksOffset[,3:12] <- nullNetworksOffset[,3:12] + 5
+  nullNetworks <- nullNetworksOffset
+  rhdf5::h5createFile("nullNetworks.h5")
+  rhdf5::h5createGroup("nullNetworks.h5", "nullNetworks")
+  
+  # save original column order
+  col_order <- names(nullNetworks)
+  rhdf5::h5write(col_order, "nullNetworks.h5", "nullNetworks/column_order")
+  
+  # save each column under its own dataset
+  for (nm in col_order) {
+    rhdf5::h5write(nullNetworks[[nm]], "nullNetworks.h5", paste0("nullNetworks/", nm))
+  }
+  monsterFileNull <- monster(expr = combdf,
+                                design = combdes,
+                                motif = NA,
+                                mode = 'regNet', nullNetworks = "nullNetworks.h5",
+                                nullPerms = 10, nullModelType = "nullNetwork",
+                                numMaxCores = 1, logging = FALSE)
+  # monsterFileNullMultiCore <- monster(expr = combdf,
+  #                                        design = combdes,
+  #                                        motif = NA,
+  #                                        mode = 'regNet', nullNetworks = "nullNetworks.h5",
+  #                                        nullPerms = 10, nullModelType = "nullNetwork",
+  #                                        numMaxCores = 3, logging = FALSE)
+  expect_equal(c(monsterFileNull@tm), c(monsterControlNull@tm))
+  for(i in 1:10){
+    expect_equal(c(monsterFileNull@nullTM[[i]]), c(monsterControlNull@nullTM[[i]]))
+  }
+  expect_equal(monsterFileNull@numGenes, monsterControlNull@numGenes)
+  expect_equal(c(monsterFileNull@numSamples), c(monsterControlNull@numSamples))
+  expect_equal(monsterFileNull@logging, monsterControlNull@logging)
+  
   # Remove data file.
+  unlink("nullNetworks.h5")
   unlink("./testDatasetMonster.RData")
 })
 
@@ -291,6 +356,74 @@ test_that('domonster runs on toy PANDA data', {
   # # these should all yield same result; confirming they are the same
   # expect_equal(monster_res1, monster_res2, tolerance=1e-15) 
   # expect_equal(monster_res1, monster_res3, tolerance=1e-15) 
+})
+
+test_that("monsterCheckDataType() converts data.frame to matrix", {
+  df <- data.frame(a = 1:3, b = 4:6)
+  result <- monsterCheckDataType(df)
+  expect_true(is.matrix(result))
+  expect_equal(dim(result), c(3, 2))
+})
+
+test_that("monsterCheckDataType() passes through matrix unchanged", {
+  mat <- matrix(1:6, nrow = 2)
+  result <- monsterCheckDataType(mat)
+  expect_true(is.matrix(result))
+  expect_equal(result, mat)
+})
+
+test_that("monsterCheckDataType() converts ExpressionSet", {
+  expr_mat <- matrix(rnorm(20), nrow = 4,
+                     dimnames = list(paste0("g", 1:4), paste0("s", 1:5)))
+  eset <- Biobase::ExpressionSet(assayData = expr_mat)
+  result <- monsterCheckDataType(eset)
+  expect_true(is.matrix(result))
+  expect_equal(dim(result), c(4, 5))
+})
+
+test_that("monsterCheckDataType() errors on invalid input", {
+  expect_error(monsterCheckDataType("foo"), "must be a data.frame")
+  expect_error(monsterCheckDataType(42), "must be a data.frame")
+  expect_error(monsterCheckDataType(list(1, 2, 3)), "must be a data.frame")
+})
+
+test_that("kabsch() returns square transformation matrix", {
+  set.seed(42)
+  n <- 20
+  p <- 3
+  P <- matrix(rnorm(n * p), nrow = n, ncol = p)
+  colnames(P) <- paste0("TF", 1:p)
+  
+  # Create Q as a rotation of P with some noise
+  Q <- P %*% matrix(c(0, -1, 0, 1, 0, 0, 0, 0, 1), 3, 3) + matrix(rnorm(n * p, sd = 0.1), nrow = n, ncol = p)
+  colnames(Q) <- paste0("TF", 1:p)
+  
+  W <- kabsch(P, Q)
+  expect_true(is.matrix(W))
+  expect_equal(nrow(W), p)
+  expect_equal(ncol(W), p)
+  expect_true(all(is.finite(W)))
+})
+
+test_that("monsterTransformationMatrix() works with ols method", {
+  data("yeast")
+  yeast$exp.cc[is.na(yeast$exp.cc)] <- mean(as.matrix(yeast$exp.cc), na.rm = TRUE)
+  cc.net.1 <- suppressWarnings(monsterMonsterNI(yeast$motif, yeast$exp.cc[1:1000, 1:20]))
+  cc.net.2 <- suppressWarnings(monsterMonsterNI(yeast$motif, yeast$exp.cc[1:1000, 31:50]))
+  
+  tm <- monsterTransformationMatrix(cc.net.1, cc.net.2, method = "ols")
+  expect_true(is.matrix(tm))
+  expect_equal(nrow(tm), ncol(tm))
+})
+
+test_that("monsterTransformationMatrix() works with kabsch method", {
+  data("yeast")
+  yeast$exp.cc[is.na(yeast$exp.cc)] <- mean(as.matrix(yeast$exp.cc), na.rm = TRUE)
+  cc.net.1 <- suppressWarnings(monsterMonsterNI(yeast$motif, yeast$exp.cc[1:1000, 1:20]))
+  cc.net.2 <- suppressWarnings(monsterMonsterNI(yeast$motif, yeast$exp.cc[1:1000, 31:50]))
+  
+  tm <- monsterTransformationMatrix(cc.net.1, cc.net.2, method = "kabsch")
+  expect_true(is.matrix(tm))
 })
 
 
