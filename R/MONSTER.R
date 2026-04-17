@@ -529,102 +529,61 @@ CalculateTransitionMatricesFromFile <- function(file, mode,
     stop("Package 'rhdf5' is required for monster() when a file input is provided for nullNetworks.\n",
          "Install using BiocManager::install('rhdf5')", call. = FALSE)
   }
-  
+  print("starting")
   # Melt the expression data.
-  expMelt <- reshape2::melt(
-    as.matrix(expr[,design == 0])
-  )
-  colnames(expMelt) <- c("tf", "gene", "score")
-  expMelt$tf <- as.character(expMelt$tf)
-  expMelt$gene <- as.character(expMelt$gene)
-  rownames(expMelt) <- paste(expMelt$tf, expMelt$gene, sep = "__")
-  expMeltCase <- reshape2::melt(
-    as.matrix(expr[,design == 1])
-  )
-  colnames(expMeltCase) <- c("tf", "gene", "score")
-  expMeltCase$tf <- as.character(expMeltCase$tf)
-  expMeltCase$gene <- as.character(expMeltCase$gene)
-  rownames(expMeltCase) <- paste(expMeltCase$tf, expMeltCase$gene, sep = "__")
-
-  # Open the file and extract the row names.
-  col_order <- rhdf5::h5read("nullNetworks.h5", "nullNetworks/column_order")
-  tf <- rhdf5::h5read("nullNetworks.h5", paste0("nullNetworks/", col_order[1]))
-  gene <- rhdf5::h5read("nullNetworks.h5", paste0("nullNetworks/", col_order[2]))
-  nnRows <- paste(tf, gene, sep = "__")
-
-  # Subset the networks so that they include only what overlaps between the
-  # null models and the true models.
-  sharedRows <- intersect(rownames(expMelt), nnRows)
+  control <- expr[,design == 0]
+  case <- expr[,design == 1]
+  
+  # Open the file and extract the relevant columns.
+  tf <- rhdf5::h5read(file, "matrices/tfs")
+  gene <- rhdf5::h5read(file, "matrices/genes")
+  sharedTF <- intersect(tf, rownames(control))
+  sharedGene <- intersect(gene, colnames(control))
+  controlShared <- control[sharedTF, sharedGene]
+  caseShared <- case[sharedTF, sharedGene]
+  tfLoc <- unlist(lapply(sharedTF, function(tfi){return(which(tf == tfi))}))
+  geneLoc <- unlist(lapply(sharedGene, function(genei){return(which(gene == genei))}))
 
   # Extract running mean for the null network data.
-  runningSum <- vector(length = length(sharedRows), mode = "numeric")
+  runningSum <- matrix(rep(0, nrow(controlShared) * ncol(controlShared)), nrow = nrow(controlShared))
   for(i in (seq_len(iterations-1))){
-    columns <- col_order[i + 2]
-    nullDat <- rhdf5::h5read("nullNetworks.h5", paste0("nullNetworks/", columns))
-    names(nullDat) <- nnRows
-    nullDat <- nullDat[sharedRows]
-    runningSum <- runningSum + nullDat
+    if(logging == TRUE){
+      print(paste("Calculating running mean - iteration", i))
+    }
+    nullMat <- rhdf5::h5read(file, paste0("matrices/", i))
+    nullMatShared <- nullMat[tfLoc, geneLoc]
+    runningSum <- runningSum + nullMatShared
   }
   runningMean <- runningSum / (iterations-1)
 
   transMatrices=list()
   if(numMaxCores == 1){
     for(i in seq_len(iterations)){
-      
-      # Subset the expression data to include shared rows only.
-      exprShared <- expMelt[sharedRows,]
-      exprSharedCase <- expMeltCase[sharedRows,]
-      nullExpr <- exprShared
-      nullExprMat <- reshape(
-        nullExpr,
-        idvar = "tf",
-        timevar = "gene",
-        direction = "wide"
-      )
-      colnames(nullExprMat) <- sub("^score\\.", "", colnames(nullExprMat))
-      rownames(nullExprMat) <- nullExprMat$tf
-      nullExprMat$tf <- NULL
-      nullExprMatCase <- reshape(
-        exprSharedCase,
-        idvar = "tf",
-        timevar = "gene",
-        direction = "wide"
-      )
-      colnames(nullExprMatCase) <- sub("^score\\.", "", colnames(nullExprMatCase))
-      rownames(nullExprMatCase) <- nullExprMatCase$tf
-      nullExprMatCase$tf <- NULL
-      
+
       # Create the input matrix for MONSTER containing control and case data.
-      fullExprMat <- as.matrix(cbind(nullExprMat, nullExprMatCase))
-      newDesign <- c(rep(0, ncol(nullExprMat)), rep(1, ncol(nullExprMatCase)))
+      fullExprMat <- as.matrix(cbind(controlShared, caseShared))
+      newDesign <- c(rep(0, ncol(controlShared)), rep(1, ncol(caseShared)))
       
       # Modify expression matrix using null data if first iteration is done.
       if(i > 1){
         
         # Extract the relevant null data column.
-        columns <- col_order[i + 1]
-        nullDat <- rhdf5::h5read("nullNetworks.h5", paste0("nullNetworks/", columns))
+        nullMat <- rhdf5::h5read(file, paste0("matrices/", i-1))
+        
+        # Subset.
+        nullMatShared <- nullMat[tfLoc, geneLoc]
 
         # Center around control data.
-        meanDiff <- nullExpr[,3] - runningMean
-        controlNulls <- nullDat + meanDiff
-        
-        # Now reshape so that we have a matrix.
-        noisyControl <- data.frame(tf = nullExpr$tf, gene = nullExpr$gene, score = controlNulls)
-        noisyControlMat <- reshape(
-          noisyControl,
-          idvar = "tf",
-          timevar = "gene",
-          direction = "wide"
-        )
-        colnames(noisyControlMat) <- sub("^score\\.", "", colnames(noisyControlMat))
-        rownames(noisyControlMat) <- noisyControlMat$tf
-        noisyControlMat$tf <- NULL
-        
+        meanDiff <- controlShared - runningMean
+        controlNulls <- nullMatShared + meanDiff
+
         # Create the input matrix for MONSTER containing control and noisy control data (null).
-        fullExprMat <- as.matrix(cbind(nullExprMat, noisyControlMat))
-        newDesign <- c(rep(0, ncol(nullExprMat)), rep(1, ncol(noisyControlMat)))
+        fullExprMat <- as.matrix(cbind(controlShared, controlNulls))
+        newDesign <- c(rep(0, ncol(controlShared)), rep(1, ncol(controlNulls)))
         
+      }
+      if(logging == TRUE){
+        print(paste("Calculating transition matrix - iteration", i))
       }
       transMatrices[[i]] <- CalculateOneTransitionMatrix(i = i, mode = mode, 
                                                          nullExpr = fullExprMat, 
@@ -641,52 +600,37 @@ CalculateTransitionMatricesFromFile <- function(file, mode,
     transMatrices <- foreach(i=seq_len(iterations),
                              .packages=c("netZooR","reshape2","penalized","MASS")) %dopar% {
                                
-                               # Subset the expression data to include shared rows only.
-                               exprShared <- expMelt[sharedRows,]
-                               exprSharedCase <- expMeltCase[sharedRows,]
-                               nullExpr <- exprShared
-                               nullExprMat <- reshape(
-                                 nullExpr,
-                                 idvar = "tf",
-                                 timevar = "gene",
-                                 direction = "wide"
-                               )
-                               colnames(nullExprMat) <- sub("^score\\.", "", colnames(nullExprMat))
-                               rownames(nullExprMat) <- nullExprMat$tf
-                               nullExprMat$tf <- NULL
-                               nullExprMatCase <- reshape(
-                                 exprSharedCase,
-                                 idvar = "tf",
-                                 timevar = "gene",
-                                 direction = "wide"
-                               )
-                               colnames(nullExprMatCase) <- sub("^score\\.", "", colnames(nullExprMatCase))
-                               rownames(nullExprMatCase) <- nullExprMatCase$tf
-                               nullExprMatCase$tf <- NULL
-                               
                                # Create the input matrix for MONSTER containing control and case data.
-                               fullExprMat <- as.matrix(cbind(nullExprMat, nullExprMatCase))
-                               newDesign <- c(rep(0, ncol(nullExprMat)), rep(1, ncol(nullExprMatCase)))
+                               fullExprMat <- as.matrix(cbind(controlShared, caseShared))
+                               newDesign <- c(rep(0, ncol(controlShared)), rep(1, ncol(caseShared)))
                                
                                # Modify expression matrix using null data if first iteration is done.
                                if(i > 1){
                                  
                                  # Extract the relevant null data column.
-                                 columns <- col_order[i + 2]
-                                 nullDat <- rhdf5::h5read("nullNetworks.h5", paste0("nullNetworks/", columns))[sharedRows,]
+                                 columns <- col_order[i + 1]
+                                 nullDat <- rhdf5::h5read(file, paste0("nullNetworks/", columns))
+                                 
+                                 # Reshape so that we have a matrix.
+                                 nullDF <- data.frame(tf = tf, gene = gene, score = nullDat)
+                                 nullMat <- xtabs(score ~ tf + gene, data = nullDF)
+                                 nullMatShared <- nullMat[sharedTF, sharedGene]
                                  
                                  # Center around control data.
-                                 controlData <- nullExpr[,design==0]
-                                 meanDiff <- controlData[,3] - runningMean
-                                 controlNulls <- nullDat + meanDiff
-                                 nullExpr[,design==1] <- controlNulls
+                                 meanDiff <- controlShared - runningMean
+                                 controlNulls <- nullMatShared + meanDiff
+                                 
+                                 # Create the input matrix for MONSTER containing control and noisy control data (null).
+                                 fullExprMat <- as.matrix(cbind(controlShared, controlNulls))
+                                 newDesign <- c(rep(0, ncol(controlShared)), rep(1, ncol(controlNulls)))
+                                 
                                }
                                return(CalculateOneTransitionMatrix(i = i, mode = mode, 
-                                                                   nullExpr = nullExpr, 
+                                                                   nullExpr = fullExprMat, 
                                                                    motif = motif, 
                                                                    ni_method = ni_method,
                                                                    ni.coefficient.cutoff = ni.coefficient.cutoff, 
-                                                                   alphaw = alphaw, design = design,
+                                                                   alphaw = alphaw, design = newDesign,
                                                                    remove.diagonal = remove.diagonal, 
                                                                    method = method, 
                                                                    outputDir = outputDir,

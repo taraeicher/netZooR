@@ -164,16 +164,21 @@ test_that("MONSTER function works", {
   nullNetworksOffset[,3:12] <- nullNetworksOffset[,3:12] + 5
   nullNetworks <- nullNetworksOffset
   rhdf5::h5createFile("nullNetworks.h5")
-  rhdf5::h5createGroup("nullNetworks.h5", "nullNetworks")
+  rhdf5::h5createGroup("nullNetworks.h5", "matrices")
   
-  # save original column order
-  col_order <- names(nullNetworks)
-  rhdf5::h5write(col_order, "nullNetworks.h5", "nullNetworks/column_order")
-  
-  # save each column under its own dataset
-  for (nm in col_order) {
-    rhdf5::h5write(nullNetworks[[nm]], "nullNetworks.h5", paste0("nullNetworks/", nm))
+  # Make a list of networks.
+  for(i in seq(3, 12)){
+    wide <- unclass(xtabs(score ~ tf + gene, data = data.frame(tf = nullNetworksOffset[,1],
+                                                      gene = nullNetworksOffset[,2],
+                                                      score = nullNetworksOffset[,i])))
+    if(i == 3){
+      rhdf5::h5write(rownames(wide), "nullNetworks.h5", paste0("matrices/tfs"))
+      rhdf5::h5write(colnames(wide), "nullNetworks.h5", paste0("matrices/genes"))
+    }
+    rhdf5::h5write(wide, "nullNetworks.h5", paste0("matrices/", as.character(i-2)))
   }
+  
+  # Run MONSTER.
   monsterFileNull <- monster(expr = combdf,
                                 design = combdes,
                                 motif = NA,
