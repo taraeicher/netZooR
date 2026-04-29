@@ -204,6 +204,54 @@ test_that("MONSTER function works", {
   unlink("./testDatasetMonster.RData")
 })
 
+test_that("monsterCalculateTmStatsPerCell function works", {
+  
+  # Initialize data.
+  set.seed(1)
+  monsterTMNeg <- matrix(rnorm(mean = 0, sd = 1, n = 100), nrow = 10)
+  rownames(monsterTMNeg) <- paste0("TF", 1:10)
+  colnames(monsterTMNeg) <- paste0("TF", 1:10)
+  monsterTMPos <- monsterTMNeg
+  monsterTMPos[5,5] <- 200
+  monsterTMPos[1,2] <- 300
+  monsterNullTM <- lapply(1:1000, function(i){
+    retval <- matrix(rnorm(mean = 0, sd = 1, n = 100), nrow = 10)
+    rownames(retval) <- paste0("TF", 1:10)
+    colnames(retval) <- paste0("TF", 1:10)
+    return(retval)
+  })
+  monsterNegObj <- new("monsterAnalysis", tm = monsterTMNeg, nullTM = monsterNullTM,
+                       numGenes = 1000, numSamples = 1000, logging = FALSE)
+  monsterPosObj <- new("monsterAnalysis", tm = monsterTMPos, nullTM = monsterNullTM,
+                       numGenes = 1000, numSamples = 1000, logging = FALSE)
+
+  # Error if the data are not of the correct type.
+  expect_error(monsterCalculateTmStatsPerCell(monsterObj = NULL, method = "z-score"),
+               "Input must be an object of class 'monsterAnalysis'.")
+  expect_error(monsterCalculateTmStatsPerCell(monsterObj = monsterNegObj, method = "google"),
+               "Valid methods include 'z-score' and 'non-parametric'. Invalid method: google")
+  
+  # Ensure that nothing is significant in the negative case.
+  monsterNegStats <- monsterCalculateTmStatsPerCell(monsterObj = monsterNegObj, method = "z-score")
+  expect_all_true(c(monsterNegStats$p.adj) > 0.05)
+  monsterNegStats <- monsterCalculateTmStatsPerCell(monsterObj = monsterNegObj, method = "non-parametric")
+  expect_all_true(c(monsterNegStats$p.adj) > 0.05)
+  
+  # Ensure that the right values are significant in the positive case.
+  monsterPosStats <- monsterCalculateTmStatsPerCell(monsterObj = monsterPosObj, method = "z-score")
+  expect_lt(monsterPosStats$p.adj[5,5], 0.05)
+  expect_lt(monsterPosStats$p.adj[1,2], 0.05)
+  monsterPosStats$p.adj[5,5] <- 1
+  monsterPosStats$p.adj[1,2] <- 1
+  expect_all_true(c(monsterPosStats$p.adj) > 0.05)
+  monsterPosStats <- monsterCalculateTmStatsPerCell(monsterObj = monsterPosObj, method = "non-parametric")
+  expect_lt(monsterPosStats$p.adj[5,5], 0.05)
+  expect_lt(monsterPosStats$p.adj[1,2], 0.05)
+  monsterPosStats$p.adj[5,5] <- 1
+  monsterPosStats$p.adj[1,2] <- 1
+  expect_all_true(c(monsterPosStats$p.adj) > 0.05)
+})
+
 test_that("GeneratePermutationNull function works", {
   
   # Put together MONSTER inputs.

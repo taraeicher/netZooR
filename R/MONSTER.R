@@ -1174,6 +1174,103 @@ monsterCalculateTmStats <- function(monsterObj, method="z-score"){
   return(list(p.values=p.values, t.values=t.values, ssodm=ssodm, null.ssodm.matrix=null.ssodm.matrix))
 }
 
+#' Calculate statistics for a transformation matrix at the matrix cell level (TF_a -> TF_b)
+#'
+#' This function powers both the p-value and t-value (or z-score) calculations
+#' for each cell in a transformation matrix.
+#'
+#' @param monsterObj monsterAnalysis Object
+#' @param method one of 'z-score' or 'non-parametric'
+#' @return p-values, adjusted p-values, z-scores (if applicable)
+#' @export
+monsterCalculateTmStatsPerCell <- function(monsterObj, method="z-score"){
+  
+  # Check object input.
+  if(!is(monsterObj, "monsterAnalysis")){
+    stop("Input must be an object of class 'monsterAnalysis'.")
+  }
+  if(!(method %in% c("z-score", "non-parametric"))){
+    stop(paste("Valid methods include 'z-score' and 'non-parametric'. Invalid method:", method))
+  }
+  
+  # Melt each matrix.
+  if (!requireNamespace("reshape2", quietly = TRUE))
+    stop("Package 'reshape2' is required for this method. Please install it.")
+  meltedTrans <- reshape2::melt(monsterObj@tm)
+  colnames(meltedTrans) <- c("Source", "Target", "Score")
+
+  meltedNullTrans <- do.call(cbind, lapply(1:length(monsterObj@nullTM), function(i){
+    
+    # Melt the null matrix.
+    nullMat <- monsterObj@nullTM[[i]]
+    melted <- reshape2::melt(nullMat)
+    colnames(melted) <- c("Source", "Target", paste0("Score", i))
+    
+    # Only keep the TF labels for the first null.
+    retval <- as.data.frame(melted[,3])
+    colnames(retval) <- paste0("Score", i)
+    if(i == 1){
+      retval <- melted
+    }
+    return(retval)
+  }))
+
+  # Initialize values to return.
+  p.values <- NULL
+  p.adj <- NULL
+  z.scores <- NULL
+  
+  # Get p-value (rank of observed within null ssodm)
+  if(method=="non-parametric"){
+    
+    # Calculate n.
+    n <- ncol(meltedNullTrans) - 2
+    
+    # Calculate r.
+    repObserved <- matrix(rep(meltedTrans$Score, n), ncol = n)
+    nullTransNum <- as.matrix(meltedNullTrans[,3:ncol(meltedNullTrans)])
+    isGreater <- nullTransNum > repObserved
+    isGreaterBin <- isGreater
+    isGreaterBin[which(isGreater == TRUE)] <- 1
+    isGreaterBin[which(isGreater == FALSE)] <- 0
+    r <- rowSums(isGreaterBin)
+
+    # Calculate p-values.
+    p <- (r + 1) / (n + 1)
+    pDF <- data.frame(Source = meltedTrans$Source, Target = meltedTrans$Target, Score = p)
+    p.values <- reshape2::acast(pDF, Source ~ Target, value.var = "Score")
+    
+  } else if (method=="z-score"){
+    
+    # Calculate z-scores.
+    nullTransNum <- as.matrix(meltedNullTrans[,3:ncol(meltedNullTrans)])
+    nullMeans <- rowMeans(nullTransNum)
+    nullSd <- apply(nullTransNum, 1, sd)
+    zDF <- data.frame(Source = meltedTrans$Source,
+                      Target = meltedTrans$Target,
+                      Score = (meltedTrans$Score - nullMeans) / nullSd)
+    z.scores <- reshape2::acast(zDF, Source ~ Target, value.var = "Score")
+    
+    # Calculate p-values using a one-tailed test (we are interested in
+    # transitions greater than expected).
+    p.values <- pnorm(z.scores, lower.tail=FALSE)
+  } else {
+    stop('Undefined method')
+  }
+  
+  # Adjust p-values using FDR.
+  p.adj <- matrix(
+    p.adjust(as.vector(p.values), method = "fdr"),
+    nrow = nrow(p.values),
+    ncol = ncol(p.values),
+    dimnames = dimnames(p.values)
+  )
+  
+  # Return.
+  return(list(p.values=p.values, p.adj = p.adj, z.scores=z.scores))
+}
+
+
 #' Calculate p-values for a tranformation matrix
 #'
 #' This function calculates the significance of an observed
