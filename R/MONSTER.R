@@ -608,13 +608,10 @@ CalculateTransitionMatricesFromFile <- function(file, mode,
                                if(i > 1){
                                  
                                  # Extract the relevant null data column.
-                                 columns <- col_order[i + 1]
-                                 nullDat <- rhdf5::h5read(file, paste0("nullNetworks/", columns))
+                                 nullMat <- rhdf5::h5read(file, paste0("matrices/", i-1))
                                  
-                                 # Reshape so that we have a matrix.
-                                 nullDF <- data.frame(tf = tf, gene = gene, score = nullDat)
-                                 nullMat <- xtabs(score ~ tf + gene, data = nullDF)
-                                 nullMatShared <- nullMat[sharedTF, sharedGene]
+                                 # Subset.
+                                 nullMatShared <- nullMat[tfLoc, geneLoc]
                                  
                                  # Center around control data.
                                  meanDiff <- controlShared - runningMean
