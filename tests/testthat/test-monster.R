@@ -212,7 +212,7 @@ test_that("monsterCalculateTmStatsPerCell function works", {
   rownames(monsterTMNeg) <- paste0("TF", 1:10)
   colnames(monsterTMNeg) <- paste0("TF", 1:10)
   monsterTMPos <- monsterTMNeg
-  monsterTMPos[5,5] <- 200
+  monsterTMPos[5,6] <- 200
   monsterTMPos[1,2] <- 300
   monsterNullTM <- lapply(1:1000, function(i){
     retval <- matrix(rnorm(mean = 0, sd = 1, n = 100), nrow = 10)
@@ -233,23 +233,32 @@ test_that("monsterCalculateTmStatsPerCell function works", {
   
   # Ensure that nothing is significant in the negative case.
   monsterNegStats <- monsterCalculateTmStatsPerCell(monsterObj = monsterNegObj, method = "z-score")
-  expect_all_true(c(monsterNegStats$p.adj) > 0.05)
+  expect_all_true(c(monsterNegStats$p.adj[which(!is.na(monsterNegStats$p.adj))]) > 0.05)
   monsterNegStats <- monsterCalculateTmStatsPerCell(monsterObj = monsterNegObj, method = "non-parametric")
-  expect_all_true(c(monsterNegStats$p.adj) > 0.05)
+  expect_all_true(c(monsterNegStats$p.adj[which(!is.na(monsterNegStats$p.adj))]) > 0.05)
   
   # Ensure that the right values are significant in the positive case.
   monsterPosStats <- monsterCalculateTmStatsPerCell(monsterObj = monsterPosObj, method = "z-score")
-  expect_lt(monsterPosStats$p.adj[5,5], 0.05)
+  expect_lt(monsterPosStats$p.adj[5,6], 0.05)
   expect_lt(monsterPosStats$p.adj[1,2], 0.05)
-  monsterPosStats$p.adj[5,5] <- 1
+  monsterPosStats$p.adj[5,6] <- 1
   monsterPosStats$p.adj[1,2] <- 1
-  expect_all_true(c(monsterPosStats$p.adj) > 0.05)
-  monsterPosStats <- monsterCalculateTmStatsPerCell(monsterObj = monsterPosObj, method = "non-parametric")
-  expect_lt(monsterPosStats$p.adj[5,5], 0.05)
-  expect_lt(monsterPosStats$p.adj[1,2], 0.05)
-  monsterPosStats$p.adj[5,5] <- 1
-  monsterPosStats$p.adj[1,2] <- 1
-  expect_all_true(c(monsterPosStats$p.adj) > 0.05)
+  expect_all_true(c(monsterPosStats$p.adj[which(!is.na(monsterPosStats$p.adj))]) > 0.05)
+  monsterPosStats2 <- monsterCalculateTmStatsPerCell(monsterObj = monsterPosObj, method = "non-parametric")
+  expect_lt(monsterPosStats2$p.adj[5,6], 0.05)
+  expect_lt(monsterPosStats2$p.adj[1,2], 0.05)
+  monsterPosStats2$p.adj[5,6] <- 1
+  monsterPosStats2$p.adj[1,2] <- 1
+  expect_all_true(c(monsterPosStats2$p.adj[which(!is.na(monsterPosStats2$p.adj))]) > 0.05)
+  
+  # Set diagonals to 0 and check for equality.
+  monsterPosObj2 <- monsterPosObj
+  diag(monsterPosObj2@tm) <- 0
+  for(i in 1:length(monsterPosObj2@nullTM)){
+    diag(monsterPosObj2@nullTM[[i]]) <- 0
+  }
+  monsterPosStatsNoDiag <- monsterCalculateTmStatsPerCell(monsterObj = monsterPosObj2, method = "non-parametric")
+  expect_equal(c(monsterPosStats2$p.adj), c(monsterPosStatsNoDiag$p.adj))
 })
 
 test_that("GeneratePermutationNull function works", {

@@ -1190,6 +1190,12 @@ monsterCalculateTmStatsPerCell <- function(monsterObj, method="z-score"){
     stop(paste("Valid methods include 'z-score' and 'non-parametric'. Invalid method:", method))
   }
   
+  # Set all diagonals to NA. We don't want to compute p-values for diagonals.
+  diag(monsterObj@tm) <- NA
+  for(i in 1:length(monsterObj@nullTM)){
+    diag(monsterObj@nullTM[[i]]) <- NA
+  }
+  
   # Melt each matrix.
   if (!requireNamespace("reshape2", quietly = TRUE))
     stop("Package 'reshape2' is required for this method. Please install it.")
@@ -1236,7 +1242,7 @@ monsterCalculateTmStatsPerCell <- function(monsterObj, method="z-score"){
     p <- (r + 1) / (n + 1)
     pDF <- data.frame(Source = meltedTrans$Source, Target = meltedTrans$Target, Score = p)
     p.values <- reshape2::acast(pDF, Source ~ Target, value.var = "Score")
-    
+
   } else if (method=="z-score"){
     
     # Calculate z-scores.
@@ -1262,7 +1268,7 @@ monsterCalculateTmStatsPerCell <- function(monsterObj, method="z-score"){
     ncol = ncol(p.values),
     dimnames = dimnames(p.values)
   )
-  
+
   # Return.
   return(list(p.values=p.values, p.adj = p.adj, z.scores=z.scores))
 }
