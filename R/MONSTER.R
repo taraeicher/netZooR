@@ -117,6 +117,8 @@ monsterPrintMonsterAnalysis <- function(x, ...){
 #' the edge weights from each simulated network. For PANDA networks:
 #' tf, gene, net1, net2, ..., netn
 #' @param logging Whether or not to print logging messages for MONSTER (default is TRUE)
+#' @param by.tfs logical indicating a transcription factor based transformation.    If 
+#' false, gives gene by gene transformation matrix
 #' @export
 #' @import doParallel
 #' @import parallel
@@ -154,7 +156,8 @@ monster <- function(expr,
                     outputDir=NA, alphaw=0.5, mode='buildNet',
                     method="ols", remove.diagonal = TRUE,
                     nullModelType = "permutation",
-                    nullNetworks = NA, logging = TRUE){
+                    nullNetworks = NA, logging = TRUE,
+                    by.tfs = TRUE){
   if(!(ni_method %in% c("BERE","pearson", "lda"))){
     stop(paste("Supported values for ni_method are BERE, pearson, and lda.",
                ni_method, "is invalid."))
@@ -262,7 +265,8 @@ monster <- function(expr,
                                                          alphaw = alphaw,
                                                          remove.diagonal = remove.diagonal, 
                                                          method = method, 
-                                                         outputDir = outputDir)
+                                                         outputDir = outputDir,
+                                                         by.tfs = by.tfs)
   }else{
     # Generate null.
     nullExprAll <- NULL
@@ -296,7 +300,8 @@ monster <- function(expr,
                                                            remove.diagonal = remove.diagonal, 
                                                            method = method, 
                                                            outputDir = outputDir,
-                                                           logging = logging)
+                                                           logging = logging,
+                                                           by.tfs = by.tfs)
       }
     }else{
       transMatrices <- foreach(i=seq_len(iters),
@@ -316,7 +321,8 @@ monster <- function(expr,
                                                                      remove.diagonal = remove.diagonal,
                                                                      method = method,
                                                                      outputDir = outputDir,
-                                                                     logging = logging))
+                                                                     logging = logging,
+                                                                     by.tfs = by.tfs))
                                }
     }
     
@@ -360,10 +366,13 @@ monster <- function(expr,
 #' @param outputDir character vector specifying a directory or path in which 
 #' which to save MONSTER results, default is NA and results are not saved.
 #' @param logging Whether or not to print logging messages for MONSTER (default is TRUE)
+#' @param by.tfs logical indicating a transcription factor based transformation.    If 
+#' false, gives gene by gene transformation matrix
 #' @return A list of matrices, each one corresponding to one null model
 CalculateOneTransitionMatrix <- function(i, mode, nullExpr, motif, ni_method,
                                          ni.coefficient.cutoff, alphaw, design,
-                                         remove.diagonal, method, outputDir, logging){
+                                         remove.diagonal, method, outputDir, logging,
+                                         by.tfs = TRUE){
   if(logging == TRUE){
     print(paste0("Running iteration ", i))
   }
@@ -387,7 +396,7 @@ CalculateOneTransitionMatrix <- function(i, mode, nullExpr, motif, ni_method,
   }
   transitionMatrix <- monsterTransformationMatrix(
     tmpNetControls, tmpNetCases, remove.diagonal=remove.diagonal, method=method,
-    logging = logging) 
+    logging = logging, by.tfs = by.tfs) 
   if(logging == TRUE){
     print(paste("Finished running iteration", i))
   }
@@ -523,7 +532,7 @@ CalculateTransitionMatricesFromFile <- function(file, mode,
                                                 design, logging, numMaxCores,
                                                 motif, ni_method, ni.coefficient.cutoff, 
                                                 alphaw, remove.diagonal, 
-                                                method, outputDir){
+                                                method, outputDir, by.tfs){
   
   if (!requireNamespace("rhdf5", quietly = TRUE)) {
     stop("Package 'rhdf5' is required for monster() when a file input is provided for nullNetworks.\n",
@@ -537,8 +546,8 @@ CalculateTransitionMatricesFromFile <- function(file, mode,
   # Open the file and extract the relevant columns.
   tf <- rhdf5::h5read(file, "matrices/tfs")
   gene <- rhdf5::h5read(file, "matrices/genes")
-  sharedTF <- intersect(tf, rownames(control))
-  sharedGene <- intersect(gene, colnames(control))
+  sharedTF <- rownames(control)[rownames(control) %in% tf]
+  sharedGene <- colnames(control)[colnames(control) %in% gene]
   controlShared <- control[sharedTF, sharedGene]
   caseShared <- case[sharedTF, sharedGene]
   tfLoc <- unlist(lapply(sharedTF, function(tfi){return(which(tf == tfi))}))
@@ -594,7 +603,8 @@ CalculateTransitionMatricesFromFile <- function(file, mode,
                                                          remove.diagonal = remove.diagonal, 
                                                          method = method, 
                                                          outputDir = outputDir,
-                                                         logging = logging)
+                                                         logging = logging,
+                                                         by.tfs = by.tfs)
     }
   }else{
     transMatrices <- foreach(i=seq_len(iterations),
@@ -631,7 +641,8 @@ CalculateTransitionMatricesFromFile <- function(file, mode,
                                                                    remove.diagonal = remove.diagonal, 
                                                                    method = method, 
                                                                    outputDir = outputDir,
-                                                                   logging = logging))
+                                                                   logging = logging,
+                                                                   by.tfs = by.tfs))
                              }
   }
   # Return the transition matrices.

@@ -199,6 +199,82 @@ test_that("MONSTER function works", {
   expect_equal(c(monsterFileNull@numSamples), c(monsterControlNull@numSamples))
   expect_equal(monsterFileNull@logging, monsterControlNull@logging)
   
+   monsterControlNull <- monster(expr = combdf,
+                                    design = combdes,
+                                    motif = NA,
+                                    mode = 'regNet', nullNetworks = nullNetworks,
+                                    nullPerms = 10, nullModelType = "nullNetwork",
+                                    numMaxCores = 1, logging = FALSE)
+  # monsterControlNullMultiCore <- monster(expr = combdf,
+  #                               design = combdes,
+  #                               motif = NA,
+  #                               mode = 'regNet', nullNetworks = nullNetworks,
+  #                               nullPerms = 10, nullModelType = "nullNetwork",
+  #                               numMaxCores = 3, logging = FALSE)
+  nullNetworksOffset <- nullNetworks
+  nullNetworksOffset[,3:12] <- nullNetworksOffset[,3:12] + 5
+  nullNetworks <- nullNetworksOffset
+  rhdf5::h5createFile("nullNetworks.h5")
+  rhdf5::h5createGroup("nullNetworks.h5", "matrices")
+  
+  # Make a list of networks.
+  for(i in seq(3, 12)){
+    wide <- unclass(xtabs(score ~ tf + gene, data = data.frame(tf = nullNetworksOffset[,1],
+                                                      gene = nullNetworksOffset[,2],
+                                                      score = nullNetworksOffset[,i])))
+    if(i == 3){
+      rhdf5::h5write(rownames(wide), "nullNetworks.h5", paste0("matrices/tfs"))
+      rhdf5::h5write(colnames(wide), "nullNetworks.h5", paste0("matrices/genes"))
+    }
+    rhdf5::h5write(wide, "nullNetworks.h5", paste0("matrices/", as.character(i-2)))
+  }
+  
+  # Run MONSTER.
+  monsterFileNull <- monster(expr = combdf,
+                                design = combdes,
+                                motif = NA,
+                                mode = 'regNet', nullNetworks = "nullNetworks.h5",
+                                nullPerms = 10, nullModelType = "nullNetwork",
+                                numMaxCores = 1, logging = FALSE)
+  # monsterFileNullMultiCore <- monster(expr = combdf,
+  #                                        design = combdes,
+  #                                        motif = NA,
+  #                                        mode = 'regNet', nullNetworks = "nullNetworks.h5",
+  #                                        nullPerms = 10, nullModelType = "nullNetwork",
+  #                                        numMaxCores = 3, logging = FALSE)
+  expect_equal(c(monsterFileNull@tm), c(monsterControlNull@tm))
+  for(i in 1:10){
+    expect_equal(c(monsterFileNull@nullTM[[i]]), c(monsterControlNull@nullTM[[i]]))
+  }
+  expect_equal(monsterFileNull@numGenes, monsterControlNull@numGenes)
+  expect_equal(c(monsterFileNull@numSamples), c(monsterControlNull@numSamples))
+  expect_equal(monsterFileNull@logging, monsterControlNull@logging)
+  
+  # Get the gene transition matrix instead.
+  monsterControlNullGene <- monster(expr = combdf,
+                                design = combdes,
+                                motif = NA,
+                                mode = 'regNet', nullNetworks = nullNetworks,
+                                nullPerms = 10, nullModelType = "nullNetwork",
+                                numMaxCores = 1, logging = FALSE, by.tfs = FALSE,
+                                method = "orig")
+  
+  # Run MONSTER.
+  monsterFileNullGene <- monster(expr = combdf,
+                             design = combdes,
+                             motif = NA,
+                             mode = 'regNet', nullNetworks = "nullNetworks.h5",
+                             nullPerms = 10, nullModelType = "nullNetwork",
+                             numMaxCores = 1, logging = FALSE, by.tfs = FALSE,
+                             method = "orig")
+  expect_equal(c(monsterFileNullGene@tm), c(monsterControlNullGene@tm))
+  for(i in 1:10){
+    expect_equal(c(monsterFileNullGene@nullTM[[i]]), c(monsterControlNullGene@nullTM[[i]]))
+  }
+  expect_equal(monsterFileNullGene@numGenes, monsterControlNullGene@numGenes)
+  expect_equal(c(monsterFileNullGene@numSamples), c(monsterControlNullGene@numSamples))
+  expect_equal(monsterFileNullGene@logging, monsterControlNullGene@logging)
+  
   # Remove data file.
   unlink("nullNetworks.h5")
   unlink("./testDatasetMonster.RData")

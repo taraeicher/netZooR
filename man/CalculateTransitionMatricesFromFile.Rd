@@ -22,7 +22,8 @@ CalculateTransitionMatricesFromFile(
   alphaw,
   remove.diagonal,
   method,
-  outputDir
+  outputDir,
+  by.tfs
 )
 }
 \arguments{

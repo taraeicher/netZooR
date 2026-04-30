@@ -19,7 +19,8 @@ monster(
   remove.diagonal = TRUE,
   nullModelType = "permutation",
   nullNetworks = NA,
-  logging = TRUE
+  logging = TRUE,
+  by.tfs = TRUE
 )
 }
 \arguments{
@@ -72,6 +73,9 @@ the edge weights from each simulated network. For PANDA networks:
 tf, gene, net1, net2, ..., netn}
 
 \item{logging}{Whether or not to print logging messages for MONSTER (default is TRUE)}
+
+\item{by.tfs}{logical indicating a transcription factor based transformation.    If 
+false, gives gene by gene transformation matrix}
 }
 \value{
 An object of class "monsterAnalysis" containing results

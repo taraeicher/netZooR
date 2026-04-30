@@ -16,7 +16,8 @@ CalculateOneTransitionMatrix(
   remove.diagonal,
   method,
   outputDir,
-  logging
+  logging,
+  by.tfs = TRUE
 )
 }
 \arguments{
@@ -50,6 +51,9 @@ equal weight to direct and indirect evidence.}
 which to save MONSTER results, default is NA and results are not saved.}
 
 \item{logging}{Whether or not to print logging messages for MONSTER (default is TRUE)}
+
+\item{by.tfs}{logical indicating a transcription factor based transformation.    If 
+false, gives gene by gene transformation matrix}
 }
 \value{
 A list of matrices, each one corresponding to one null model
