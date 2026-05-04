@@ -33,6 +33,7 @@ transaction matrix
 # yeast$exp.cc[is.na(yeast$exp.cc)] <- mean(as.matrix(yeast$exp.cc),na.rm=TRUE)
 # monsterRes <- monster(yeast$exp.cc, design, yeast$motif, nullPerms=100, numMaxCores=4)#' 
 data(monsterRes)
+slot(monsterRes, "logging") <- FALSE
 # Color the nodes according to cluster membership
 clusters <- kmeans(monsterGetTm(monsterRes),3)$cluster 
 monsterTransitionPCAPlot(monsterRes, 

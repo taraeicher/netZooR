@@ -25,5 +25,6 @@ corresponding dendrogram of a transaction matrix
 # yeast$exp.cc[is.na(yeast$exp.cc)] <- mean(as.matrix(yeast$exp.cc),na.rm=TRUE)
 # monsterRes <- monster(yeast$exp.cc, design, yeast$motif, nullPerms=10, numMaxCores=1)
 data(monsterRes)
+slot(monsterRes, "logging") <- FALSE
 monsterHclHeatmapPlot(monsterRes)
 }

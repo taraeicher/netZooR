@@ -46,6 +46,7 @@ targeting of B in the target state.
 # design <- c(rep(0,20),rep(NA,10),rep(1,20))
 # monsterRes <- monster(yeast$exp.cc, design, yeast$motif, nullPerms=100, numMaxCores=4)#' 
 data(monsterRes)
+slot(monsterRes, "logging") <- FALSE
 monsterTransitionNetworkPlot(monsterRes, rescale='significance')
 monsterTransitionNetworkPlot(monsterRes, rescale='none')
 }

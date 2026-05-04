@@ -17,7 +17,10 @@ monster(
   mode = "buildNet",
   method = "ols",
   remove.diagonal = TRUE,
-  logging = TRUE
+  nullModelType = "permutation",
+  nullNetworks = NA,
+  logging = TRUE,
+  by.tfs = TRUE
 )
 }
 \arguments{
@@ -59,7 +62,20 @@ networks are supplied in the 'expr' variable as a TF-by-Gene matrix, by concaten
 
 \item{remove.diagonal}{#' Logical for returning a result containing 0s across the diagonal (default = TRUE).}
 
+\item{nullModelType}{Type of null model used. If "permutation" is set as the default, MONSTER permutes expression data when in "buildNet" mode
+and permutes network edges by gene when in "regNet" mode. "nullNetwork" generates null networks from the control network using the edge weights from
+the control network as the mean and the edge weight variances across networks with no true signal as the variance.}
+
+\item{nullNetworks}{This parameter is only used when running in "regNet" mode with the "nullNetwork" option set. This includes an H5 format file
+containing an object named "nullNetworks"
+or data frame with the values from networks with no signal. The first two columns must be the source and target nodes, and the remaining columns must be
+the edge weights from each simulated network. For PANDA networks:
+tf, gene, net1, net2, ..., netn}
+
 \item{logging}{Whether or not to print logging messages for MONSTER (default is TRUE)}
+
+\item{by.tfs}{logical indicating a transcription factor based transformation.    If 
+false, gives gene by gene transformation matrix}
 }
 \value{
 An object of class "monsterAnalysis" containing results
