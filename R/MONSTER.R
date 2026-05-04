@@ -526,6 +526,8 @@ GenerateNullFromControl <- function(concatNet, iterations, design, nullNetworks,
 #' @param method character specifying which algorithm to use, default='ols'.
 #' @param outputDir character vector specifying a directory or path in which 
 #' which to save MONSTER results, default is NA and results are not saved.
+#' @param by.tfs logical indicating a transcription factor based transformation.    If 
+#' false, gives gene by gene transformation matrix
 #' @return A list of matrices, each one corresponding to one null model
 CalculateTransitionMatricesFromFile <- function(file, mode,
                                                 expr, iterations,

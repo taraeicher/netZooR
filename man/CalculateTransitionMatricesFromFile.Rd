@@ -64,6 +64,9 @@ equal weight to direct and indirect evidence.}
 
 \item{outputDir}{character vector specifying a directory or path in which 
 which to save MONSTER results, default is NA and results are not saved.}
+
+\item{by.tfs}{logical indicating a transcription factor based transformation.    If 
+false, gives gene by gene transformation matrix}
 }
 \value{
 A list of matrices, each one corresponding to one null model
