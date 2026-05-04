@@ -39,14 +39,10 @@ sourcePPI <- function(TF, STRING.version="10", species.index, ...){
   colnames(TF) <- "TF"
   # map the TF to STRINGdb dataset
   TF_mapped <-  string_db$map(TF,"TF",removeUnmappedRows=FALSE)
-  print("PPI Test")
-  print(TF_mapped)
   # collect the interactions between the TF of interest
   ppi_tmp <- string_db$get_interactions(TF_mapped$STRING_id)[,c(1,2)]
-  print(ppi_tmp)
   # store the PPI by using original identifier.
   PPI <- data.frame(from=TF_mapped[match(ppi_tmp$from,TF_mapped$STRING_id),1], to=TF_mapped[match(ppi_tmp$to,TF_mapped$STRING_id),1])
-  print(PPI)
   # assign "score"column  to "1"
   PPI$score <- "1"
   return(PPI)

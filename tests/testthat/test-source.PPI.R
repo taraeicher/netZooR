@@ -16,6 +16,17 @@ test_that("sourcePPI works", {
   # STRINGdb Version 11
   else if(R.Version()$major=="4"){
     actual_PPI_V11 <- sourcePPI(tf,"11",83332)
-    expect_equal(actual_PPI_V11, ppiV11)
+    #expect_equal(actual_PPI_V11, ppiV11)
+    expect_equal(
+      actual_PPI_V11,
+      ppiV11,
+      info = paste(
+        "PPI info from:\n",
+        paste(capture.output(print(actual_PPI_V11$from)), collapse = ", "),
+        "\nPPI info to:\n",
+        paste(capture.output(print(actual_PPI_V11$to)), collapse = ", "),
+        "\nPPI info score:\n",
+        paste(capture.output(print(actual_PPI_V11$score)), collapse = ", "))
+      )
   }
 }) 
