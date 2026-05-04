@@ -45,14 +45,10 @@ jobs:
         with:
           r-version: ${{ matrix.r-version }}
 
-      - name: Clear pak cache
-        run: |
-          Rscript -e 'pak::cache_clean()'
-
       - name: install dependencies
         uses: r-lib/actions/setup-r-dependencies@v2.11.3
         with:
-          cache-version: 2
+          cache-version: 3
           extra-packages: |
              any::rcmdcheck
              any::covr
