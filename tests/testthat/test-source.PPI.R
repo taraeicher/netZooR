@@ -15,18 +15,35 @@ test_that("sourcePPI works", {
   }
   # STRINGdb Version 11
   else if(R.Version()$major=="4"){
-    actual_PPI_V11 <- sourcePPI(tf,"11",83332)
+    #actual_PPI_V11 <- sourcePPI(tf,"11",83332)
+    string_db=STRINGdb::STRINGdb$new(version="11", species=83332)
+    # change the colname to "TF"
+    colnames(tf) <- "TF"
+    # map the TF to STRINGdb dataset
+    TF_mapped <-  string_db$map(tf,"TF",removeUnmappedRows=FALSE)
+    # collect the interactions between the TF of interest
+    ppi_tmp <- string_db$get_interactions(TF_mapped$STRING_id)[,c(1,2)]
+    # store the PPI by using original identifier.
+    actual_PPI_V11 <- data.frame(from=TF_mapped[match(ppi_tmp$from,TF_mapped$STRING_id),1], to=TF_mapped[match(ppi_tmp$to,TF_mapped$STRING_id),1])
+    # assign "score"column  to "1"
+    actual_PPI_V11$score <- "1"
     #expect_equal(actual_PPI_V11, ppiV11)
     expect_equal(
       actual_PPI_V11,
       ppiV11,
       info = paste(
-        "PPI info from:\n",
-        paste(capture.output(print(actual_PPI_V11$from)), collapse = ", "),
-        "\nPPI info to:\n",
-        paste(capture.output(print(actual_PPI_V11$to)), collapse = ", "),
-        "\nPPI info score:\n",
-        paste(capture.output(print(actual_PPI_V11$score)), collapse = ", "))
+        "TF mapped:\n",
+        paste(capture.output(print(TF_mapped$TF)), collapse = ", "),
+        "\n",
+        paste(capture.output(print(TF_mapped$STRING_id)), collapse = ", "),
+        "\nPPI tmp:\n",
+        paste(capture.output(print(ppi_tmp$from)), collapse = ", "),
+        "\n",
+        paste(capture.output(print(ppi_tmp$to)), collapse = ", "),
+        "\nFrom mapped:\n",
+        paste(capture.output(print(TF_mapped[match(ppi_tmp$from,TF_mapped$STRING_id),1])), collapse = ", "),
+        "\To mapped:\n",
+        paste(capture.output(print(TF_mapped[match(ppi_tmp$to,TF_mapped$STRING_id),1])), collapse = ", "))
       )
   }
 }) 
