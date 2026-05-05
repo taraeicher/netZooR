@@ -32,18 +32,17 @@ test_that("sourcePPI works", {
       actual_PPI_V11,
       ppiV11,
       info = paste(
-        "TF mapped:\n",
-        paste(capture.output(print(TF_mapped$TF)), collapse = ", "),
+        paste(string_db$score_threshold),
         "\n",
-        paste(capture.output(print(TF_mapped$STRING_id)), collapse = ", "),
-        "\nPPI tmp:\n",
-        paste(capture.output(print(ppi_tmp$from)), collapse = ", "),
+        paste(string_db$version),
         "\n",
-        paste(capture.output(print(ppi_tmp$to)), collapse = ", "),
-        "\nFrom mapped:\n",
-        paste(capture.output(print(TF_mapped[match(ppi_tmp$from,TF_mapped$STRING_id),1])), collapse = ", "),
-        "\nTo mapped:\n",
-        paste(capture.output(print(TF_mapped[match(ppi_tmp$to,TF_mapped$STRING_id),1])), collapse = ", "))
-      )
+        paste(string_db$species),
+        "\n",
+        paste(string_db$input_directory),
+        "\n",
+        paste(packageVersion("STRINGdb")),
+        "\n",
+        paste(BiocManager::version())
+      ))
   }
 }) 
