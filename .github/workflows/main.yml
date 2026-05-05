@@ -61,13 +61,28 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install Python packages
+      - name: Install Python packages on Windows
+        if: runner.os == 'Windows'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy scipy pandas joblib
+        shell: pwsh
+
+      - name: Install Python packages on Unix/Mac
+        if: runner.os != 'Windows'
         run: |
           pip install --upgrade pip
           pip install numpy scipy pandas joblib
         shell: bash
 
-      - name: Set RETICULATE_PYTHON
+      - name: Set RETICULATE_PYTHON on Windows
+        if: runner.os == 'Windows'
+        run: |
+          "RETICULATE_PYTHON=$(python -c 'import sys; print(sys.executable)')" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: pwsh
+
+      - name: Set RETICULATE_PYTHON on macOS/Linux
+        if: runner.os != 'Windows'
         run: |
           echo "RETICULATE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> $GITHUB_ENV
         shell: bash
