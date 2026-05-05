@@ -75,27 +75,27 @@ jobs:
           python-version: '3.x'
 
       - name: Install Python packages (Windows)
-        if: runner.os == "Windows"
+        if: runner.os == 'Windows'
         run: |
           python -m pip install --upgrade pip
           python -m pip install numpy scipy pandas
         shell: pwsh
 
       - name: Install Python packages (Unix / Mac)
-        if: runner.os != "Windows"
+        if: runner.os != 'Windows'
         run: |
           pip install --upgrade pip
           pip install numpy scipy pandas
         shell: bash
 
       - name: Set RETICULATE_PYTHON (Windows)
-        if: runner.os == "Windows"
+        if: runner.os == 'Windows'
         run: |
           echo "RETICULATE_PYTHON=$(python -c 'import sys; print(sys.executable)')" | Out-File -FilePath $env:GITHUB_ENV -Append
         shell: pwsh
 
       - name: Set RETICULATE_PYTHON (Unix / Mac)
-        if: runner.os != "Windows"
+        if: runner.os != 'Windows'
         run: |
           echo "RETICULATE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> $GITHUB_ENV
         shell: bash
