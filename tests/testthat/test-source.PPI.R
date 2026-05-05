@@ -42,7 +42,7 @@ test_that("sourcePPI works", {
         paste(capture.output(print(ppi_tmp$to)), collapse = ", "),
         "\nFrom mapped:\n",
         paste(capture.output(print(TF_mapped[match(ppi_tmp$from,TF_mapped$STRING_id),1])), collapse = ", "),
-        "\To mapped:\n",
+        "\nTo mapped:\n",
         paste(capture.output(print(TF_mapped[match(ppi_tmp$to,TF_mapped$STRING_id),1])), collapse = ", "))
       )
   }
