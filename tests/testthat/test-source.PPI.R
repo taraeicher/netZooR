@@ -19,6 +19,10 @@ test_that("sourcePPI works", {
     ppiV11 <- data.frame(from = c("Rv0022c","Rv0023","Rv0042c","Rv0023"),
                          to = c("Rv0023","Rv0042c","Rv0043c","Rv0047c"),
                          score = as.character(rep(1, 4)))
+    if (getRversion() < "4.6.0") {
+      # For R versions less than 4.6.0, compare to the old string.
+      suppressWarnings(load("./testDataset.RData"))
+    }
     expect_equal(actual_PPI_V11, ppiV11)
   }
 }) 
