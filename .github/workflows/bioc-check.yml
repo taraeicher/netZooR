@@ -182,12 +182,10 @@ jobs:
           extra-packages: |
             any::covr
             any::reticulate
-            any::devtools
 
       - name: Test coverage
         run: |
-          devtools::test(reporter = "summary")
-          #covr::codecov(quiet = FALSE)
+          covr::package_coverage(quiet = FALSE)
         shell: Rscript {0}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
