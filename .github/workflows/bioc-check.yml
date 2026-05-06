@@ -181,37 +181,21 @@ jobs:
         with:
           extra-packages: |
             any::covr
+            any::reticulate
 
-      - name: Diagnose reticulate / Python environment
-        shell: Rscript {0}
-        run: |
-          cat("R version:\n")
-          print(R.version.string)
-
-          cat("\nreticulate version:\n")
-          print(utils::packageVersion("reticulate"))
-
-          cat("\nreticulate config:\n")
-          print(reticulate::py_config())
-
-          cat("\nPython executable used by reticulate:\n")
-          print(reticulate::py_exe())
-
-          cat("\nPython version from reticulate:\n")
-          reticulate::py_run_string("
-import sys
-print(sys.version)
-print(sys.executable)
-")
-
-          cat("\nInstalled Python packages:\n")
-          reticulate::py_run_string("
-import sys, subprocess
-subprocess.run([sys.executable, '-m', 'pip', 'freeze'])
-")
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+       
+      - name: Install Python dependencies
+         run: |
+           python -m pip install --upgrade pip
+           python -m pip install numpy
 
       - name: Test coverage
         run: |
+          Sys.setenv(RETICULATE_PYTHON = Sys.which("python"))
+          print(reticulate::py_config())
           covr::codecov(quiet = FALSE)
         shell: Rscript {0}
         env:
