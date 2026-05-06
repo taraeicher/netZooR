@@ -182,6 +182,7 @@ jobs:
           extra-packages: |
             any::covr
             any::reticulate
+            any::devtools
 
       - name: Test coverage
         run: |
