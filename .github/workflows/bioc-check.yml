@@ -199,16 +199,16 @@ jobs:
 
           cat("\nPython version from reticulate:\n")
           reticulate::py_run_string("
-            import sys
-            print(sys.version)
-            print(sys.executable)
-          ")
+import sys
+print(sys.version)
+print(sys.executable)
+")
 
           cat("\nInstalled Python packages:\n")
           reticulate::py_run_string("
-            import sys, subprocess
-            subprocess.run([sys.executable, '-m', 'pip', 'freeze'])
-          ")
+import sys, subprocess
+subprocess.run([sys.executable, '-m', 'pip', 'freeze'])
+")
 
       - name: Test coverage
         run: |
