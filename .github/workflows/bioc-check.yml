@@ -185,7 +185,7 @@ jobs:
 
       - name: Test coverage
         run: |
-          testthat::test_dir("tests/testthat", reporter = "summary")
+          devtools::test(reporter = "summary")
           #covr::codecov(quiet = FALSE)
         shell: Rscript {0}
         env:
