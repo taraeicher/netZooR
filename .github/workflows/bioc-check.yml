@@ -60,38 +60,27 @@ jobs:
             libxml2-dev \
             libglpk-dev
 
-      # Debugging step to solve issue with GOstats
-      - name: Show Bioconductor devel repos and GOstats availability
+      # Install dependencies using r-lib/actions (uses pak, handles R-devel well)
+      - name: Install dependencies on R devel, ignoring GOstats
+        if: matrix.r-version == 'devel'
         run: |
-          install.packages("BiocManager", repos = "https://cloud.r-project.org")
+          install.packages("pak", repos = "https://cloud.r-project.org")
+          Sys.setenv(PKG_USE_BIOCONDUCTOR = "true")
+          Sys.setenv(PKG_METADATA_UPDATE_AFTER = "0s")
 
-          # Explicitly set Bioconductor version
-          BiocManager::install(version = "devel", ask = FALSE)
-
-          # CRITICAL: lock repos AFTER setting version
-          options(repos = BiocManager::repositories())
-
-          cat("\nActive repos:\n")
-          repos <- getOption("repos")
-          print(repos)          
-
-          ap <- available.packages(
-            repos = repos,
-            filters = character()
+          pak::pkg_install(
+            c(
+              "deps::.",
+              "GOstats=?ignore",
+              "any::BiocCheck",
+              "any::rcmdcheck"
+            ),
+            dependencies = TRUE
           )
-
-          cat("GOstats in available.packages():", "GOstats" %in% rownames(ap), "\n")
-
-           if ("GOstats" %in% rownames(ap)) {
-             print(ap["GOstats", ])
-           }
-
-           cat("\nDirect BiocManager install attempt:\n")
-           BiocManager::install("GOstats", ask = FALSE, update = FALSE)
         shell: Rscript {0}
 
-      # Install dependencies using r-lib/actions (uses pak, handles R-devel well)
       - name: Install dependencies
+        if: matrix.r-version != 'devel'
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: |
