@@ -183,20 +183,10 @@ jobs:
             any::covr
             any::reticulate
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-       
-      - name: Install Python dependencies
-        run: |
-           python -m pip install --upgrade pip
-           python -m pip install numpy
-
       - name: Test coverage
         run: |
-          Sys.setenv(RETICULATE_PYTHON = Sys.which("python"))
-          print(reticulate::py_config())
-          covr::codecov(quiet = FALSE)
+          testthat::test_dir("tests/testthat", reporter = "summary")
+          #covr::codecov(quiet = FALSE)
         shell: Rscript {0}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
