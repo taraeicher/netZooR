@@ -66,7 +66,6 @@ jobs:
         run: |
           install.packages("pak", repos = "https://cloud.r-project.org")
           Sys.setenv(PKG_USE_BIOCONDUCTOR = "true")
-          Sys.setenv(PKG_METADATA_UPDATE_AFTER = "0s")
 
           pak::pkg_install(
             c(
