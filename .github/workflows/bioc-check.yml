@@ -60,6 +60,20 @@ jobs:
             libxml2-dev \
             libglpk-dev
 
+      # Debugging step to solve issue with GOstats
+      - name: Show Bioconductor devel repos and GOstats availability
+        run: |
+          install.packages("BiocManager", repos = "https://cloud.r-project.org")
+          BiocManager::install(version = "devel", ask = FALSE)
+
+          print(R.version.string)
+          print(BiocManager::version())
+          print(BiocManager::repositories())
+
+          ap <- available.packages(repos = BiocManager::repositories())
+          print(ap["GOstats", ])
+        shell: Rscript {0}
+
       # Install dependencies using r-lib/actions (uses pak, handles R-devel well)
       - name: Install dependencies
         uses: r-lib/actions/setup-r-dependencies@v2
