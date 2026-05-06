@@ -185,7 +185,7 @@ jobs:
 
       - name: Test coverage
         run: |
-          covr::package_coverage(quiet = FALSE)
+          covr::codecov(quiet = FALSE)
         shell: Rscript {0}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
