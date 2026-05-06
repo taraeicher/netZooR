@@ -63,8 +63,17 @@ jobs:
       # Debugging step to solve issue with GOstats
       - name: Show Bioconductor devel repos and GOstats availability
         run: |
-          repos <- BiocManager::repositories()
-          print(repos)
+          install.packages("BiocManager", repos = "https://cloud.r-project.org")
+
+          # Explicitly set Bioconductor version
+          BiocManager::install(version = "devel", ask = FALSE)
+
+          # CRITICAL: lock repos AFTER setting version
+          options(repos = BiocManager::repositories())
+
+          cat("\nActive repos:\n")
+          repos <- getOption("repos")
+          print(repos)          
 
           ap <- available.packages(
             repos = repos,
