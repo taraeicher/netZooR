@@ -189,3 +189,15 @@ jobs:
         shell: Rscript {0}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Show testthat failure logs
+        if: failure()
+        run: |
+          echo "=== Searching for Rout.fail files ==="
+          find /tmp -name "*.Rout.fail" -print
+
+          echo "=== Printing Rout.fail files ==="
+          find /tmp -name "*.Rout.fail" -exec sh -c '
+            echo "----- $1 -----"
+            cat "$1"
+          ' sh {} \;
