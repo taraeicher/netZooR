@@ -134,21 +134,6 @@ pandaPy <- function(expr_file, motif_file=NULL, ppi_file=NULL, computing="cpu", 
   
   # source the pypanda from github raw website.
   pandapath <- system.file("extdata", "panda.py", package = "netZooR", mustWork = TRUE)
-  message("pandapath: ", pandapath)
-  message("exists: ", file.exists(pandapath))
-  message("python: ", reticulate::py_config()$python)
-  tryCatch(
-    reticulate::source_python(pandapath, convert = TRUE),
-    error = function(e) {
-      cat("source_python failed:")
-      cat(conditionMessage(e))
-      
-      cat("reticulate Python error:")
-      cat(reticulate::py_last_error())
-      flush.console()
-      stop(e)
-    }
-  )
   reticulate::source_python(pandapath,convert = TRUE)
   
   # invoke Python script to create a Panda object
