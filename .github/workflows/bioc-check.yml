@@ -183,6 +183,22 @@ jobs:
             any::covr
             any::reticulate
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Python packages
+        run: |
+          pip install --upgrade pip
+          pip install numpy scipy pandas
+        shell: bash
+
+      - name: Set RETICULATE_PYTHON
+        run: |
+          echo "RETICULATE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> $GITHUB_ENV
+        shell: bash
+
       - name: Test coverage
         run: |
           covr::codecov(quiet = FALSE)
