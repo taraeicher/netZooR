@@ -194,10 +194,11 @@ jobs:
         if: failure()
         run: |
           echo "=== Searching for Rout.fail files ==="
-          find /tmp -name "*.Rout.fail" -print
-
+          sudo find /tmp "$GITHUB_WORKSPACE" -name "*.Rout.fail" -print || true
+          
           echo "=== Printing Rout.fail files ==="
-          find /tmp -name "*.Rout.fail" -exec sh -c '
+          sudo find /tmp "$GITHUB_WORKSPACE" -name "*.Rout.fail" -exec sh -c '
+  
             echo "----- $1 -----"
             cat "$1"
           ' sh {} \;
