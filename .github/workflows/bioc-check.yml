@@ -60,8 +60,27 @@ jobs:
             libxml2-dev \
             libglpk-dev
 
-      # Install dependencies using r-lib/actions (uses pak, handles R-devel well)
+      # On R-devel, GOstats sometimes can't be resolved by pak. Install with
+      # pak directly so we can mark GOstats as ignorable.
+      - name: Install dependencies (R devel)
+        if: matrix.r-version == 'devel'
+        run: |
+          install.packages("pak", repos = "https://cloud.r-project.org")
+          Sys.setenv(PKG_USE_BIOCONDUCTOR = "true")
+          pak::pkg_install(
+            c(
+              "deps::.",
+              "GOstats=?ignore",
+              "any::BiocCheck",
+              "any::rcmdcheck"
+            ),
+            dependencies = TRUE
+          )
+        shell: Rscript {0}
+
+      # Install dependencies using r-lib/actions (uses pak)
       - name: Install dependencies
+        if: matrix.r-version != 'devel'
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: |
@@ -163,6 +182,24 @@ jobs:
         with:
           extra-packages: |
             any::covr
+            any::reticulate
+
+      # Setup Python for reticulate (mirrors the bioc-check job; Linux only)
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Python packages
+        run: |
+          pip install --upgrade pip
+          pip install numpy scipy pandas
+        shell: bash
+
+      - name: Set RETICULATE_PYTHON
+        run: |
+          echo "RETICULATE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> $GITHUB_ENV
+        shell: bash
 
       - name: Test coverage
         run: |
