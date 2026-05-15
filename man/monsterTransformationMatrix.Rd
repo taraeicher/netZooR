@@ -10,7 +10,8 @@ monsterTransformationMatrix(
   by.tfs = TRUE,
   standardize = FALSE,
   remove.diagonal = TRUE,
-  method = "ols"
+  method = "ols",
+  logging = TRUE
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ false, gives gene by gene transformation matrix}
 \item{remove.diagonal}{logical for returning a result containing 0s across the diagonal}
 
 \item{method}{character specifying which algorithm to use, default='ols'}
+
+\item{logging}{Whether or not to log progress (default = TRUE)}
 }
 \value{
 matrix object corresponding to transition matrix

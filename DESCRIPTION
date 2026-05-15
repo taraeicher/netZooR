@@ -99,9 +99,10 @@ Suggests:
     readr,
     RColorBrewer,
     quantro,
-    fgsea
+    fgsea,
+    rhdf5
 Remotes: jnpaulson/pandaR
 VignetteBuilder: knitr
-RoxygenNote: 7.3.3
 BugReports: https://github.com/netZoo/netZooR/issues
 URL: https://github.com/netZoo/netZooR, https://netzoo.github.io/
+Config/roxygen2/version: 8.0.0

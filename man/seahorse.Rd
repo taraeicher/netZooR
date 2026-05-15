@@ -9,12 +9,17 @@ Description:
               associations between a set of given phenotypes and each gene,
               performs gene set enrichment analysis (GSEA) for each phenotype,
               using the measures of association.
-              GSEA is performed through R package "fgsea".
-              The measures of association 
-              for a numerical phenotype is Pearson correlation and
-              for a categorical phenotype is the p-value of an ANOVA test}
+              GSEA is performed through R package "fgsea".}
 \usage{
-seahorse(expression, phenotype, phenotype_dictionary, pathways)
+seahorse(
+  expression,
+  phenotype,
+  phenotype_dictionary,
+  pathways,
+  compute_cor = TRUE,
+  assoc_method = "pearson",
+  transform_expression = TRUE
+)
 }
 \arguments{
 \item{expression}{: gene expression matrix (normalized, and filtered) 
@@ -31,7 +36,20 @@ containing type of each phenotype.
 Types can be either "numeric" or "categorical"}
 
 \item{pathways}{: a list of pathways (e.g. KEGG, GO, Reactome etc. 
-                  downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
+downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
+
+\item{compute_cor}{: Whether or not to compute the correlation matrix. Default is TRUE.}
+
+\item{assoc_method}{: The method used to infer associations between phenotypes and genes. Default
+is "pearson". Other options are "spearman", "kendall", and "linear". The "pearson", "kendall", and "spearman" options
+compute correlations between each phenotype and gene independently for numeric phenotypes and
+compute an ANOVA for categorical phenotypes. linear" computes a linear regression
+model of the form gene ~ phenotype1 + phenotype2 + ... + phenotypeN and returns the p-values
+for each coefficient.}
+
+\item{transform_expression}{: Whether or not to transform gene expression data into logCPM.
+This parameter is only used for the "linear" association method. Use if your data are raw RNA-seq
+counts. Default is TRUE.
 Outputs:}
 }
 \value{
@@ -49,9 +67,6 @@ Description:
               performs gene set enrichment analysis (GSEA) for each phenotype,
               using the measures of association.
               GSEA is performed through R package "fgsea".
-              The measures of association 
-              for a numerical phenotype is Pearson correlation and
-              for a categorical phenotype is the p-value of an ANOVA test
 }
 \examples{
 

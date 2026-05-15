@@ -9,12 +9,13 @@ monsterMonsterNI(
   expr.data,
   verbose = FALSE,
   randomize = "none",
-  method = "bere",
+  method = "BERE",
   ni.coefficient.cutoff = NA,
   alphaw = 1,
   regularization = "none",
   score = "motifincluded",
-  cpp = FALSE
+  cpp = FALSE,
+  logging = TRUE
 )
 }
 \arguments{
@@ -29,7 +30,7 @@ factor (column 1) a gene (column 2) and a score (column 3) for the motif.}
 \item{randomize}{logical indicating randomization by genes, within genes or none}
 
 \item{method}{String to indicate algorithm method.  Must be one of 
-"bere","pearson","cd","lda", or "wcd". Default is "bere".
+"BERE","pearson",or "lda". Default is "BERE".
 Important note: the direct regulatory network observed from gene expression is currently
 implemented as a regular correlation as opposed to the partial correlation described 
 in the paper (please see Schlauch et al., 2017,  https://doi.org/10.1186/s12918-017-0517-y)}
@@ -48,6 +49,8 @@ readded upon completion of the algorithm
 to give to indirect compared to direct evidence.  See documentation.}
 
 \item{cpp}{logical use C++ for maximum speed, set to false if unable to run.}
+
+\item{logging}{Whether or not to log progress (default = TRUE)}
 }
 \value{
 matrix for inferred network between TFs and genes

@@ -86,10 +86,55 @@ test_that("plotCMDS() returns coordinates without plotting", {
   expect_equal(unname(nrow(coords)), unname(ncol(obj)))
 })
 
+test_that("plotCMDS() with samples=FALSE returns gene coordinates", {
+  obj <- make_tiny_eset()
+  coords <- plotCMDS(obj, comp = 1:2, samples = FALSE, plotFlag = FALSE, n = 10)
+  expect_true(is.matrix(coords) || is.data.frame(coords))
+  expect_equal(ncol(coords), 2)
+  expect_equal(unname(nrow(coords)), 10)
+})
+
+test_that("plotCMDS() with plotting works", {
+  obj <- make_tiny_eset()
+  coords <- plotCMDS(obj, comp = 1:2, plotFlag = TRUE)
+  expect_true(!is.null(coords))
+  graphics.off()
+})
+
 test_that("checkMisAnnotation() returns coordinates without error", {
   obj <- make_tiny_eset()
   # Add a sex-linked phenotype for trivial checking
   result <- checkMisAnnotation(obj, phenotype = "tissue",
                                controlGenes = "all", plotFlag = FALSE)
   expect_true(!is.null(result))
+})
+
+test_that("extractMatrix() returns raw counts", {
+  obj <- make_tiny_eset()
+  mat <- extractMatrix(obj, normalized = FALSE, log = FALSE)
+  expect_true(is.matrix(mat))
+  expect_equal(dim(mat), dim(Biobase::exprs(obj)))
+  expect_equal(mat, Biobase::exprs(obj))
+})
+
+test_that("extractMatrix() returns log-transformed counts", {
+  obj <- make_tiny_eset()
+  mat <- extractMatrix(obj, normalized = FALSE, log = TRUE)
+  expect_true(is.matrix(mat))
+  expect_equal(mat, log2(Biobase::exprs(obj) + 1))
+})
+
+test_that("extractMatrix() with normalized=TRUE requires normalizedMatrix", {
+  obj <- make_tiny_eset()
+  expect_error(extractMatrix(obj, normalized = TRUE),
+               "normalizedMatrix assayData missing")
+})
+
+test_that("extractMatrix() works on plain matrix input", {
+  mat <- matrix(1:20, nrow = 4)
+  result <- extractMatrix(mat, log = FALSE)
+  expect_equal(result, mat)
+  
+  result_log <- extractMatrix(mat, log = TRUE)
+  expect_equal(result_log, log2(mat + 1))
 })
