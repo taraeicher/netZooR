@@ -124,11 +124,23 @@ computeLinearRegression <- function(expression, phenotype, phenotype_dictionary,
   phenoAssoc <- list
   gsea <- list
   
+  # Ensure that the column names are valid for the phenotypic data.
+  colnames(phenotype) <- make.names(colnames(phenotype))
+
   # Compute a design matrix for the phenotypic data.
   formula <- paste("~ ", paste(colnames(phenotype)[1:(ncol(phenotype) - 1)], 
                                    collapse = " + "), colnames(phenotype)[ncol(phenotype)],
                    sep = " + ")
   design <- model.matrix(object = stats::as.formula(formula), data = phenotype)
+  
+  # Check whether samples were removed and modify gene expression data accordingly.
+  if(length(setdiff(colnames(expression), rownames(design)) > 0)){
+    expressionSampsOld <- ncol(expression)
+    expression <- expression[,rownames(design)]
+    expressionSampsNew <- ncol(expression)
+    message(paste("Out of", expressionSampsOld, "we retained", expressionSampsNew,
+                  "samples."))
+  }
 
   # Transform the gene expression data using voom.
   if(transform_expression == TRUE){
