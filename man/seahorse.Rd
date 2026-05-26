@@ -18,7 +18,8 @@ seahorse(
   pathways,
   compute_cor = TRUE,
   assoc_method = "pearson",
-  transform_expression = TRUE
+  transform_expression = TRUE,
+  pval_adj_method = "none"
 )
 }
 \arguments{
@@ -49,7 +50,10 @@ for each coefficient.}
 
 \item{transform_expression}{: Whether or not to transform gene expression data into logCPM.
 This parameter is only used for the "linear" association method. Use if your data are raw RNA-seq
-counts. Default is TRUE.
+counts. Default is TRUE.}
+
+\item{pval_adj_method}{Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
+"holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
 Outputs:}
 }
 \value{
