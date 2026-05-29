@@ -123,6 +123,19 @@ test_that("seahorse function works", {
   # Run SEAHORSE with linear regression and FDR adjustment
   results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                       compute_cor = FALSE, assoc_method = "linear", pval_adj_method = "fdr")
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("(Intercept)", "sexmale", "height") %in% names(results$GSEA)))
+  expect_equal(stats::p.adjust(results$phenotype_association$sexmale$stat, method = "fdr"),
+               results$phenotype_association$sexmale$padj)
+  expect_equal(stats::p.adjust(results$phenotype_association$height$stat, method = "fdr"),
+               results$phenotype_association$height$padj)
+  expect_true(is.na(results$coexpression))
+  
   # Check that SEAHORSE runs with linear regression and a malformed column name.
   phenotype_data_mal <- phenotype_data
   colnames(phenotype_data_mal) <- c("?sex", "height in inches")
@@ -153,12 +166,7 @@ test_that("seahorse function works", {
   expect_true(all(c("coexpression", "phenotype_association", "GSEA") %in% names(results)))
   # Check that phenotype names appear in sub-lists
   expect_true(all(c("(Intercept)", "sexmale", "height") %in% names(results$GSEA)))
-  expect_equal(stats::p.adjust(results$phenotype_association$sexmale$stat, method = "fdr"),
-               results$phenotype_association$sexmale$padj)
-  expect_equal(stats::p.adjust(results$phenotype_association$height$stat, method = "fdr"),
-               results$phenotype_association$height$padj)
-  expect_true(is.na(results$coexpression))
-  
+  expect_true(all(is.na(results$coexpression)))
   
   # Run SEAHORSE with linear regression and the correlation matrix.
   results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
