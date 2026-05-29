@@ -29,6 +29,8 @@
 #' @param transform_expression : Whether or not to transform gene expression data into logCPM.
 #' This parameter is only used for the "linear" association method. Use if your data are raw RNA-seq
 #' counts. Default is TRUE.
+#' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
+#' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
 #' Outputs:
 #' @return results    : a list containing three objects
 #'         results$coexpression: a gene x gene Pearson correlation matrix.
@@ -59,11 +61,19 @@
 #'  
 #' @export
 seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, compute_cor = TRUE,
-                     assoc_method = "pearson", transform_expression = TRUE){
+                     assoc_method = "pearson", transform_expression = TRUE, pval_adj_method = "none"){
   if (!requireNamespace("fgsea", quietly = TRUE)) {
     stop("Package 'fgsea' is required but not installed.")
   }
+  if (!requireNamespace("stats", quietly = TRUE)) {
+    stop("Package 'stats' is required but not installed.")
+  }
   set.seed(0)
+  
+  # Return an error if pval_adj_method is not an accepted method.
+  if(!(pval_adj_method %in% stats::p.adjust.methods)){
+    stop(paste(pval_adj_method, "is not a valid method for stats::p.adjust()."))
+  }
   
   # Check that association method is valid.
   if(!assoc_method %in% c("pearson", "spearman", "kendall", "linear")){
@@ -86,13 +96,14 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   if(assoc_method %in% c("pearson", "spearman", "kendall")){
     corr <- computeCorrelations(expression = expression, phenotype = phenotype,
                                    pathways = pathways, phenotype_dictionary = phenotype_dictionary,
-                                   method = assoc_method)
+                                   method = assoc_method, pval_adj_method = pval_adj_method)
     results$phenotype_association <- corr$pheno
     results$GSEA <- corr$gsea
   }else{
     linReg <- computeLinearRegression(expression = expression, phenotype = phenotype,
                                        pathways = pathways, phenotype_dictionary = phenotype_dictionary,
-                                       transform_expression = transform_expression)
+                                       transform_expression = transform_expression,
+                                      pval_adj_method = pval_adj_method)
     results$phenotype_association <- linReg$pheno
     results$GSEA <- linReg$gsea
   }
@@ -115,10 +126,12 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
 #' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
 #' @param transform_expression : Whether or not to transform gene expression data into logCPM.
+#' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
+#' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
 #' This parameter is only used for the "linear" association method. Use if your data are raw RNA-seq
 #' counts. Default is TRUE.
 computeLinearRegression <- function(expression, phenotype, phenotype_dictionary, pathways,
-                                    transform_expression){
+                                    transform_expression, pval_adj_method){
   
   # Initialize output.
   phenoAssoc <- list
@@ -160,8 +173,8 @@ computeLinearRegression <- function(expression, phenotype, phenotype_dictionary,
   # Format p-values as a list for all covariates.
   p_list <- lapply(colnames(p_vals), function(c){
     p <- p_vals[,c]
-    names(p) <- rownames(p_vals)
-    return(p)
+    padj <- stats::p.adjust(p_vals[,c], method = pval_adj_method)
+    return(data.frame(stat = p, padj = padj, row.names = rownames(p_vals)))
   })
   names(p_list) <- colnames(p_vals)
 
@@ -195,7 +208,10 @@ computeLinearRegression <- function(expression, phenotype, phenotype_dictionary,
 #' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
 #' @param method : One of "pearson", "spearman", or "kendall".
-computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pathways, method){
+#' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
+#' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
+computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pathways, method,
+                                pval_adj_method){
   phenoAssoc <- list()
   gsea <- list()
   for (i in 1:ncol(phenotype)){
@@ -204,8 +220,14 @@ computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pat
     
     if (phenotype_dictionary[i] == "numeric"){
       output_seahorse = gsea_numeric(expression, pheno, pathways, method = method)
-    }else {output_seahorse = gsea_categorical(expression, pheno, pathways)}
-    phenoAssoc[[pheno_name]] = output_seahorse$cor
+      output_seahorse_padj <- rep("NA", length(output_seahorse$cor))
+    }else {
+      output_seahorse = gsea_categorical(expression, pheno, pathways)
+      output_seahorse_padj <- stats::p.adjust(output_seahorse$cor, method = pval_adj_method)
+    }
+    phenoAssoc[[pheno_name]] = data.frame(stat = output_seahorse$cor,
+                                          padj = output_seahorse_padj,
+                                          row.names = names(output_seahorse$cor))
     gsea[[pheno_name]] = output_seahorse$GSEA
   }
   return(list(pheno = phenoAssoc, gsea = gsea))
