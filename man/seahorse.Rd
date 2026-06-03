@@ -34,7 +34,7 @@ with rows as samples and columns as phenotype variables.}
 
 \item{phenotype_dictionary}{: a vector of strings
 containing type of each phenotype.
-Types can be either "numeric" or "categorical"}
+Types can be "dichotomous", "nominal", or "continuous"}
 
 \item{pathways}{: a list of pathways (e.g. KEGG, GO, Reactome etc. 
 downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
@@ -84,12 +84,12 @@ rownames(phenotype_data) = colnames(expression_data)
 phenotype_data$sex = c(rep("male", nrow(phenotype_data)/2), rep("female", nrow(phenotype_data)/2))
 phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = TRUE)
 
-phenotype_dictionary = c("categorical", "numeric")
+phenotype_dictionary = c("dichotomous", "continuous")
 
 pathways = list()
 pathways$pathway1 = sample(rownames(expression_data), 5)
 pathways$pathway2 = sample(rownames(expression_data), 3)
-pathways$pathway1 = sample(rownames(expression_data), 7)
+pathways$pathway3 = sample(rownames(expression_data), 7)
 
 # Run seahorse
 results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
