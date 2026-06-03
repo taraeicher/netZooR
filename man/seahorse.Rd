@@ -34,7 +34,7 @@ with rows as samples and columns as phenotype variables.}
 
 \item{phenotype_dictionary}{: a vector of strings
 containing type of each phenotype.
-Types can be either "numeric" or "categorical"}
+Types can be "dichotomous", "nominal", or "continuous"}
 
 \item{pathways}{: a list of pathways (e.g. KEGG, GO, Reactome etc. 
 downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
