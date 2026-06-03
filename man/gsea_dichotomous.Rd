@@ -5,6 +5,8 @@
 \title{Function to run GSEA for a dichotomous phenotype}
 \usage{
 gsea_dichotomous(expression, pheno, pathways)
+
+gsea_dichotomous(expression, pheno, pathways)
 }
 \arguments{
 \item{expression}{: gene expression matrix (normalized, and filtered) 
@@ -21,4 +23,6 @@ downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
 }
 \description{
 Function to run GSEA for a dichotomous phenotype
+
+Function to run phenotype correlations for a pair of dichotomous or nominal phenotypes.
 }

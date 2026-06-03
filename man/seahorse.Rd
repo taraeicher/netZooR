@@ -16,7 +16,8 @@ seahorse(
   phenotype,
   phenotype_dictionary,
   pathways,
-  compute_cor = TRUE,
+  compute_gene_cor = TRUE,
+  compute_phenotype_cor = TRUE,
   assoc_method = "pearson",
   transform_expression = TRUE,
   pval_adj_method = "none"
@@ -39,7 +40,9 @@ Types can be "dichotomous", "nominal", or "continuous"}
 \item{pathways}{: a list of pathways (e.g. KEGG, GO, Reactome etc. 
 downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
 
-\item{compute_cor}{: Whether or not to compute the correlation matrix. Default is TRUE.}
+\item{compute_gene_cor}{: Whether or not to compute the gene-gene correlation matrix. Default is TRUE.}
+
+\item{compute_phenotype_cor}{: Whether or not to compute the phenotype-phenotype association matrix. Default is TRUE.}
 
 \item{assoc_method}{: The method used to infer associations between phenotypes and genes. Default
 is "pearson". Other options are "spearman", "kendall", and "linear". The "pearson", "kendall", and "spearman" options
