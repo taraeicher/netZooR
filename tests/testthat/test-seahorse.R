@@ -64,7 +64,7 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$padj)))
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
-  # Run seahorse to test both FFH and Chi-square tests.
+  # Run seahorse to test both FFH and Chi-square tests and ANOVA, t-test, and correlation.
   # We expect that "smoke" will trigger FFH in all except sex because true counts < 5,
   # "sex" will trigger FFH in "group" because true counts < 5,
   # "group" will trigger FFH in "rare group" because true counts < 5,
@@ -76,8 +76,9 @@ test_that("seahorse function works", {
   phenotype_data_2$grade = c(rep("A", 45), rep("B", 45), rep("C", 10))
   phenotype_data_2$rare_group <- rep("common", 100)
   phenotype_data_2$rare_group[c(1:12, 14, 18, 19)] <- "rare"
-  phenotype_data_2 <- phenotype_data_2[,c("smoke", "sex", "group", "height", "grade", "rare_group")]
-  phenotype_dictionary_2 <- c("dichotomous", "dichotomous", "nominal", "continuous", "nominal", "dichotomous")
+  phenotype_data_2$WBC <- runif(n = 100, min = 4000, max = 11000)
+  phenotype_data_2 <- phenotype_data_2[,c("smoke", "sex", "group", "height", "grade", "rare_group", "WBC")]
+  phenotype_dictionary_2 <- c("dichotomous", "dichotomous", "nominal", "continuous", "nominal", "dichotomous", "continuous")
   expression_data_2 = data.frame(matrix(rexp(1000, rate=.1), ncol=100, nrow = 100))
   rownames(expression_data_2) = paste("gene", 1:100, sep = "")
   colnames(expression_data_2) = paste("sample", 1:100, sep = "")
@@ -89,15 +90,15 @@ test_that("seahorse function works", {
   # Check that results contain expected top-level keys
   expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA") %in% names(results)))
   # Check that phenotype names appear in sub-lists
-  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% names(results$GSEA)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% names(results$GSEA)))
   expect_true(all(!is.na(results$coexpression)))
   expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% rownames(results$phenocor$stat)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% colnames(results$phenocor$stat)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% rownames(results$phenocor$cramerV)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% colnames(results$phenocor$cramerV)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% rownames(results$phenocor$padj)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% colnames(results$phenocor$padj)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% rownames(results$phenocor$stat)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% colnames(results$phenocor$stat)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% rownames(results$phenocor$cramerV)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% colnames(results$phenocor$cramerV)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% rownames(results$phenocor$padj)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% colnames(results$phenocor$padj)))
   # Ensure that statistics are calculated as expected (chi-square and FFH)
   expect_true(all(!is.na(results$phenocor$stat["smoke", c("sex", "group", "grade", "rare_group")])))
   expect_true(all(!is.na(results$phenocor$stat["sex", c("group", "grade", "rare_group")])))
@@ -136,6 +137,9 @@ test_that("seahorse function works", {
   expect_all_equal(results$phenocor$testType[c("smoke", "sex"), "height"], "T-Test")
   expect_all_equal(results$phenocor$testType["height", "rare_group"], "T-Test")
   # Ensure that statistics are calculated as expected (correlation)
+  expect_true(all(!is.na(results$phenocor$stat["height", "WBC"])))
+  expect_true(all(is.na(results$phenocor$cramerV["height", "WBC"])))
+  expect_all_equal(results$phenocor$testType["height", "WBC"], "Cor")
   
   # Run seahorse without correlation matrix
   results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,

@@ -539,6 +539,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
         output_seahorse_con = phenotype_cor(phenotype = pheno, 
                                               phenotypesToCompare = phenoCon, 
                                             method = method)
+        str(output_seahorse_con)
         output_seahorse_padj_con <- rep(NA, nrow(output_seahorse_con))
       }
       
@@ -785,8 +786,9 @@ phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
 #' @returns A data frame with two vectors: "cor", which lists the t-test p-values, 
 #' and "V" which is set to NA.
 phenotype_cor <- function(phenotype, phenotypesToCompare, method){
-  return(data.frame(cor = rep(NA, ncol(phenotypesToCompare)),
-                    testType = rep(NA, ncol(phenotypesToCompare)),
+  corRes = cor(phenotype, phenotypesToCompare, use="pairwise.complete.obs", method = method)
+  return(data.frame(cor = unname(c(corRes)),
+                    testType = rep("Cor", ncol(phenotypesToCompare)),
                     V = rep(NA, ncol(phenotypesToCompare)),
                     row.names = colnames(phenotypesToCompare)))
 }
