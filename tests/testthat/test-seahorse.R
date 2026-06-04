@@ -104,15 +104,19 @@ test_that("seahorse function works", {
   expect_true(all(!is.na(results$phenocor$stat["sex", c("group", "grade", "rare_group")])))
   expect_true(all(!is.na(results$phenocor$stat["group", c("grade", "rare_group")])))
   expect_true(all(!is.na(results$phenocor$stat["grade", "rare_group"])))
-  expect_true(all(!is.na(results$phenocor$padj["smoke", c("sex", "group", "grade", "rare_group")])))
-  expect_true(all(!is.na(results$phenocor$padj["sex", c("group", "grade", "rare_group")])))
-  expect_true(all(!is.na(results$phenocor$padj["group", c("grade", "rare_group")])))
-  expect_true(all(!is.na(results$phenocor$padj["grade", "rare_group"])))
   # FFH specifically
   expect_true(all(is.na(results$phenocor$cramerV["smoke", c("group", "grade", "rare_group")])))
   expect_true(all(is.na(results$phenocor$cramerV["sex", "group"])))
   expect_true(all(is.na(results$phenocor$cramerV["group", c("grade", "rare_group")])))
   expect_true(all(is.na(results$phenocor$cramerV["grade", "rare_group"])))
+  expect_equal(results$phenocor$stat["smoke", c("group", "grade", "rare_group")],
+               results$phenocor$padj["smoke", c("group", "grade", "rare_group")])
+  expect_equal(results$phenocor$stat["sex", "group"],
+               results$phenocor$padj["sex", "group"])
+  expect_equal(results$phenocor$stat["group", c("grade", "rare_group")],
+               results$phenocor$padj["group", c("grade", "rare_group")])
+  expect_equal(results$phenocor$stat["grade", "rare_group"],
+               results$phenocor$padj["grade", "rare_group"])
   expect_all_equal(results$phenocor$testType["smoke", c("group", "grade", "rare_group")], "FFH")
   expect_all_equal(results$phenocor$testType["sex", "group"], "FFH")
   expect_all_equal(results$phenocor$testType["group", c("grade", "rare_group")], "FFH")
@@ -120,6 +124,10 @@ test_that("seahorse function works", {
   # Chi-square specifically
   expect_true(all(!is.na(results$phenocor$cramerV["smoke", "sex"])))
   expect_true(all(!is.na(results$phenocor$cramerV["sex", c("grade", "rare_group")])))
+  expect_equal(results$phenocor$stat["smoke", "sex"],
+               results$phenocor$padj["smoke", "sex"])
+  expect_equal(results$phenocor$stat["sex", c("grade", "rare_group")],
+               results$phenocor$padj["sex", c("grade", "rare_group")])
   expect_all_equal(results$phenocor$testType["smoke", "sex"], "Chi-square")
   expect_all_equal(results$phenocor$testType["sex", c("grade", "rare_group")], "Chi-square")
   # Ensure that statistics are calculated as expected (ANOVA)
@@ -127,6 +135,10 @@ test_that("seahorse function works", {
   expect_true(all(!is.na(results$phenocor$stat["height", "grade"])))
   expect_true(all(is.na(results$phenocor$cramerV["group", "height"])))
   expect_true(all(is.na(results$phenocor$cramerV["height", "grade"])))
+  expect_equal(results$phenocor$stat["group", "height"],
+               results$phenocor$padj["group", "height"])
+  expect_equal(results$phenocor$stat["height", "grade"],
+               results$phenocor$padj["height", "grade"])
   expect_all_equal(results$phenocor$testType["group", "height"], "ANOVA")
   expect_all_equal(results$phenocor$testType["height", "grade"], "ANOVA")
   # Ensure that statistics are calculated as expected (t-test).
@@ -134,11 +146,96 @@ test_that("seahorse function works", {
   expect_true(all(!is.na(results$phenocor$stat["height", "rare_group"])))
   expect_true(all(is.na(results$phenocor$cramerV[c("smoke", "sex"), "height"])))
   expect_true(all(is.na(results$phenocor$cramerV["height", "rare_group"])))
+  expect_equal(results$phenocor$stat[c("smoke", "sex"), "height"],
+               results$phenocor$padj[c("smoke", "sex"), "height"])
+  expect_equal(results$phenocor$stat["height", "rare_group"],
+               results$phenocor$padj["height", "rare_group"])
   expect_all_equal(results$phenocor$testType[c("smoke", "sex"), "height"], "T-Test")
   expect_all_equal(results$phenocor$testType["height", "rare_group"], "T-Test")
   # Ensure that statistics are calculated as expected (correlation)
   expect_true(all(!is.na(results$phenocor$stat["height", "WBC"])))
   expect_true(all(is.na(results$phenocor$cramerV["height", "WBC"])))
+  expect_true(all(is.na(results$phenocor$padj["height", "WBC"])))
+  expect_all_equal(results$phenocor$testType["height", "WBC"], "Cor")
+  
+  # Verify the phenotype data with FDR adjustment.
+  results <- seahorse(expression_data_2, phenotype_data_2, phenotype_dictionary_2, pathways,
+                      pval_adj_method = "fdr")
+  
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% names(results$GSEA)))
+  expect_true(all(!is.na(results$coexpression)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% rownames(results$phenocor$stat)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% colnames(results$phenocor$stat)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% rownames(results$phenocor$cramerV)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% colnames(results$phenocor$cramerV)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% rownames(results$phenocor$padj)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group", "WBC") %in% colnames(results$phenocor$padj)))
+  # Ensure that statistics are calculated as expected (chi-square and FFH)
+  expect_true(all(!is.na(results$phenocor$stat["smoke", c("sex", "group", "grade", "rare_group")])))
+  expect_true(all(!is.na(results$phenocor$stat["sex", c("group", "grade", "rare_group")])))
+  expect_true(all(!is.na(results$phenocor$stat["group", c("grade", "rare_group")])))
+  expect_true(all(!is.na(results$phenocor$stat["grade", "rare_group"])))
+  # FFH specifically
+  expect_true(all(is.na(results$phenocor$cramerV["smoke", c("group", "grade", "rare_group")])))
+  expect_true(all(is.na(results$phenocor$cramerV["sex", "group"])))
+  expect_true(all(is.na(results$phenocor$cramerV["group", c("grade", "rare_group")])))
+  expect_true(all(is.na(results$phenocor$cramerV["grade", "rare_group"])))
+  expect_equal(p.adjust(results$phenocor$stat["smoke", c("group", "grade", "rare_group")], method = "fdr"),
+               results$phenocor$padj["smoke", c("group", "grade", "rare_group")])
+  expect_equal(p.adjust(results$phenocor$stat["sex", "group"], method = "fdr"),
+               results$phenocor$padj["sex", "group"])
+  expect_equal(p.adjust(results$phenocor$stat["group", c("grade", "rare_group")], method = "fdr"),
+               results$phenocor$padj["group", c("grade", "rare_group")])
+  expect_equal(p.adjust(results$phenocor$stat["grade", "rare_group"], method = "fdr"),
+               results$phenocor$padj["grade", "rare_group"])
+  expect_all_equal(results$phenocor$testType["smoke", c("group", "grade", "rare_group")], "FFH")
+  expect_all_equal(results$phenocor$testType["sex", "group"], "FFH")
+  expect_all_equal(results$phenocor$testType["group", c("grade", "rare_group")], "FFH")
+  expect_all_equal(results$phenocor$testType["grade", "rare_group"], "FFH")
+  # Chi-square specifically
+  expect_true(all(!is.na(results$phenocor$cramerV["smoke", "sex"])))
+  expect_true(all(!is.na(results$phenocor$cramerV["sex", c("grade", "rare_group")])))
+  expect_equal(p.adjust(results$phenocor$stat["smoke", "sex"], method = "fdr"),
+               results$phenocor$padj["smoke", "sex"])
+  expect_equal(p.adjust(results$phenocor$stat["sex", c("grade", "rare_group")], method = "fdr"),
+               results$phenocor$padj["sex", c("grade", "rare_group")])
+  expect_all_equal(results$phenocor$testType["smoke", "sex"], "Chi-square")
+  expect_all_equal(results$phenocor$testType["sex", c("grade", "rare_group")], "Chi-square")
+  # Ensure that statistics are calculated as expected (ANOVA)
+  expect_true(all(!is.na(results$phenocor$stat["group", "height"])))
+  expect_true(all(!is.na(results$phenocor$stat["height", "grade"])))
+  expect_true(all(is.na(results$phenocor$cramerV["group", "height"])))
+  expect_true(all(is.na(results$phenocor$cramerV["height", "grade"])))
+  expect_equal(p.adjust(results$phenocor$stat["group", c("height", "WBC")], method = "fdr"),
+               results$phenocor$padj["group", c("height", "WBC")])
+  expect_equal(p.adjust(results$phenocor$stat["height", "grade"], method = "fdr"),
+               results$phenocor$padj["height", "grade"])
+  expect_all_equal(results$phenocor$testType["group", "height"], "ANOVA")
+  expect_all_equal(results$phenocor$testType["height", "grade"], "ANOVA")
+  # Ensure that statistics are calculated as expected (t-test).
+  expect_true(all(!is.na(results$phenocor$stat[c("smoke", "sex"), "height"])))
+  expect_true(all(!is.na(results$phenocor$stat["height", "rare_group"])))
+  expect_true(all(is.na(results$phenocor$cramerV[c("smoke", "sex"), "height"])))
+  expect_true(all(is.na(results$phenocor$cramerV["height", "rare_group"])))
+  expect_equal(p.adjust(results$phenocor$stat["smoke", c("height", "WBC")], method = "fdr"),
+               results$phenocor$padj["smoke", c("height", "WBC")])
+  expect_equal(p.adjust(results$phenocor$stat["sex", c("height", "WBC")], method = "fdr"),
+               results$phenocor$padj["sex", c("height", "WBC")])
+  expect_equal(p.adjust(results$phenocor$stat["rare_group", "WBC"], method = "fdr"),
+               results$phenocor$padj["rare_group", "WBC"])
+  expect_all_equal(results$phenocor$testType[c("smoke", "sex"), "height"], "T-Test")
+  expect_all_equal(results$phenocor$testType["height", "rare_group"], "T-Test")
+  # Ensure that statistics are calculated as expected (correlation)
+  expect_true(all(!is.na(results$phenocor$stat["height", "WBC"])))
+  expect_true(all(is.na(results$phenocor$cramerV["height", "WBC"])))
+  expect_true(all(is.na(results$phenocor$padj["height", "WBC"])))
   expect_all_equal(results$phenocor$testType["height", "WBC"], "Cor")
   
   # Run seahorse without correlation matrix

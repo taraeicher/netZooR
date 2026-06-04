@@ -436,7 +436,11 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
                                                phenotypesToCompare = phenoCat, 
                                                phenotypeType = phenoType, 
                                                phenotypesToCompareType = typesAfter[whichCat])
-        output_seahorse_padj_cat <- stats::p.adjust(output_seahorse_cat$cor, method = pval_adj_method)
+        output_seahorse_padj_cat <- rep(NA, nrow(output_seahorse_cat))
+        output_seahorse_padj_cat[which(output_seahorse_cat$testType == "FFH")] <- 
+          stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "FFH"), "cor"], method = pval_adj_method)
+        output_seahorse_padj_cat[which(output_seahorse_cat$testType == "Chi-square")] <- 
+          stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "Chi-square"), "cor"], method = pval_adj_method)
       }
       
       # Do continuous phenotypes.
@@ -474,7 +478,11 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
                                                     phenotypesToCompare = phenoCat, 
                                                     phenotypeType = phenoType, 
                                                     phenotypesToCompareType = typesAfter[whichCat])
-        output_seahorse_padj_cat <- stats::p.adjust(output_seahorse_cat$cor, method = pval_adj_method)
+        output_seahorse_padj_cat <- rep(NA, nrow(output_seahorse_cat))
+        output_seahorse_padj_cat[which(output_seahorse_cat$testType == "FFH")] <- 
+          stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "FFH"), "cor"], method = pval_adj_method)
+        output_seahorse_padj_cat[which(output_seahorse_cat$testType == "Chi-square")] <- 
+          stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "Chi-square"), "cor"], method = pval_adj_method)
       }
       
       # Do continuous phenotypes.
@@ -539,7 +547,6 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
         output_seahorse_con = phenotype_cor(phenotype = pheno, 
                                               phenotypesToCompare = phenoCon, 
                                             method = method)
-        str(output_seahorse_con)
         output_seahorse_padj_con <- rep(NA, nrow(output_seahorse_con))
       }
       
