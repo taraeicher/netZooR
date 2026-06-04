@@ -4,12 +4,7 @@
 \alias{phenotype_anova}
 \title{Function to compute ANOVA statistics between nominal and continuous phenotypes.}
 \usage{
-phenotype_anova(
-  phenotype,
-  phenotypesToCompare,
-  phenotypeType,
-  phenotypesToCompareType
-)
+phenotype_anova(phenotype, phenotypesToCompare, phenotypeType)
 }
 \arguments{
 \item{phenotype}{The phenotype vector to test.}

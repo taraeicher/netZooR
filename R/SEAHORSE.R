@@ -420,6 +420,13 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
     colnames(phenosAfter) <- colnames(phenotype)[rangeAfter]
     typesAfter <- phenotype_dictionary[rangeAfter]
     
+    # Initialize an empty data frame.
+    emptyDF <- data.frame(cor = c(),
+                          V = c(),
+                          testType = c(),
+                          row.names = c())
+    emptyPadj <- c()
+    
     # Run associations.
     if(phenoType == "dichotomous"){
       
@@ -428,22 +435,30 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
       phenoCat <- as.data.frame(phenosAfter[,whichCat])
       colnames(phenoCat) <- colnames(phenosAfter)[whichCat]
       rownames(phenoCat) <- rownames(phenosAfter)
-      output_seahorse_cat <- phenotype_chisq(phenotype = pheno, 
-                                                  phenotypesToCompare = phenoCat, 
-                                                  phenotypeType = phenoType, 
-                                                  phenotypesToCompareType = typesAfter[whichCat])
-      output_seahorse_padj_cat <- stats::p.adjust(output_seahorse_cat$cor, method = pval_adj_method)
+      output_seahorse_cat <- emptyDF
+      output_seahorse_padj_cat <- emptyPadj
+      if(ncol(phenoCat) > 0){
+        output_seahorse_cat <- phenotype_chisq(phenotype = pheno, 
+                                               phenotypesToCompare = phenoCat, 
+                                               phenotypeType = phenoType, 
+                                               phenotypesToCompareType = typesAfter[whichCat])
+        output_seahorse_padj_cat <- stats::p.adjust(output_seahorse_cat$cor, method = pval_adj_method)
+      }
       
       # Do continuous phenotypes.
       whichContinuous <- which(typesAfter == "continuous")
       phenoCon <- as.data.frame(phenosAfter[,whichContinuous])
       colnames(phenoCon) <- colnames(phenosAfter)[whichContinuous]
       rownames(phenoCon) <- rownames(phenosAfter)
-      output_seahorse_con <- phenotype_ttest(phenotype = pheno, 
-                                            phenotypesToCompare = phenoCon, 
-                                            phenotypeType = phenoType, 
-                                            phenotypesToCompareType = typesAfter[whichContinuous])
-      output_seahorse_padj_con <- stats::p.adjust(output_seahorse_con$cor, method = pval_adj_method)
+      output_seahorse_con <- emptyDF
+      output_seahorse_padj_con <- emptyPadj
+      if(ncol(phenoCon) > 0){
+        output_seahorse_con <- phenotype_ttest(phenotype = pheno, 
+                                              phenotypesToCompare = phenoCon, 
+                                              phenotypeType = phenoType, 
+                                              phenotypesToCompareType = typesAfter[whichContinuous])
+        output_seahorse_padj_con <- stats::p.adjust(output_seahorse_con$cor, method = pval_adj_method)
+      }
       
       # Concatenate categorical and continuous results.
       output_seahorse <- data.frame(stat = c(output_seahorse_cat$cor, output_seahorse_con$cor),
@@ -459,22 +474,29 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
       phenoCat <- as.data.frame(phenosAfter[,whichCat])
       colnames(phenoCat) <- colnames(phenosAfter)[whichCat]
       rownames(phenoCat) <- rownames(phenosAfter)
-      output_seahorse_cat <- phenotype_chisq(phenotype = pheno, 
-                                                  phenotypesToCompare = phenoCat, 
-                                                  phenotypeType = phenoType, 
-                                                  phenotypesToCompareType = typesAfter[whichCat])
-      output_seahorse_padj_cat <- stats::p.adjust(output_seahorse_cat$cor, method = pval_adj_method)
+      output_seahorse_cat <- emptyDF
+      output_seahorse_padj_cat <- emptyPadj
+      if(ncol(phenoCat) > 0){
+        output_seahorse_cat <- phenotype_chisq(phenotype = pheno, 
+                                                    phenotypesToCompare = phenoCat, 
+                                                    phenotypeType = phenoType, 
+                                                    phenotypesToCompareType = typesAfter[whichCat])
+        output_seahorse_padj_cat <- stats::p.adjust(output_seahorse_cat$cor, method = pval_adj_method)
+      }
       
       # Do continuous phenotypes.
       whichContinuous <- which(typesAfter == "continuous")
       phenoCon <- as.data.frame(phenosAfter[,whichContinuous])
       colnames(phenoCon) <- colnames(phenosAfter)[whichContinuous]
       rownames(phenoCon) <- rownames(phenosAfter)
-      output_seahorse_con <- phenotype_anova(phenotype = pheno, 
-                                            phenotypesToCompare = phenoCon, 
-                                            phenotypeType = phenoType, 
-                                            phenotypesToCompareType = typesAfter[whichContinuous])
-      output_seahorse_padj_con <- stats::p.adjust(output_seahorse_con$cor, method = pval_adj_method)
+      output_seahorse_con <- emptyDF
+      output_seahorse_padj_con <- emptyPadj
+      if(ncol(phenoCon) > 0){
+        output_seahorse_con <- phenotype_anova(phenotype = pheno, 
+                                              phenotypesToCompare = phenoCon, 
+                                              phenotypeType = phenoType)
+        output_seahorse_padj_con <- stats::p.adjust(output_seahorse_con$cor, method = pval_adj_method)
+      }
       
       # Concatenate categorical and continuous results.
       output_seahorse <- data.frame(stat = c(output_seahorse_cat$cor, output_seahorse_con$cor),
@@ -490,37 +512,48 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
       phenoDich <- as.data.frame(phenosAfter[,whichDichotomous])
       colnames(phenoDich) <- colnames(phenosAfter)[whichDichotomous]
       rownames(phenoDich) <- rownames(phenosAfter)
-      output_seahorse_dich <- phenotype_ttest(phenotype = pheno, 
-                                                  phenotypesToCompare = phenoDich, 
-                                                  phenotypeType = phenoType, 
-                                                  phenotypesToCompareType = typesAfter[whichDichotomous])
-      output_seahorse_padj_cat <- stats::p.adjust(output_seahorse_dich$cor, method = pval_adj_method)
+      output_seahorse_dich <- emptyDF
+      output_seahorse_padj_dich <- emptyPadj
+      if(ncol(phenoDich) > 0){
+        output_seahorse_dich <- phenotype_ttest(phenotype = pheno, 
+                                                    phenotypesToCompare = phenoDich, 
+                                                    phenotypeType = phenoType, 
+                                                    phenotypesToCompareType = typesAfter[whichDichotomous])
+        output_seahorse_padj_dich <- stats::p.adjust(output_seahorse_dich$cor, method = pval_adj_method)
+      }
       
       # Do nominal phenotypes.
       whichNominal <- which(typesAfter == "nominal")
       phenoNom <- as.data.frame(phenosAfter[,whichNominal])
       colnames(phenoNom) <- colnames(phenosAfter)[whichNominal]
       rownames(phenoNom) <- rownames(phenosAfter)
-      output_seahorse_nom <- phenotype_anova(phenotype = pheno, 
-                                            phenotypesToCompare = phenoNom, 
-                                            phenotypeType = phenoType, 
-                                            phenotypesToCompareType = typesAfter[whichNominal])
-      output_seahorse_padj_nom <- stats::p.adjust(output_seahorse_nom$cor, method = pval_adj_method)
+      output_seahorse_nom <- emptyDF
+      output_seahorse_padj_nom <- emptyPadj
+      if(ncol(phenoNom) > 0){
+        output_seahorse_nom <- phenotype_anova(phenotype = pheno, 
+                                              phenotypesToCompare = phenoNom, 
+                                              phenotypeType = phenoType)
+        output_seahorse_padj_nom <- stats::p.adjust(output_seahorse_nom$cor, method = pval_adj_method)
+      }
 
       # Do continuous phenotypes.
       whichContinuous <- which(typesAfter == "continuous")
       phenoCon <- as.data.frame(phenosAfter[,whichContinuous])
       colnames(phenoCon) <- colnames(phenosAfter)[whichContinuous]
       rownames(phenoCon) <- rownames(phenosAfter)
-      output_seahorse_con = phenotype_cor(phenotype = pheno, 
-                                            phenotypesToCompare = phenoCon, 
-                                          method = method)
-      output_seahorse_padj_con <- rep(NA, nrow(output_seahorse_con))
+      output_seahorse_con <- emptyDF
+      output_seahorse_padj_con <- emptyPadj
+      if(ncol(phenoCon) > 0){
+        output_seahorse_con = phenotype_cor(phenotype = pheno, 
+                                              phenotypesToCompare = phenoCon, 
+                                            method = method)
+        output_seahorse_padj_con <- rep(NA, nrow(output_seahorse_con))
+      }
       
       # Concatenate categorical and continuous results.
       output_seahorse <- data.frame(stat = c(output_seahorse_dich$cor, output_seahorse_nom$cor, output_seahorse_con$cor),
                                    cramerV = c(output_seahorse_dich$V, output_seahorse_nom$V, output_seahorse_con$V),
-                                   padj = c(output_seahorse_padj_cat, output_seahorse_padj_nom, output_seahorse_padj_con),
+                                   padj = c(output_seahorse_padj_dich, output_seahorse_padj_nom, output_seahorse_padj_con),
                                    testType = c(output_seahorse_dich$testType, output_seahorse_nom$testType, output_seahorse_con$testType),
                                    row.names = c(rownames(output_seahorse_dich), rownames(output_seahorse_nom), rownames(output_seahorse_con)))
       
@@ -687,10 +720,25 @@ phenotype_ffs <- function(tables){
 #' phenotypes against which to compare.
 #' @returns A data frame with two vectors: "cor", which lists the ANOVA p-values, 
 #' and "V" which is set to NA.
-phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType, phenotypesToCompareType){
-  return(data.frame(cor = rep(NA, length(phenotypesToCompareType)),
-                    V = rep(NA, length(phenotypesToCompareType)),
-                    testType = rep(NA, length(phenotypesToCompareType)),
+phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
+  
+  cor <- rep(NA, ncol(phenotypesToCompare))
+  
+  # Case 1 - the phenotype is nominal and the phenotypes to compare are numeric.
+  # Case 2 - the phenotype is numeric and the phenotypes to compare are nominal.
+  if(phenotypeType == "nominal"){
+    phenotype_vector = factor(as.character(phenotype))
+    cor <- unlist(apply(phenotypesToCompare, MARGIN=2, function(x){anova(lm(as.numeric(as.character(x))~phenotype_vector))$`Pr(>F)`[1]}))
+  }else{
+    cor <- unlist(lapply(1:ncol(phenotypesToCompare), function(i){
+      phenotype_vector <- factor(as.character(phenotypesToCompare[,i]))
+      return(anova(lm(as.numeric(as.character(phenotype))~phenotype_vector))$`Pr(>F)`[1])
+    }))
+  }
+    
+  return(data.frame(cor = cor,
+                    V = rep(NA, ncol(phenotypesToCompare)),
+                    testType = rep("ANOVA", ncol(phenotypesToCompare)),
                     row.names = colnames(phenotypesToCompare)))
 }
 

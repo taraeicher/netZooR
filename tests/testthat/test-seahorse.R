@@ -73,11 +73,11 @@ test_that("seahorse function works", {
   # All other comparisons should trigger Chi-square tests.
   phenotype_data_2 <- do.call(rbind, rep(list(phenotype_data), 10))
   phenotype_data_2$smoke = c(rep("No", 90), rep("Yes", 10))
-  phenotype_data_2$grade = c(rep("A", 50), rep("B", 50))
+  phenotype_data_2$grade = c(rep("A", 45), rep("B", 45), rep("C", 10))
   phenotype_data_2$rare_group <- rep("common", 100)
   phenotype_data_2$rare_group[c(1:12, 14, 18, 19)] <- "rare"
-  phenotype_data_2 <- phenotype_data_2[,c("smoke", "sex", "height", "group", "grade", "rare_group")]
-  phenotype_dictionary_2 <- c("dichotomous", "dichotomous", "continuous", "nominal", "dichotomous", "dichotomous")
+  phenotype_data_2 <- phenotype_data_2[,c("smoke", "sex", "group", "height", "grade", "rare_group")]
+  phenotype_dictionary_2 <- c("dichotomous", "dichotomous", "nominal", "continuous", "nominal", "dichotomous")
   expression_data_2 = data.frame(matrix(rexp(1000, rate=.1), ncol=100, nrow = 100))
   rownames(expression_data_2) = paste("gene", 1:100, sep = "")
   colnames(expression_data_2) = paste("sample", 1:100, sep = "")
@@ -110,19 +110,24 @@ test_that("seahorse function works", {
   # FFH specifically
   expect_true(all(is.na(results$phenocor$cramerV["smoke", c("group", "grade", "rare_group")])))
   expect_true(all(is.na(results$phenocor$cramerV["sex", "group"])))
-  expect_true(all(is.na(results$phenocor$cramerV["group", "rare_group"])))
+  expect_true(all(is.na(results$phenocor$cramerV["group", c("grade", "rare_group")])))
+  expect_true(all(is.na(results$phenocor$cramerV["grade", "rare_group"])))
   expect_all_equal(results$phenocor$testType["smoke", c("group", "grade", "rare_group")], "FFH")
   expect_all_equal(results$phenocor$testType["sex", "group"], "FFH")
-  expect_all_equal(results$phenocor$testType["group", "rare_group"], "FFH")
+  expect_all_equal(results$phenocor$testType["group", c("grade", "rare_group")], "FFH")
   expect_all_equal(results$phenocor$testType["grade", "rare_group"], "FFH")
   # Chi-square specifically
   expect_true(all(!is.na(results$phenocor$cramerV["smoke", "sex"])))
   expect_true(all(!is.na(results$phenocor$cramerV["sex", c("grade", "rare_group")])))
-  expect_true(all(!is.na(results$phenocor$cramerV["group", "grade"])))
   expect_all_equal(results$phenocor$testType["smoke", "sex"], "Chi-square")
   expect_all_equal(results$phenocor$testType["sex", c("grade", "rare_group")], "Chi-square")
-  expect_all_equal(results$phenocor$testType["group", "grade"], "Chi-square")
   # Ensure that statistics are calculated as expected (ANOVA)
+  expect_true(all(!is.na(results$phenocor$stat["group", "height"])))
+  expect_true(all(!is.na(results$phenocor$stat["height", "grade"])))
+  expect_true(all(is.na(results$phenocor$cramerV["group", "height"])))
+  expect_true(all(is.na(results$phenocor$cramerV["height", "grade"])))
+  expect_all_equal(results$phenocor$testType["group", "height"], "ANOVA")
+  expect_all_equal(results$phenocor$testType["height", "grade"], "ANOVA")
   # Ensure that statistics are calculated as expected (correlation)
   
   # Run seahorse without correlation matrix
