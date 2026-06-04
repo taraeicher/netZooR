@@ -4,12 +4,7 @@
 \alias{phenotype_ffs}
 \title{Function to run associations between categorical (dichotomous or nominal) phenotypes using a Fisher-Freeman-Halton Test.}
 \usage{
-phenotype_ffs(
-  phenotype,
-  phenotypesToCompare,
-  phenotypeType,
-  phenotypesToCompareType
-)
+phenotype_ffs(phenotype, phenotypesToCompare)
 }
 \arguments{
 \item{phenotype}{The phenotype vector to test.}

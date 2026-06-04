@@ -62,8 +62,9 @@ test_that("seahorse function works", {
   # Run seahorse where an early variable will trigger FFH test.
   phenotype_data_2 <- phenotype_data
   phenotype_data_2$smoke = c(rep("No", 8), rep("Yes", 2))
-  phenotype_data_2 <- phenotype_data_2[,c("smoke", "sex", "height", "group")]
-  phenotype_dictionary_2 <- c("dichotomous", "dichotomous", "continuous", "nominal")
+  phenotype_data_2$grade = c(rep("A", 5), rep("B", 5))
+  phenotype_data_2 <- phenotype_data_2[,c("smoke", "sex", "height", "group", "grade")]
+  phenotype_dictionary_2 <- c("dichotomous", "dichotomous", "continuous", "nominal", "dichotomous")
   results <- seahorse(expression_data, phenotype_data_2, phenotype_dictionary_2, pathways)
   
   # Verify structure
@@ -72,16 +73,24 @@ test_that("seahorse function works", {
   # Check that results contain expected top-level keys
   expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA") %in% names(results)))
   # Check that phenotype names appear in sub-lists
-  expect_true(all(c("smoke", "sex", "height", "group") %in% names(results$GSEA)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% names(results$GSEA)))
   expect_true(all(!is.na(results$coexpression)))
   expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
-  expect_true(all(c("smoke", "sex", "height", "group") %in% rownames(results$phenocor$stat)))
-  expect_true(all(c("smoke", "sex", "height", "group") %in% colnames(results$phenocor$stat)))
-  expect_true(all(c("smoke", "sex", "height", "group") %in% rownames(results$phenocor$cramerV)))
-  expect_true(all(c("smoke", "sex", "height", "group") %in% colnames(results$phenocor$cramerV)))
-  expect_true(all(c("smoke", "sex", "height", "group") %in% rownames(results$phenocor$padj)))
-  expect_true(all(c("smoke", "sex", "height", "group") %in% colnames(results$phenocor$padj)))
-  
+  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% rownames(results$phenocor$stat)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% colnames(results$phenocor$stat)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% rownames(results$phenocor$cramerV)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% colnames(results$phenocor$cramerV)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% rownames(results$phenocor$padj)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% colnames(results$phenocor$padj)))
+  expect_true(all(!is.na(results$phenocor$stat["smoke", c("sex", "group", "grade")])))
+  expect_true(all(!is.na(results$phenocor$stat["sex", c("group", "grade")])))
+  expect_true(all(!is.na(results$phenocor$stat["group", "grade"])))
+  expect_true(all(!is.na(results$phenocor$padj["smoke", c("sex", "group", "grade")])))
+  expect_true(all(!is.na(results$phenocor$padj["sex", c("group", "grade")])))
+  expect_true(all(!is.na(results$phenocor$padj["group", "grade"])))
+  expect_true(all(is.na(results$phenocor$cramerV["smoke", c("sex", "group", "grade")])))
+  expect_true(all(is.na(results$phenocor$cramerV["sex", c("group", "grade")])))
+  expect_true(all(is.na(results$phenocor$cramerV["group", "grade"])))
   
   # Run seahorse without correlation matrix
   results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,

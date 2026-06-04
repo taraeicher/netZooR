@@ -548,10 +548,8 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType, pheno
   corRes <- NA
   ffhCutoff <- 5
   phenotypeGroupCounts <- table(phenotype)
-  str(phenotypeGroupCounts)
   if(min(phenotypeGroupCounts) < ffhCutoff){
-    corRes <- phenotype_ffs(phenotype = phenotype, phenotypesToCompare = phenotypesToCompare,
-                            phenotypeType = phenotypeType, phenotypesToCompareType = phenotypesToCompareType) 
+    corRes <- phenotype_ffs(phenotype = phenotype, phenotypesToCompare = phenotypesToCompare) 
   }else{
     isLess <- unlist(lapply(phenotypesToCompare, function(phen){
       grpCounts <- table(phen)
@@ -561,19 +559,17 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType, pheno
       }
       return(less)
     }))
-    phenotypesLess <- phenotypesToCompare[,which(isLess == TRUE)]
-    phenotypesLessType <- phenotypesToCompareType[which(isLess == TRUE)]
-    phenotypesNotLess <- phenotypesToCompare[,which(isLess == FALSE)]
-    phenotypesNotLessType <- phenotypesToCompareType[which(isLess == FALSE)]
-    corResLess <- phenotype_ffs(phenotype = phenotype, phenotypesToCompare = phenotypesLess,
-                                phenotypeType = phenotypeType, phenotypesToCompareType = phenotypesLessType)
-    corResNotLess <- data.frame(cor = rep(NA, length(phenotypesNotLessType)),
-                                V = rep(NA, length(phenotypesNotLessType)),
+    phenotypesLess <- as.data.frame(phenotypesToCompare[,which(isLess == TRUE)])
+    colnames(phenotypesLess) <- colnames(phenotypesToCompare)[which(isLess == TRUE)]
+    phenotypesNotLess <- as.data.frame(phenotypesToCompare[,which(isLess == FALSE)])
+    colnames(phenotypesNotLess) <- colnames(phenotypesToCompare)[which(isLess == FALSE)]
+    corResLess <- phenotype_ffs(phenotype = phenotype, phenotypesToCompare = phenotypesLess)
+    corResNotLess <- data.frame(cor = rep(NA, ncol(phenotypesNotLess)),
+                                V = rep(NA, ncol(phenotypesNotLess)),
                                 row.names = colnames(phenotypesNotLess))
     corRes <- rbind(corResLess, corResNotLess)
     corRes <- corRes[colnames(phenotypesToCompare),]
   }
-  str(corRes)
   return(corRes)
 }
 
@@ -585,9 +581,18 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType, pheno
 #' phenotypes against which to compare.
 #' @returns A data frame with two vectors: "cor", which lists Fisher-Freeman-Halton Test p-values, 
 #' and "V" which lists the Cramer's V statistics (NA)
-phenotype_ffs <- function(phenotype, phenotypesToCompare, phenotypeType, phenotypesToCompareType){
-  return(data.frame(cor = rep(NA, length(phenotypesToCompareType)),
-                    V = rep(NA, length(phenotypesToCompareType)),
+phenotype_ffs <- function(phenotype, phenotypesToCompare){
+  
+  # Run the comparisons one at a time because FFH is not implemented in matrixTests.
+  pvals <- unlist(lapply(colnames(phenotypesToCompare), function(pheno) {
+    fishTable <- table(phenotype, phenotypesToCompare[,pheno])
+    fishP <- fisher.test(fishTable, simulate.p.value = TRUE, B = 10000)$p.value
+    return(fishP)
+  }))
+
+  # Return the results.
+  return(data.frame(cor = pvals,
+                    V = rep(NA, ncol(phenotypesToCompare)),
                     row.names = colnames(phenotypesToCompare)))
 }
 
