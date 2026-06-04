@@ -543,6 +543,49 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
 #' @returns A data frame with two vectors: "cor", which lists the Chi-square or Fisher-Freeman-Halton Test p-values, 
 #' and "V" which lists the Cramer's V statistics (will be NA if Fisher-Freeman-Halton Test is computed)
 phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType, phenotypesToCompareType){
+  
+  # If one of the groups listed in the phenotype vector has < 5 samples, run FFH test instead.
+  corRes <- NA
+  ffhCutoff <- 5
+  phenotypeGroupCounts <- table(phenotype)
+  str(phenotypeGroupCounts)
+  if(min(phenotypeGroupCounts) < ffhCutoff){
+    corRes <- phenotype_ffs(phenotype = phenotype, phenotypesToCompare = phenotypesToCompare,
+                            phenotypeType = phenotypeType, phenotypesToCompareType = phenotypesToCompareType) 
+  }else{
+    isLess <- unlist(lapply(phenotypesToCompare, function(phen){
+      grpCounts <- table(phen)
+      less <- FALSE
+      if(any(grpCounts) < ffhCutoff){
+        less <- TRUE
+      }
+      return(less)
+    }))
+    phenotypesLess <- phenotypesToCompare[,which(isLess == TRUE)]
+    phenotypesLessType <- phenotypesToCompareType[which(isLess == TRUE)]
+    phenotypesNotLess <- phenotypesToCompare[,which(isLess == FALSE)]
+    phenotypesNotLessType <- phenotypesToCompareType[which(isLess == FALSE)]
+    corResLess <- phenotype_ffs(phenotype = phenotype, phenotypesToCompare = phenotypesLess,
+                                phenotypeType = phenotypeType, phenotypesToCompareType = phenotypesLessType)
+    corResNotLess <- data.frame(cor = rep(NA, length(phenotypesNotLessType)),
+                                V = rep(NA, length(phenotypesNotLessType)),
+                                row.names = colnames(phenotypesNotLess))
+    corRes <- rbind(corResLess, corResNotLess)
+    corRes <- corRes[colnames(phenotypesToCompare),]
+  }
+  str(corRes)
+  return(corRes)
+}
+
+#' Function to run associations between categorical (dichotomous or nominal) phenotypes using a Fisher-Freeman-Halton Test.
+#' @param phenotype The phenotype vector to test.
+#' @param phenotypesToCompare A data frame containing all phenotypes against which to run associations.
+#' @param phenotypeType Whether the phenotype is dichotomous or nominal.
+#' @param phenotypesToCompareType A vector of types (dichotomous, nominal) corresponding to all
+#' phenotypes against which to compare.
+#' @returns A data frame with two vectors: "cor", which lists Fisher-Freeman-Halton Test p-values, 
+#' and "V" which lists the Cramer's V statistics (NA)
+phenotype_ffs <- function(phenotype, phenotypesToCompare, phenotypeType, phenotypesToCompareType){
   return(data.frame(cor = rep(NA, length(phenotypesToCompareType)),
                     V = rep(NA, length(phenotypesToCompareType)),
                     row.names = colnames(phenotypesToCompare)))
