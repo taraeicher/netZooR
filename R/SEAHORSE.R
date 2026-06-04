@@ -64,6 +64,8 @@
 seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, compute_gene_cor = TRUE,
                      compute_phenotype_cor = TRUE,
                      assoc_method = "pearson", transform_expression = TRUE, pval_adj_method = "none"){
+  
+  # Check packages.
   if (!requireNamespace("fgsea", quietly = TRUE)) {
     stop("Package 'fgsea' is required but not installed.")
   }
@@ -87,6 +89,31 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   
   # Ensure that the column names are valid for the phenotypic data.
   colnames(phenotype) <- make.names(colnames(phenotype))
+  
+  # Check that phenotype dictionary is correct.
+  for(i in 1:length(phenotype_dictionary)){
+    dictType <- phenotype_dictionary[i]
+    pheno <- phenotype[,i]
+    phenoName <- colnames(phenotype)[i]
+    
+    # Check that nominal have more than 2 levels.
+    levels <- unique(pheno)
+    if(dictType == "nominal" && length(levels) <= 2){
+      stop(paste("Phenotype", phenoName, "set to nominal but has 2 levels or fewer."))
+    }
+    # Check that dichotomous don't have more than 2 levels.
+    if(dictType == "dichotomous" && length(levels) > 2){
+      stop(paste("Phenotype", phenoName, "set to dichotomous but has more than 2 levels."))
+    }
+    # Check that continuous can be converted to a numeric vector.
+    if(dictType == "continuous"){
+      phenoChar <- as.character(pheno)
+      phenoNum <- suppressWarnings(as.numeric(phenoChar))
+      if(length(setdiff(which(is.na(phenoNum)), which(is.na(phenoChar)))) > 0){
+        stop(paste("Phenotype", phenoName, "set to continuous but cannot be converted to numeric."))
+      }
+    }
+  }
   
   # Compute coexpression of genes
   results$coexpression <- NA
@@ -299,10 +326,6 @@ gsea_nominal <- function(expression, pheno, pathways){
   output_seahorse$GSEA = list()
   
   phenotype_vector = factor(as.character(pheno))
-  phenotypes <- unique(phenotype_vector)
-  if(length(phenotypes) <= 2){
-    stop("Phenotype set to nominal but has 2 levels or fewer.")
-  }
   cor = unlist(apply(expression, MARGIN=1, function(x){anova(lm(as.numeric(x)~phenotype_vector))$`Pr(>F)`[1]}))
   output_seahorse$cor = cor
   
@@ -312,6 +335,51 @@ gsea_nominal <- function(expression, pheno, pathways){
   
   return(output_seahorse)
 }
+
+#' Function to run GSEA for a dichotomous phenotype
+#' @param expression : gene expression matrix (normalized, and filtered) 
+#'                     with rows as genes and columns as samples.
+#'                     Row and column names must be present.
+#'                     Row names must be HGNC symbols.
+#'                     Column names must match the row names of the phenotype matrix.
+#' @param pheno : phenotype matrix
+#'                    with rows as samples and columns as phenotype variables.
+#' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
+#'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
+#' @export
+gsea_dichotomous <- function(expression, pheno, pathways){
+  if (!requireNamespace("fgsea", quietly = TRUE)) {
+    stop("Package 'fgsea' is required but not installed.")
+  }
+  if (!requireNamespace("matrixTests", quietly = TRUE)) {
+    stop("Package 'matrixTests' is required but not installed.")
+  }
+  output_seahorse = list()
+  output_seahorse$cor = list()
+  output_seahorse$GSEA = list()
+  
+  phenotype_vector = factor(as.character(pheno))
+  phenotypes <- unique(phenotype_vector)
+  group1 <- expression[,which(phenotype_vector == phenotypes[1])]
+  group2 <- expression[,which(phenotype_vector == phenotypes[2])]
+  tres <- matrixTests::row_t_welch(group1, group2)
+  cor = tres$pvalue
+  names(cor) <- rownames(tres)
+  output_seahorse$cor = cor
+  
+  # Run GSEA
+  fgseaRes <- NA
+  tryCatch({
+    fgseaRes <- fgsea::fgsea(pathways, -1 * log10(cor), minSize=15, maxSize=500, scoreType = "pos")
+  }, error = function(cond){
+    print(cond)
+  })
+  
+  output_seahorse$GSEA = fgseaRes
+  
+  return(output_seahorse)
+}
+
 
 #' Computes phenotype-phenotype correlation for continuous phenotypes, ANOVA for nominal
 #' phenotypes, and t-test for dichotomous phenotypes
@@ -325,7 +393,7 @@ gsea_nominal <- function(expression, pheno, pathways){
 #' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
 computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method,
                                 pval_adj_method){
-  
+
   # For each phenotype, compute all of its associations.
   phenoAssoc <- lapply(1:(ncol(phenotype)-1), function(i){
     # Extract the phenotype.
@@ -653,51 +721,4 @@ phenotype_cor <- function(phenotype, phenotypesToCompare, method){
                     testType = rep(NA, ncol(phenotypesToCompare)),
                     V = rep(NA, ncol(phenotypesToCompare)),
                     row.names = colnames(phenotypesToCompare)))
-}
-
-#' Function to run GSEA for a dichotomous phenotype
-#' @param expression : gene expression matrix (normalized, and filtered) 
-#'                     with rows as genes and columns as samples.
-#'                     Row and column names must be present.
-#'                     Row names must be HGNC symbols.
-#'                     Column names must match the row names of the phenotype matrix.
-#' @param pheno : phenotype matrix
-#'                    with rows as samples and columns as phenotype variables.
-#' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
-#'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
-#' @export
-gsea_dichotomous <- function(expression, pheno, pathways){
-  if (!requireNamespace("fgsea", quietly = TRUE)) {
-    stop("Package 'fgsea' is required but not installed.")
-  }
-  if (!requireNamespace("matrixTests", quietly = TRUE)) {
-    stop("Package 'matrixTests' is required but not installed.")
-  }
-  output_seahorse = list()
-  output_seahorse$cor = list()
-  output_seahorse$GSEA = list()
-  
-  phenotype_vector = factor(as.character(pheno))
-  phenotypes <- unique(phenotype_vector)
-  if(length(phenotypes) > 2){
-    stop("Phenotype set to dichotomous but has > 2 levels.")
-  }
-  group1 <- expression[,which(phenotype_vector == phenotypes[1])]
-  group2 <- expression[,which(phenotype_vector == phenotypes[2])]
-  tres <- matrixTests::row_t_welch(group1, group2)
-  cor = tres$pvalue
-  names(cor) <- rownames(tres)
-  output_seahorse$cor = cor
-  
-  # Run GSEA
-  fgseaRes <- NA
-  tryCatch({
-    fgseaRes <- fgsea::fgsea(pathways, -1 * log10(cor), minSize=15, maxSize=500, scoreType = "pos")
-  }, error = function(cond){
-    print(cond)
-  })
-  
-  output_seahorse$GSEA = fgseaRes
-  
-  return(output_seahorse)
 }

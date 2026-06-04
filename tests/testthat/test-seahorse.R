@@ -2,6 +2,7 @@ context("test SEAHORSE result")
 
 test_that("seahorse function works", {
   skip_if_not_installed("fgsea")
+  skip_if_not_installed("matrixTests")
   set.seed(42)
   # Simulate expression data
   expression_data = data.frame(matrix(rexp(1000, rate=.1), ncol=10, nrow = 100))
@@ -34,11 +35,15 @@ test_that("seahorse function works", {
   phenotype_bad1 <- c("nominal", "continuous", "nominal")
   expect_error(seahorse(expression_data, phenotype_data, phenotype_bad1, pathways,
                         pval_adj_method = "bonferroni"),
-               "Phenotype set to nominal but has 2 levels or fewer.")
+               "Phenotype sex set to nominal but has 2 levels or fewer.")
   phenotype_bad2 <- c("dichotomous", "continuous", "dichotomous")
   expect_error(seahorse(expression_data, phenotype_data, phenotype_bad2, pathways,
                         pval_adj_method = "bonferroni"),
-               "Phenotype set to dichotomous but has > 2 levels.")
+               "Phenotype group set to dichotomous but has more than 2 levels.")
+  phenotype_bad3 <- c("continuous", "continuous", "nominal")
+  expect_error(seahorse(expression_data, phenotype_data, phenotype_bad3, pathways,
+                        pval_adj_method = "bonferroni"),
+               "Phenotype sex set to continuous but cannot be converted to numeric.")
   
   # Run seahorse
   results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
