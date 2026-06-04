@@ -4,12 +4,7 @@
 \alias{phenotype_ttest}
 \title{Function to compute Welch's t-test statistics between dichotomous and continuous phenotypes.}
 \usage{
-phenotype_ttest(
-  phenotype,
-  phenotypesToCompare,
-  phenotypeType,
-  phenotypesToCompareType
-)
+phenotype_ttest(phenotype, phenotypesToCompare, phenotypeType)
 }
 \arguments{
 \item{phenotype}{The phenotype vector to test.}

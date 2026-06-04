@@ -128,6 +128,13 @@ test_that("seahorse function works", {
   expect_true(all(is.na(results$phenocor$cramerV["height", "grade"])))
   expect_all_equal(results$phenocor$testType["group", "height"], "ANOVA")
   expect_all_equal(results$phenocor$testType["height", "grade"], "ANOVA")
+  # Ensure that statistics are calculated as expected (t-test).
+  expect_true(all(!is.na(results$phenocor$stat[c("smoke", "sex"), "height"])))
+  expect_true(all(!is.na(results$phenocor$stat["height", "rare_group"])))
+  expect_true(all(is.na(results$phenocor$cramerV[c("smoke", "sex"), "height"])))
+  expect_true(all(is.na(results$phenocor$cramerV["height", "rare_group"])))
+  expect_all_equal(results$phenocor$testType[c("smoke", "sex"), "height"], "T-Test")
+  expect_all_equal(results$phenocor$testType["height", "rare_group"], "T-Test")
   # Ensure that statistics are calculated as expected (correlation)
   
   # Run seahorse without correlation matrix

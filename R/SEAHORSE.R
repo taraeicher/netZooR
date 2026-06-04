@@ -72,6 +72,9 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   if (!requireNamespace("stats", quietly = TRUE)) {
     stop("Package 'stats' is required but not installed.")
   }
+  if (!requireNamespace("matrixTests", quietly = TRUE)) {
+    stop("Package 'matrixTests' is required but not installed.")
+  }
   set.seed(0)
   
   # Return an error if pval_adj_method is not an accepted method.
@@ -286,9 +289,7 @@ computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pat
 #' @param method : One of "pearson", "spearman", or "kendall".
 #' @export
 gsea_continuous <- function(expression, pheno, pathways, method){
-  if (!requireNamespace("fgsea", quietly = TRUE)) {
-    stop("Package 'fgsea' is required but not installed.")
-  }
+
   output_seahorse = list()
   output_seahorse$cor = list()
   output_seahorse$GSEA = list()
@@ -318,9 +319,7 @@ gsea_continuous <- function(expression, pheno, pathways, method){
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
 #' @export
 gsea_nominal <- function(expression, pheno, pathways){
-  if (!requireNamespace("fgsea", quietly = TRUE)) {
-    stop("Package 'fgsea' is required but not installed.")
-  }
+
   output_seahorse = list()
   output_seahorse$cor = list()
   output_seahorse$GSEA = list()
@@ -348,12 +347,7 @@ gsea_nominal <- function(expression, pheno, pathways){
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
 #' @export
 gsea_dichotomous <- function(expression, pheno, pathways){
-  if (!requireNamespace("fgsea", quietly = TRUE)) {
-    stop("Package 'fgsea' is required but not installed.")
-  }
-  if (!requireNamespace("matrixTests", quietly = TRUE)) {
-    stop("Package 'matrixTests' is required but not installed.")
-  }
+  
   output_seahorse = list()
   output_seahorse$cor = list()
   output_seahorse$GSEA = list()
@@ -455,8 +449,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
       if(ncol(phenoCon) > 0){
         output_seahorse_con <- phenotype_ttest(phenotype = pheno, 
                                               phenotypesToCompare = phenoCon, 
-                                              phenotypeType = phenoType, 
-                                              phenotypesToCompareType = typesAfter[whichContinuous])
+                                              phenotypeType = phenoType)
         output_seahorse_padj_con <- stats::p.adjust(output_seahorse_con$cor, method = pval_adj_method)
       }
       
@@ -517,8 +510,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
       if(ncol(phenoDich) > 0){
         output_seahorse_dich <- phenotype_ttest(phenotype = pheno, 
                                                     phenotypesToCompare = phenoDich, 
-                                                    phenotypeType = phenoType, 
-                                                    phenotypesToCompareType = typesAfter[whichDichotomous])
+                                                    phenotypeType = phenoType)
         output_seahorse_padj_dich <- stats::p.adjust(output_seahorse_dich$cor, method = pval_adj_method)
       }
       
@@ -750,11 +742,39 @@ phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
 #' phenotypes against which to compare.
 #' @returns A data frame with two vectors: "cor", which lists the t-test p-values, 
 #' and "V" which is set to NA.
-phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType, phenotypesToCompareType){
-  return(data.frame(cor = rep(NA, length(phenotypesToCompareType)),
-                    V = rep(NA, length(phenotypesToCompareType)),
-                    testType = rep(NA, length(phenotypesToCompareType)),
+phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
+  
+  # Case 1 - the phenotype is dichotomous and the phenotypes to compare are numeric.
+  # We can vectorize this and use matrixTests.
+  # Case 2 - the phenotype is numeric and the phenotypes to compare are dichotomous.
+  # We cannot vectorize this and use t.test instead, which defaults to Welch's t-test.
+  if(phenotypeType == "dichotomous"){
+    phenotype_vector = factor(as.character(phenotype))
+    levels <- unique(phenotype_vector)
+    group1 <- phenotypesToCompare[which(phenotype_vector == levels[1]),]
+    group2 <- phenotypesToCompare[which(phenotype_vector == levels[2]),]
+    tres <- matrixTests::col_t_welch(group1, group2)
+    cor = tres$pvalue
+    names(cor) <- rownames(tres)
+  }else{
+    cor <- unlist(lapply(1:ncol(phenotypesToCompare), function(i){
+      phenotype_vector = factor(as.character(phenotypesToCompare[,i]))
+      levels <- unique(phenotype_vector)
+      group1 <- phenotype[which(phenotype_vector == levels[1])]
+      group2 <- phenotype[which(phenotype_vector == levels[2])]
+      tres <- t.test(group1, group2)
+      stat = tres$p.value
+      names(stat) <- rownames(tres)
+      return(stat)
+    }))
+  }
+  
+  # Return the data frame.
+  return(data.frame(cor = cor,
+                    V = rep(NA, ncol(phenotypesToCompare)),
+                    testType = rep("T-Test", ncol(phenotypesToCompare)),
                     row.names = colnames(phenotypesToCompare)))
+  
 }
 
 #' Function to compute correlation between continuous phenotypes.
