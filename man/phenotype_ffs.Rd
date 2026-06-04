@@ -4,17 +4,10 @@
 \alias{phenotype_ffs}
 \title{Function to run associations between categorical (dichotomous or nominal) phenotypes using a Fisher-Freeman-Halton Test.}
 \usage{
-phenotype_ffs(phenotype, phenotypesToCompare)
+phenotype_ffs(tables)
 }
 \arguments{
-\item{phenotype}{The phenotype vector to test.}
-
-\item{phenotypesToCompare}{A data frame containing all phenotypes against which to run associations.}
-
-\item{phenotypeType}{Whether the phenotype is dichotomous or nominal.}
-
-\item{phenotypesToCompareType}{A vector of types (dichotomous, nominal) corresponding to all
-phenotypes against which to compare.}
+\item{tables}{The list of tables to test, named by the phenotypes against which to compare.}
 }
 \value{
 A data frame with two vectors: "cor", which lists Fisher-Freeman-Halton Test p-values, 

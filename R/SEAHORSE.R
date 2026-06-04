@@ -313,47 +313,6 @@ gsea_nominal <- function(expression, pheno, pathways){
   return(output_seahorse)
 }
 
-#' Function to run GSEA for a dichotomous phenotype
-#' @param expression : gene expression matrix (normalized, and filtered) 
-#'                     with rows as genes and columns as samples.
-#'                     Row and column names must be present.
-#'                     Row names must be HGNC symbols.
-#'                     Column names must match the row names of the phenotype matrix.
-#' @param pheno : phenotype matrix
-#'                    with rows as samples and columns as phenotype variables.
-#' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
-#'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
-#' @export
-gsea_dichotomous <- function(expression, pheno, pathways){
-  if (!requireNamespace("fgsea", quietly = TRUE)) {
-    stop("Package 'fgsea' is required but not installed.")
-  }
-  if (!requireNamespace("matrixTests", quietly = TRUE)) {
-    stop("Package 'matrixTests' is required but not installed.")
-  }
-  output_seahorse = list()
-  output_seahorse$cor = list()
-  output_seahorse$GSEA = list()
-  
-  phenotype_vector = factor(as.character(pheno))
-  phenotypes <- unique(phenotype_vector)
-  if(length(phenotypes) > 2){
-    stop("Phenotype set to dichotomous but has > 2 levels.")
-  }
-  group1 <- expression[,which(phenotype_vector == phenotypes[1])]
-  group2 <- expression[,which(phenotype_vector == phenotypes[2])]
-  tres <- matrixTests::row_t_welch(group1, group2)
-  cor = tres$pvalue
-  names(cor) <- rownames(tres)
-  output_seahorse$cor = cor
-  
-  # Run GSEA
-  fgseaRes <- fgsea::fgsea(pathways, -1 * log10(cor), minSize=15, maxSize=500, scoreType = "pos")
-  output_seahorse$GSEA = fgseaRes
-  
-  return(output_seahorse)
-}
-
 #' Computes phenotype-phenotype correlation for continuous phenotypes, ANOVA for nominal
 #' phenotypes, and t-test for dichotomous phenotypes
 #' @param phenotype : phenotype matrix
@@ -422,6 +381,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
       output_seahorse <- data.frame(stat = c(output_seahorse_cat$cor, output_seahorse_con$cor),
                                cramerV = c(output_seahorse_cat$V, output_seahorse_con$V),
                                padj = c(output_seahorse_padj_cat, output_seahorse_padj_con),
+                               testType = c(output_seahorse_cat$testType, output_seahorse_con$testType),
                                row.names = c(rownames(output_seahorse_cat), rownames(output_seahorse_con)))
       
     }else if(phenoType == "nominal"){
@@ -452,6 +412,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
       output_seahorse <- data.frame(stat = c(output_seahorse_cat$cor, output_seahorse_con$cor),
                                    cramerV = c(output_seahorse_cat$V, output_seahorse_con$V),
                                    padj = c(output_seahorse_padj_cat, output_seahorse_padj_con),
+                                   testType = c(output_seahorse_cat$testType, output_seahorse_con$testType),
                                    row.names = c(rownames(output_seahorse_cat), rownames(output_seahorse_con)))
       
     }else{
@@ -492,6 +453,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
       output_seahorse <- data.frame(stat = c(output_seahorse_dich$cor, output_seahorse_nom$cor, output_seahorse_con$cor),
                                    cramerV = c(output_seahorse_dich$V, output_seahorse_nom$V, output_seahorse_con$V),
                                    padj = c(output_seahorse_padj_cat, output_seahorse_padj_nom, output_seahorse_padj_con),
+                                   testType = c(output_seahorse_dich$testType, output_seahorse_nom$testType, output_seahorse_con$testType),
                                    row.names = c(rownames(output_seahorse_dich), rownames(output_seahorse_nom), rownames(output_seahorse_con)))
       
     }
@@ -500,13 +462,15 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
     additionalVars <- data.frame(stat = rep(NA, length(varsNotAdded)),
                                  cramerV = rep(NA, length(varsNotAdded)),
                                  padj = rep(NA, length(varsNotAdded)),
+                                 testType = rep(NA, length(varsNotAdded)),
                                  row.names = varsNotAdded)
+
     output_seahorse <- rbind(output_seahorse, additionalVars)
     output_seahorse <- output_seahorse[colnames(phenotype),]
     return(output_seahorse)
   })
   names(phenoAssoc) <- colnames(phenotype)[1:(ncol(phenotype)-1)]
-  
+
   # Compile each vector list into a matrix. Add an extra NA row at the end.
   statMat <- t(as.matrix(do.call(cbind, list(lapply(1:length(phenoAssoc), function(i){
     df <- data.frame(phenoAssoc[[i]]$stat)
@@ -526,9 +490,15 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
     rownames(df) <- names(phenotype)
     return(df)
   }), setNames(data.frame(X=rep(NA, ncol(phenotype))), colnames(phenotype)[ncol(phenotype)])))))
+  typeMat <- t(as.matrix(do.call(cbind, list(lapply(1:length(phenoAssoc), function(i){
+    df <- data.frame(phenoAssoc[[i]]$testType)
+    colnames(df) <- names(phenoAssoc)[i]
+    rownames(df) <- names(phenotype)
+    return(df)
+  }), setNames(data.frame(X=rep(NA, ncol(phenotype))), colnames(phenotype)[ncol(phenotype)])))))
 
   # Return all matrices.
-  phenoAssocList <- list(stat = statMat, cramerV = vMat, padj = adjMat)
+  phenoAssocList <- list(stat = statMat, cramerV = vMat, padj = adjMat, testType = typeMat)
   return(phenoAssocList)
 }
 
@@ -544,56 +514,101 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
 #' and "V" which lists the Cramer's V statistics (will be NA if Fisher-Freeman-Halton Test is computed)
 phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType, phenotypesToCompareType){
   
-  # If one of the groups listed in the phenotype vector has < 5 samples, run FFH test instead.
-  corRes <- NA
+  # Generate the tables for all phenotype pairs.
+  allPhenoPairTables <- lapply(phenotypesToCompare, function(phen){
+    grpCounts <- table(phenotype, phen)
+  })
+  names(allPhenoPairTables) <- colnames(phenotypesToCompare)
+
+  # Check which phenotype pair tables have an entry below the cutoff for Chi-square.
   ffhCutoff <- 5
-  phenotypeGroupCounts <- table(phenotype)
-  if(min(phenotypeGroupCounts) < ffhCutoff){
-    corRes <- phenotype_ffs(phenotype = phenotype, phenotypesToCompare = phenotypesToCompare) 
-  }else{
-    isLess <- unlist(lapply(phenotypesToCompare, function(phen){
-      grpCounts <- table(phen)
-      less <- FALSE
-      if(any(grpCounts) < ffhCutoff){
-        less <- TRUE
+  isBelowCutoff <- unlist(lapply(allPhenoPairTables, function(tbl){
+    anyBelow <- FALSE
+    if(min(tbl) < ffhCutoff){
+      anyBelow <- TRUE
+    }
+    return(anyBelow)
+  }))
+  names(isBelowCutoff) <- colnames(phenotypesToCompare)
+  
+  # If one of the groups listed in the contingency table has < 5 samples, run FFH test instead.
+  # Separate phenotypes to compare into those which require an FFH test and
+  # those which can use a chi-square test.
+  phenotypesLess <- as.data.frame(phenotypesToCompare[,which(isBelowCutoff == TRUE)])
+  colnames(phenotypesLess) <- colnames(phenotypesToCompare)[which(isBelowCutoff == TRUE)]
+  phenotypesNotLess <- as.data.frame(phenotypesToCompare[,which(isBelowCutoff == FALSE)])
+  colnames(phenotypesNotLess) <- colnames(phenotypesToCompare)[which(isBelowCutoff == FALSE)]
+  
+  # Do an FFH test where necessary.
+  corResLess <- phenotype_ffs(allPhenoPairTables[which(isBelowCutoff == TRUE)])
+  
+  # Do a chi-square test everywhere else.
+  # Run the comparisons one at a time because FFH is not implemented in matrixTests.
+  notLessTables <- allPhenoPairTables[which(isBelowCutoff == FALSE)]
+  chisqRes <- lapply(notLessTables, function(chisqTable) {
+    
+    # Run the test. If a warning is thrown, switch to FFH.
+    type <- "Chi-square"
+    chisq <- withCallingHandlers(
+      chisq.test(chisqTable),
+      warning = function(w) {
+        if (grepl("Chi-squared approximation may be incorrect", w$message)) {
+          # Do not change only within the warning scope but also within the parent scope.
+          type <<- "FFH"
+          invokeRestart("muffleWarning")
+        }
       }
-      return(less)
-    }))
-    phenotypesLess <- as.data.frame(phenotypesToCompare[,which(isLess == TRUE)])
-    colnames(phenotypesLess) <- colnames(phenotypesToCompare)[which(isLess == TRUE)]
-    phenotypesNotLess <- as.data.frame(phenotypesToCompare[,which(isLess == FALSE)])
-    colnames(phenotypesNotLess) <- colnames(phenotypesToCompare)[which(isLess == FALSE)]
-    corResLess <- phenotype_ffs(phenotype = phenotype, phenotypesToCompare = phenotypesLess)
-    corResNotLess <- data.frame(cor = rep(NA, ncol(phenotypesNotLess)),
-                                V = rep(NA, ncol(phenotypesNotLess)),
-                                row.names = colnames(phenotypesNotLess))
-    corRes <- rbind(corResLess, corResNotLess)
-    corRes <- corRes[colnames(phenotypesToCompare),]
-  }
+    )
+    
+    # Get the p-value and Cramer's V.
+    pval <- chisq$p.value
+    V <- sqrt(chisq$statistic / (sum(chisqTable) * min(nrow(chisqTable) - 1, 
+                                                       ncol(chisqTable) - 1)))
+    return(list(pval = pval, v = V, testType = type))
+  })
+  chisqP <- unlist(lapply(chisqRes, function(res){
+    return(res$pval)
+  }))
+  cramerV <- unlist(lapply(chisqRes, function(res){
+    return(res$v)
+  }))
+  testType <- unlist(lapply(chisqRes, function(res){
+    return(res$testType)
+  }))
+  corResNotLessFull <- data.frame(cor = chisqP,
+                              V = cramerV,
+                              testType = testType,
+                              row.names = colnames(phenotypesNotLess))
+  
+  # Run FFS where warning was issued.
+  corResNotLess <- corResNotLessFull[which(corResNotLessFull$testType == "Chi-square"),]
+  switchedTables <- notLessTables[which(corResNotLessFull$testType == "FFH")]
+  corResSwitched <- phenotype_ffs(switchedTables)
+
+  # Bind together the results from the FFH and Chi-Square tests.
+  corRes <- rbind(corResLess, corResNotLess, corResSwitched)
+  corRes <- corRes[colnames(phenotypesToCompare),]
+
   return(corRes)
 }
 
 #' Function to run associations between categorical (dichotomous or nominal) phenotypes using a Fisher-Freeman-Halton Test.
-#' @param phenotype The phenotype vector to test.
-#' @param phenotypesToCompare A data frame containing all phenotypes against which to run associations.
-#' @param phenotypeType Whether the phenotype is dichotomous or nominal.
-#' @param phenotypesToCompareType A vector of types (dichotomous, nominal) corresponding to all
-#' phenotypes against which to compare.
+#' @param tables The list of tables to test, named by the phenotypes against which to compare.
 #' @returns A data frame with two vectors: "cor", which lists Fisher-Freeman-Halton Test p-values, 
 #' and "V" which lists the Cramer's V statistics (NA)
-phenotype_ffs <- function(phenotype, phenotypesToCompare){
+phenotype_ffs <- function(tables){
   
   # Run the comparisons one at a time because FFH is not implemented in matrixTests.
-  pvals <- unlist(lapply(colnames(phenotypesToCompare), function(pheno) {
-    fishTable <- table(phenotype, phenotypesToCompare[,pheno])
+  pvals <- unlist(lapply(tables, function(fishTable) {
     fishP <- fisher.test(fishTable, simulate.p.value = TRUE, B = 10000)$p.value
     return(fishP)
   }))
 
   # Return the results.
   return(data.frame(cor = pvals,
-                    V = rep(NA, ncol(phenotypesToCompare)),
-                    row.names = colnames(phenotypesToCompare)))
+                    V = rep(NA, length(tables)),
+                    testType = rep("FFH", length(tables)),
+                    row.names = names(tables)))
 }
 
 #' Function to compute ANOVA statistics between nominal and continuous phenotypes.
@@ -607,6 +622,7 @@ phenotype_ffs <- function(phenotype, phenotypesToCompare){
 phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType, phenotypesToCompareType){
   return(data.frame(cor = rep(NA, length(phenotypesToCompareType)),
                     V = rep(NA, length(phenotypesToCompareType)),
+                    testType = rep(NA, length(phenotypesToCompareType)),
                     row.names = colnames(phenotypesToCompare)))
 }
 
@@ -621,6 +637,7 @@ phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType, pheno
 phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType, phenotypesToCompareType){
   return(data.frame(cor = rep(NA, length(phenotypesToCompareType)),
                     V = rep(NA, length(phenotypesToCompareType)),
+                    testType = rep(NA, length(phenotypesToCompareType)),
                     row.names = colnames(phenotypesToCompare)))
 }
 
@@ -633,10 +650,17 @@ phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType, pheno
 #' and "V" which is set to NA.
 phenotype_cor <- function(phenotype, phenotypesToCompare, method){
   return(data.frame(cor = rep(NA, ncol(phenotypesToCompare)),
-                    V = rep(NA, ncol(phenotypesToCompare))))
+                    testType = rep(NA, ncol(phenotypesToCompare)),
+                    V = rep(NA, ncol(phenotypesToCompare)),
+                    row.names = colnames(phenotypesToCompare)))
 }
 
-#' Function to run phenotype correlations for a pair of dichotomous or nominal phenotypes.
+#' Function to run GSEA for a dichotomous phenotype
+#' @param expression : gene expression matrix (normalized, and filtered) 
+#'                     with rows as genes and columns as samples.
+#'                     Row and column names must be present.
+#'                     Row names must be HGNC symbols.
+#'                     Column names must match the row names of the phenotype matrix.
 #' @param pheno : phenotype matrix
 #'                    with rows as samples and columns as phenotype variables.
 #' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
@@ -666,7 +690,13 @@ gsea_dichotomous <- function(expression, pheno, pathways){
   output_seahorse$cor = cor
   
   # Run GSEA
-  fgseaRes <- fgsea::fgsea(pathways, -1 * log10(cor), minSize=15, maxSize=500, scoreType = "pos")
+  fgseaRes <- NA
+  tryCatch({
+    fgseaRes <- fgsea::fgsea(pathways, -1 * log10(cor), minSize=15, maxSize=500, scoreType = "pos")
+  }, error = function(cond){
+    print(cond)
+  })
+  
   output_seahorse$GSEA = fgseaRes
   
   return(output_seahorse)

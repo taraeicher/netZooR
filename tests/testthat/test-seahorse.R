@@ -51,7 +51,7 @@ test_that("seahorse function works", {
   # Check that phenotype names appear in sub-lists
   expect_true(all(c("sex", "height", "group") %in% names(results$GSEA)))
   expect_true(all(!is.na(results$coexpression)))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$cramerV)))
@@ -59,13 +59,24 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$padj)))
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
-  # Run seahorse where an early variable will trigger FFH test.
-  phenotype_data_2 <- phenotype_data
-  phenotype_data_2$smoke = c(rep("No", 8), rep("Yes", 2))
-  phenotype_data_2$grade = c(rep("A", 5), rep("B", 5))
-  phenotype_data_2 <- phenotype_data_2[,c("smoke", "sex", "height", "group", "grade")]
-  phenotype_dictionary_2 <- c("dichotomous", "dichotomous", "continuous", "nominal", "dichotomous")
-  results <- seahorse(expression_data, phenotype_data_2, phenotype_dictionary_2, pathways)
+  # Run seahorse to test both FFH and Chi-square tests.
+  # We expect that "smoke" will trigger FFH in all except sex because true counts < 5,
+  # "sex" will trigger FFH in "group" because true counts < 5,
+  # "group" will trigger FFH in "rare group" because true counts < 5,
+  # and "group" will trigger FFH in "rare group" because EXPECTED (not true) counts < 5.
+  # and "grade" will trigger FFH in "rare group" because true counts < 5.
+  # All other comparisons should trigger Chi-square tests.
+  phenotype_data_2 <- do.call(rbind, rep(list(phenotype_data), 10))
+  phenotype_data_2$smoke = c(rep("No", 90), rep("Yes", 10))
+  phenotype_data_2$grade = c(rep("A", 50), rep("B", 50))
+  phenotype_data_2$rare_group <- rep("common", 100)
+  phenotype_data_2$rare_group[c(1:12, 14, 18, 19)] <- "rare"
+  phenotype_data_2 <- phenotype_data_2[,c("smoke", "sex", "height", "group", "grade", "rare_group")]
+  phenotype_dictionary_2 <- c("dichotomous", "dichotomous", "continuous", "nominal", "dichotomous", "dichotomous")
+  expression_data_2 = data.frame(matrix(rexp(1000, rate=.1), ncol=100, nrow = 100))
+  rownames(expression_data_2) = paste("gene", 1:100, sep = "")
+  colnames(expression_data_2) = paste("sample", 1:100, sep = "")
+  results <- seahorse(expression_data_2, phenotype_data_2, phenotype_dictionary_2, pathways)
   
   # Verify structure
   expect_type(results, "list")
@@ -73,24 +84,41 @@ test_that("seahorse function works", {
   # Check that results contain expected top-level keys
   expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA") %in% names(results)))
   # Check that phenotype names appear in sub-lists
-  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% names(results$GSEA)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% names(results$GSEA)))
   expect_true(all(!is.na(results$coexpression)))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% rownames(results$phenocor$stat)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% colnames(results$phenocor$stat)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% rownames(results$phenocor$cramerV)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% colnames(results$phenocor$cramerV)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% rownames(results$phenocor$padj)))
-  expect_true(all(c("smoke", "sex", "height", "group", "grade") %in% colnames(results$phenocor$padj)))
-  expect_true(all(!is.na(results$phenocor$stat["smoke", c("sex", "group", "grade")])))
-  expect_true(all(!is.na(results$phenocor$stat["sex", c("group", "grade")])))
-  expect_true(all(!is.na(results$phenocor$stat["group", "grade"])))
-  expect_true(all(!is.na(results$phenocor$padj["smoke", c("sex", "group", "grade")])))
-  expect_true(all(!is.na(results$phenocor$padj["sex", c("group", "grade")])))
-  expect_true(all(!is.na(results$phenocor$padj["group", "grade"])))
-  expect_true(all(is.na(results$phenocor$cramerV["smoke", c("sex", "group", "grade")])))
-  expect_true(all(is.na(results$phenocor$cramerV["sex", c("group", "grade")])))
-  expect_true(all(is.na(results$phenocor$cramerV["group", "grade"])))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% rownames(results$phenocor$stat)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% colnames(results$phenocor$stat)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% rownames(results$phenocor$cramerV)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% colnames(results$phenocor$cramerV)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% rownames(results$phenocor$padj)))
+  expect_true(all(c("smoke", "sex", "height", "group", "grade", "rare_group") %in% colnames(results$phenocor$padj)))
+  # Ensure that statistics are calculated as expected (chi-square and FFH)
+  expect_true(all(!is.na(results$phenocor$stat["smoke", c("sex", "group", "grade", "rare_group")])))
+  expect_true(all(!is.na(results$phenocor$stat["sex", c("group", "grade", "rare_group")])))
+  expect_true(all(!is.na(results$phenocor$stat["group", c("grade", "rare_group")])))
+  expect_true(all(!is.na(results$phenocor$stat["grade", "rare_group"])))
+  expect_true(all(!is.na(results$phenocor$padj["smoke", c("sex", "group", "grade", "rare_group")])))
+  expect_true(all(!is.na(results$phenocor$padj["sex", c("group", "grade", "rare_group")])))
+  expect_true(all(!is.na(results$phenocor$padj["group", c("grade", "rare_group")])))
+  expect_true(all(!is.na(results$phenocor$padj["grade", "rare_group"])))
+  # FFH specifically
+  expect_true(all(is.na(results$phenocor$cramerV["smoke", c("group", "grade", "rare_group")])))
+  expect_true(all(is.na(results$phenocor$cramerV["sex", "group"])))
+  expect_true(all(is.na(results$phenocor$cramerV["group", "rare_group"])))
+  expect_all_equal(results$phenocor$testType["smoke", c("group", "grade", "rare_group")], "FFH")
+  expect_all_equal(results$phenocor$testType["sex", "group"], "FFH")
+  expect_all_equal(results$phenocor$testType["group", "rare_group"], "FFH")
+  expect_all_equal(results$phenocor$testType["grade", "rare_group"], "FFH")
+  # Chi-square specifically
+  expect_true(all(!is.na(results$phenocor$cramerV["smoke", "sex"])))
+  expect_true(all(!is.na(results$phenocor$cramerV["sex", c("grade", "rare_group")])))
+  expect_true(all(!is.na(results$phenocor$cramerV["group", "grade"])))
+  expect_all_equal(results$phenocor$testType["smoke", "sex"], "Chi-square")
+  expect_all_equal(results$phenocor$testType["sex", c("grade", "rare_group")], "Chi-square")
+  expect_all_equal(results$phenocor$testType["group", "grade"], "Chi-square")
+  # Ensure that statistics are calculated as expected (ANOVA)
+  # Ensure that statistics are calculated as expected (correlation)
   
   # Run seahorse without correlation matrix
   results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
@@ -107,7 +135,7 @@ test_that("seahorse function works", {
   expect_equal(results$phenotype_association$height$padj, rep("NA", length(results$phenotype_association$height$padj)))
   expect_equal(results$phenotype_association$group$stat, results$phenotype_association$group$padj)
   expect_true(is.na(results$coexpression))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$cramerV)))
@@ -149,7 +177,7 @@ test_that("seahorse function works", {
   expect_equal(stats::p.adjust(results$phenotype_association$group$stat, method = "bonferroni"), 
                results$phenotype_association$group$padj)
   expect_true(is.na(results$coexpression))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$cramerV)))
@@ -174,7 +202,7 @@ test_that("seahorse function works", {
   expect_equal(stats::p.adjust(results$phenotype_association$group$stat, method = "fdr"), 
                results$phenotype_association$group$padj)
   expect_true(is.na(results$coexpression))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$cramerV)))
@@ -198,7 +226,7 @@ test_that("seahorse function works", {
   expect_equal(results$phenotype_association$group3$stat, results$phenotype_association$group3$padj)
   expect_equal(results$phenotype_association$group2$stat, results$phenotype_association$group2$padj)
   expect_true(is.na(results$coexpression))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$cramerV)))
@@ -226,7 +254,7 @@ test_that("seahorse function works", {
   expect_equal(stats::p.adjust(results$phenotype_association$group2$stat, method = "bonferroni"),
                results$phenotype_association$group2$padj)
   expect_true(is.na(results$coexpression))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$cramerV)))
@@ -253,7 +281,7 @@ test_that("seahorse function works", {
   expect_equal(stats::p.adjust(results$phenotype_association$group2$stat, method = "fdr"),
                results$phenotype_association$group2$padj)
   expect_true(is.na(results$coexpression))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$cramerV)))
@@ -274,7 +302,7 @@ test_that("seahorse function works", {
   # Check that phenotype names appear in sub-lists
   expect_true(all(c("(Intercept)", "X.sexmale", "height.in.inches", "X123group3", "X123group2") %in% names(results$GSEA)))
   expect_true(is.na(results$coexpression))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
   expect_true(all(c("X.sex", "height.in.inches", "X123group") %in% rownames(results$phenocor$stat)))
   expect_true(all(c("X.sex", "height.in.inches", "X123group") %in% colnames(results$phenocor$stat)))
   expect_true(all(c("X.sex", "height.in.inches", "X123group") %in% rownames(results$phenocor$cramerV)))
@@ -293,7 +321,7 @@ test_that("seahorse function works", {
   # Check that phenotype names appear in sub-lists
   expect_true(all(c("X.sex", "height.in.inches", "X123group") %in% names(results$GSEA)))
   expect_true(is.na(results$coexpression))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
   expect_true(all(c("X.sex", "height.in.inches", "X123group") %in% rownames(results$phenocor$stat)))
   expect_true(all(c("X.sex", "height.in.inches", "X123group") %in% colnames(results$phenocor$stat)))
   expect_true(all(c("X.sex", "height.in.inches", "X123group") %in% rownames(results$phenocor$cramerV)))
@@ -318,7 +346,7 @@ test_that("seahorse function works", {
   # Check that phenotype names appear in sub-lists
   expect_true(all(c("(Intercept)", "sexmale", "height", "group3", "group2") %in% names(results$GSEA)))
   expect_true(all(is.na(results$coexpression)))
-  expect_true(all(c("stat", "cramerV", "padj") %in% names(results$phenocor)))
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$stat)))
   expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$cramerV)))
