@@ -32,6 +32,7 @@
 #' counts. Default is TRUE.
 #' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
 #' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
+#' @param usage_report_file Location where the usage report should be stored. Must be RDS format.
 #' Outputs:
 #' @return results    : a list containing three objects
 #'         results$coexpression: a gene x gene Pearson correlation matrix.
@@ -63,7 +64,8 @@
 #' @export
 seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, compute_gene_cor = TRUE,
                      compute_phenotype_cor = TRUE,
-                     assoc_method = "pearson", transform_expression = TRUE, pval_adj_method = "none"){
+                     assoc_method = "pearson", transform_expression = TRUE, pval_adj_method = "none",
+                     usage_report_file = NULL){
   
   # Check packages.
   if (!requireNamespace("fgsea", quietly = TRUE)) {
@@ -75,6 +77,10 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   if (!requireNamespace("matrixTests", quietly = TRUE)) {
     stop("Package 'matrixTests' is required but not installed.")
   }
+  if (!requireNamespace("peakRAM", quietly = TRUE) && !is.null(usage_report_file)) {
+    stop(paste("Package 'peakRAM' is required to monitor memory and time usage.",
+               "Install it or set usage_report_file = NULL to turn off monitoring."))
+  }
   set.seed(0)
   
   # Return an error if pval_adj_method is not an accepted method.
@@ -83,6 +89,13 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   }
   
   # Check that association method is valid.
+  if(!assoc_method %in% c("pearson", "spearman", "kendall", "linear")){
+    stop(paste(assoc_method, "is an invalid association method!"))
+  }else if (assoc_method == "linear" && !requireNamespace("limma", quietly = TRUE)) {
+    stop("Package 'limma' is required for linear regression. Install it with BiocManager::install('limma')")
+  }
+  
+  # Check that file is valid.
   if(!assoc_method %in% c("pearson", "spearman", "kendall", "linear")){
     stop(paste(assoc_method, "is an invalid association method!"))
   }else if (assoc_method == "linear" && !requireNamespace("limma", quietly = TRUE)) {
@@ -118,38 +131,96 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
     }
   }
   
+  # Check that usage report file can be created.
+  if(!is.null(usage_report_file)){
+    tryCatch({
+      saveRDS(list(1,2,3), usage_report_file)
+      unlink(usage_report_file)
+    }, error = function(cond){
+      stop(paste(usage_report_file, "could not be created."))
+    })
+    
+  }
+
   # Compute coexpression of genes
+  usageGeneGene <- NA
   results$coexpression <- NA
-  if(compute_gene_cor == TRUE){
-    results$coexpression = cor(t(expression), use="pairwise.complete.obs")
+  if(is.null(usage_report_file)){
+    if(compute_gene_cor == TRUE){
+      results$coexpression = cor(t(expression), use="pairwise.complete.obs")
+    }
+  }else{
+    if(compute_gene_cor == TRUE){
+      usageGeneGene <- peakRAM({
+        results$coexpression = cor(t(expression), use="pairwise.complete.obs") 
+      })
+    }
   }
   
   # Compute coexpression of phenotypes
+  usagePhenPhen <- NA
   results$phenocor <- NA
-  if(compute_phenotype_cor == TRUE){
-    results$phenocor = computePhenotypeCorrelations(phenotype = phenotype,
-                                                    phenotype_dictionary = phenotype_dictionary,
-                                                    method = assoc_method, pval_adj_method = pval_adj_method)
+  if(is.null(usage_report_file)){
+    if(compute_phenotype_cor == TRUE){
+      results$phenocor = computePhenotypeCorrelations(phenotype = phenotype,
+                                                      phenotype_dictionary = phenotype_dictionary,
+                                                      method = assoc_method, pval_adj_method = pval_adj_method)
+    }
+  }else{
+    if(compute_phenotype_cor == TRUE){
+      usagePhenPhen <- peakRAM({
+        results$phenocor = computePhenotypeCorrelations(phenotype = phenotype,
+                                                        phenotype_dictionary = phenotype_dictionary,
+                                                        method = assoc_method, pval_adj_method = pval_adj_method)
+      })
+    } 
   }
   
   # Compute association of gene expression with phenotypes and run GSEA
+  usagePhenGene <- NA
   results$phenotype_association = list()
   results$GSEA = list()
-  
-  if(assoc_method %in% c("pearson", "spearman", "kendall")){
-    corr <- computeCorrelations(expression = expression, phenotype = phenotype,
-                                   pathways = pathways, phenotype_dictionary = phenotype_dictionary,
-                                   method = assoc_method, pval_adj_method = pval_adj_method)
-    results$phenotype_association <- corr$pheno
-    results$GSEA <- corr$gsea
+  if(is.null(usage_report_file)){
+    if(assoc_method %in% c("pearson", "spearman", "kendall")){
+      corr <- computeCorrelations(expression = expression, phenotype = phenotype,
+                                  pathways = pathways, phenotype_dictionary = phenotype_dictionary,
+                                  method = assoc_method, pval_adj_method = pval_adj_method)
+      results$phenotype_association <- corr$pheno
+      results$GSEA <- corr$gsea
+    }else{
+      linReg <- computeLinearRegression(expression = expression, phenotype = phenotype,
+                                        pathways = pathways, phenotype_dictionary = phenotype_dictionary,
+                                        transform_expression = transform_expression,
+                                        pval_adj_method = pval_adj_method)
+      results$phenotype_association <- linReg$pheno
+      results$GSEA <- linReg$gsea
+    }
   }else{
-    linReg <- computeLinearRegression(expression = expression, phenotype = phenotype,
-                                       pathways = pathways, phenotype_dictionary = phenotype_dictionary,
-                                       transform_expression = transform_expression,
-                                      pval_adj_method = pval_adj_method)
-    results$phenotype_association <- linReg$pheno
-    results$GSEA <- linReg$gsea
+    usagePhenGene <- peakRAM({
+      if(assoc_method %in% c("pearson", "spearman", "kendall")){
+        corr <- computeCorrelations(expression = expression, phenotype = phenotype,
+                                    pathways = pathways, phenotype_dictionary = phenotype_dictionary,
+                                    method = assoc_method, pval_adj_method = pval_adj_method)
+        results$phenotype_association <- corr$pheno
+        results$GSEA <- corr$gsea
+      }else{
+        linReg <- computeLinearRegression(expression = expression, phenotype = phenotype,
+                                          pathways = pathways, phenotype_dictionary = phenotype_dictionary,
+                                          transform_expression = transform_expression,
+                                          pval_adj_method = pval_adj_method)
+        results$phenotype_association <- linReg$pheno
+        results$GSEA <- linReg$gsea
+      }
+    })
   }
+  
+  # Save the results to a usage file.
+  if(!is.null(usage_report_file)){
+    saveRDS(list(GeneToGeneCor = usageGeneGene, PhenToPhenCor = usagePhenPhen,
+                 PhenToGeneCor = usagePhenGene), usage_report_file)
+  }
+  
+  # Return the results.
   return(results)
 }
 

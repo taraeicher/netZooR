@@ -100,7 +100,8 @@ Suggests:
     RColorBrewer,
     quantro,
     fgsea,
-    rhdf5
+    rhdf5,
+    peakRAM
 Remotes: jnpaulson/pandaR
 VignetteBuilder: knitr
 BugReports: https://github.com/netZoo/netZooR/issues
