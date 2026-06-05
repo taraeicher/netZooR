@@ -28,7 +28,9 @@ seahorse(
 with rows as genes and columns as samples.
 Row and column names must be present.
 Row names must be HGNC symbols.
-Column names must match the row names of the phenotype matrix.}
+Column names must match the row names of the phenotype matrix.
+We assume the data are adequately transformed for use with limma()
+(i.e. log-scaled and/or transformed using VOOM or DeSeq2).}
 
 \item{phenotype}{: phenotype matrix
 with rows as samples and columns as phenotype variables.}

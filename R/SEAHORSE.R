@@ -12,6 +12,8 @@
 #'                     Row and column names must be present.
 #'                     Row names must be HGNC symbols.
 #'                     Column names must match the row names of the phenotype matrix.
+#'                     We assume the data are adequately transformed for use with limma()
+#'                     (i.e. log-scaled and/or transformed using VOOM or DeSeq2).
 #' @param phenotype : phenotype matrix
 #'                    with rows as samples and columns as phenotype variables.
 #' @param phenotype_dictionary : a vector of strings
@@ -77,6 +79,8 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   if (!requireNamespace("peakRAM", quietly = TRUE) && !is.null(usage_report_file)) {
     stop(paste("Package 'peakRAM' is required to monitor memory and time usage.",
                "Install it or set usage_report_file = NULL to turn off monitoring."))
+  if (!requireNamespace("limma", quietly = TRUE)) {
+    stop("Package 'limma' is required but not installed.")
   }
   set.seed(0)
   
@@ -312,6 +316,7 @@ computeLinearRegression <- function(expression, phenotype, phenotype_dictionary,
 #' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
 computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pathways, method,
                                 pval_adj_method){
+  
   phenoAssoc <- list()
   gsea <- list()
   for (i in 1:ncol(phenotype)){
@@ -379,6 +384,7 @@ gsea_continuous <- function(expression, pheno, pathways, method){
 #'                    with rows as samples and columns as phenotype variables.
 #' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
+#'                   
 #' @export
 gsea_nominal <- function(expression, pheno, pathways){
 
@@ -729,7 +735,7 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType, pheno
   corResLess <- phenotype_ffs(allPhenoPairTables[which(isBelowCutoff == TRUE)])
   
   # Do a chi-square test everywhere else.
-  # Run the comparisons one at a time because FFH is not implemented in matrixTests.
+  # Run the comparisons one at a time because FFH cannot be scaled.
   notLessTables <- allPhenoPairTables[which(isBelowCutoff == FALSE)]
   chisqRes <- lapply(notLessTables, function(chisqTable) {
     
@@ -784,7 +790,7 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType, pheno
 #' and "V" which lists the Cramer's V statistics (NA)
 phenotype_ffs <- function(tables){
   
-  # Run the comparisons one at a time because FFH is not implemented in matrixTests.
+  # Run the comparisons one at a time because FFH cannot be scaled.
   pvals <- unlist(lapply(tables, function(fishTable) {
     fishP <- fisher.test(fishTable, simulate.p.value = TRUE, B = 10000)$p.value
     return(fishP)

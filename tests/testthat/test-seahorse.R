@@ -3,6 +3,8 @@ context("test SEAHORSE result")
 test_that("seahorse function works", {
   skip_if_not_installed("fgsea")
   skip_if_not_installed("matrixTests")
+  skip_if_not_installed("stats")
+  skip_if_not_installed("limma")
   set.seed(42)
   # Simulate expression data
   expression_data = data.frame(matrix(rexp(1000, rate=.1), ncol=10, nrow = 100))
