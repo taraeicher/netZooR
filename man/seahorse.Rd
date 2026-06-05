@@ -19,7 +19,6 @@ seahorse(
   compute_gene_cor = TRUE,
   compute_phenotype_cor = TRUE,
   assoc_method = "pearson",
-  transform_expression = TRUE,
   pval_adj_method = "none",
   usage_report_file = NULL
 )
@@ -51,10 +50,6 @@ compute correlations between each phenotype and gene independently for numeric p
 compute an ANOVA for categorical phenotypes. linear" computes a linear regression
 model of the form gene ~ phenotype1 + phenotype2 + ... + phenotypeN and returns the p-values
 for each coefficient.}
-
-\item{transform_expression}{: Whether or not to transform gene expression data into logCPM.
-This parameter is only used for the "linear" association method. Use if your data are raw RNA-seq
-counts. Default is TRUE.}
 
 \item{pval_adj_method}{Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
 "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".}

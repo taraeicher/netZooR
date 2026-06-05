@@ -11,7 +11,6 @@ computeLinearRegression(
   phenotype,
   phenotype_dictionary,
   pathways,
-  transform_expression,
   pval_adj_method
 )
 }
@@ -31,8 +30,6 @@ Types can be either "numeric" or "categorical"}
 
 \item{pathways}{: a list of pathways (e.g. KEGG, GO, Reactome etc. 
 downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
-
-\item{transform_expression}{: Whether or not to transform gene expression data into logCPM.}
 
 \item{pval_adj_method}{Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
 "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
