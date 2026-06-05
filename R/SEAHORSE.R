@@ -12,6 +12,8 @@
 #'                     Row and column names must be present.
 #'                     Row names must be HGNC symbols.
 #'                     Column names must match the row names of the phenotype matrix.
+#'                     We assume the data are adequately transformed for use with limma()
+#'                     (i.e. log-scaled and/or transformed using VOOM or DeSeq2).
 #' @param phenotype : phenotype matrix
 #'                    with rows as samples and columns as phenotype variables.
 #' @param phenotype_dictionary : a vector of strings
@@ -27,9 +29,6 @@
 #' compute an ANOVA for categorical phenotypes. linear" computes a linear regression
 #' model of the form gene ~ phenotype1 + phenotype2 + ... + phenotypeN and returns the p-values
 #' for each coefficient.
-#' @param transform_expression : Whether or not to transform gene expression data into logCPM.
-#' This parameter is only used for the "linear" association method. Use if your data are raw RNA-seq
-#' counts. Default is TRUE.
 #' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
 #' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
 #' Outputs:
@@ -63,7 +62,7 @@
 #' @export
 seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, compute_gene_cor = TRUE,
                      compute_phenotype_cor = TRUE,
-                     assoc_method = "pearson", transform_expression = TRUE, pval_adj_method = "none"){
+                     assoc_method = "pearson", pval_adj_method = "none"){
   
   # Check packages.
   if (!requireNamespace("fgsea", quietly = TRUE)) {
@@ -74,6 +73,9 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   }
   if (!requireNamespace("matrixTests", quietly = TRUE)) {
     stop("Package 'matrixTests' is required but not installed.")
+  }
+  if (!requireNamespace("limma", quietly = TRUE)) {
+    stop("Package 'limma' is required but not installed.")
   }
   set.seed(0)
   
@@ -145,7 +147,6 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   }else{
     linReg <- computeLinearRegression(expression = expression, phenotype = phenotype,
                                        pathways = pathways, phenotype_dictionary = phenotype_dictionary,
-                                       transform_expression = transform_expression,
                                       pval_adj_method = pval_adj_method)
     results$phenotype_association <- linReg$pheno
     results$GSEA <- linReg$gsea
@@ -168,13 +169,12 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
 #'                               Types can be either "numeric" or "categorical" 
 #' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
-#' @param transform_expression : Whether or not to transform gene expression data into logCPM.
 #' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
 #' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
 #' This parameter is only used for the "linear" association method. Use if your data are raw RNA-seq
 #' counts. Default is TRUE.
 computeLinearRegression <- function(expression, phenotype, phenotype_dictionary, pathways,
-                                    transform_expression, pval_adj_method){
+                                    pval_adj_method){
   
   # Initialize output.
   phenoAssoc <- list
@@ -193,11 +193,6 @@ computeLinearRegression <- function(expression, phenotype, phenotype_dictionary,
     expressionSampsNew <- ncol(expression)
     message(paste("Out of", expressionSampsOld, "we retained", expressionSampsNew,
                   "samples."))
-  }
-
-  # Transform the gene expression data using voom.
-  if(transform_expression == TRUE){
-    expression <- limma::voom(counts = expression, design = design)
   }
 
   # Run the linear models.
@@ -252,6 +247,7 @@ computeLinearRegression <- function(expression, phenotype, phenotype_dictionary,
 #' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
 computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pathways, method,
                                 pval_adj_method){
+  
   phenoAssoc <- list()
   gsea <- list()
   for (i in 1:ncol(phenotype)){
@@ -295,12 +291,13 @@ gsea_continuous <- function(expression, pheno, pathways, method){
   output_seahorse$GSEA = list()
   
   phenotype_vector = as.numeric(pheno)
-  cor = unlist(apply(expression, MARGIN=1, function(x){cor(as.numeric(x), phenotype_vector, use="pairwise.complete.obs",
-                                                           method = method)}))
-  output_seahorse$cor = cor
+  cors <- cor(t(expression), phenotype_vector, use = "pairwise.complete.obs", method = method)
+  cors <- as.numeric(cors)
+  names(cors) <- rownames(expression)
+  output_seahorse$cor = cors
   
   # Run GSEA
-  cor_rank = sort(cor, decreasing = T)
+  cor_rank = sort(output_seahorse$cor, decreasing = TRUE)
   fgseaRes <- fgsea::fgsea(pathways, cor_rank, minSize=15, maxSize=500)
   output_seahorse$GSEA = fgseaRes
   
@@ -317,6 +314,7 @@ gsea_continuous <- function(expression, pheno, pathways, method){
 #'                    with rows as samples and columns as phenotype variables.
 #' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
+#'                   
 #' @export
 gsea_nominal <- function(expression, pheno, pathways){
 
@@ -324,12 +322,25 @@ gsea_nominal <- function(expression, pheno, pathways){
   output_seahorse$cor = list()
   output_seahorse$GSEA = list()
   
+  # Run the linear models.
   phenotype_vector = factor(as.character(pheno))
-  cor = unlist(apply(expression, MARGIN=1, function(x){anova(lm(as.numeric(x)~phenotype_vector))$`Pr(>F)`[1]}))
-  output_seahorse$cor = cor
+  design <- model.matrix(~ phenotype_vector)
+  fit <- limma::lmFit(object = expression, design = design)
+  
+  # Compute empirical Bayes statistics.
+  bayes <- limma::eBayes(fit = fit)
+  
+  coef_to_test <- setdiff(colnames(design), "(Intercept)")
+  anova_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
+  
+  # Format p-values as a list for all covariates.
+  p <- anova_res[,"P.Value"]
+  output_seahorse$cor <- p
+  names(output_seahorse$cor) <- rownames(anova_res)
   
   # Run GSEA
-  fgseaRes <- fgsea::fgsea(pathways, -1 * log10(cor), minSize=15, maxSize=500, scoreType = "pos")
+  statSorted <- sort(-1 * log10(output_seahorse$cor), decreasing = TRUE)
+  fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500, scoreType = "pos")
   output_seahorse$GSEA = fgseaRes
   
   return(output_seahorse)
@@ -352,19 +363,29 @@ gsea_dichotomous <- function(expression, pheno, pathways){
   output_seahorse$cor = list()
   output_seahorse$GSEA = list()
   
+  # Run the linear models.
   phenotype_vector = factor(as.character(pheno))
-  phenotypes <- unique(phenotype_vector)
-  group1 <- expression[,which(phenotype_vector == phenotypes[1])]
-  group2 <- expression[,which(phenotype_vector == phenotypes[2])]
-  tres <- matrixTests::row_t_welch(group1, group2)
-  cor = tres$pvalue
-  names(cor) <- rownames(tres)
-  output_seahorse$cor = cor
+  design <- model.matrix(~ phenotype_vector)
+  fit <- limma::lmFit(object = expression, design = design)
+  
+  # Compute empirical Bayes statistics.
+  bayes <- limma::eBayes(fit = fit)
+  
+  coef_to_test <- setdiff(colnames(design), "(Intercept)")
+  t_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
+  
+  # Format p-values as a list for all covariates.
+  p <- t_res[,"P.Value"]
+  t <- t_res[,"t"]
+  output_seahorse$cor <- p
+  names(output_seahorse$cor) <- rownames(t_res)
+  names(t) <- rownames(t_res)
   
   # Run GSEA
   fgseaRes <- NA
   tryCatch({
-    fgseaRes <- fgsea::fgsea(pathways, -1 * log10(cor), minSize=15, maxSize=500, scoreType = "pos")
+    statSorted <- sort(t, decreasing = TRUE)
+    fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500)
   }, error = function(cond){
     print(cond)
   })
@@ -644,7 +665,7 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType, pheno
   corResLess <- phenotype_ffs(allPhenoPairTables[which(isBelowCutoff == TRUE)])
   
   # Do a chi-square test everywhere else.
-  # Run the comparisons one at a time because FFH is not implemented in matrixTests.
+  # Run the comparisons one at a time because FFH cannot be scaled.
   notLessTables <- allPhenoPairTables[which(isBelowCutoff == FALSE)]
   chisqRes <- lapply(notLessTables, function(chisqTable) {
     
@@ -699,7 +720,7 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType, pheno
 #' and "V" which lists the Cramer's V statistics (NA)
 phenotype_ffs <- function(tables){
   
-  # Run the comparisons one at a time because FFH is not implemented in matrixTests.
+  # Run the comparisons one at a time because FFH cannot be scaled.
   pvals <- unlist(lapply(tables, function(fishTable) {
     fishP <- fisher.test(fishTable, simulate.p.value = TRUE, B = 10000)$p.value
     return(fishP)
