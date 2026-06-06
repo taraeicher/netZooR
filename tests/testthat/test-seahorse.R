@@ -485,4 +485,55 @@ test_that("seahorse function works", {
   # Check that phenotype names appear in sub-lists
   expect_true(all(c("(Intercept)", "sexmale", "height", "group3", "group2") %in% names(results$GSEA)))
   expect_true(all(!is.na(results$coexpression)))
+  
+  # Run SEAHORSE and save usage file (all).
+  skip_if_not_installed("peakRAM")
+  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
+                      usage_report_file = "usage_file.RDS")
+  usage <- readRDS("usage_file.RDS")
+  expect_true(all(c("GeneToGeneCor", "PhenToPhenCor", "PhenToGeneCor") %in% names(usage)))
+  expect_true(length(colnames(usage$GeneToGeneCor)) == 4)
+  expect_true(length(colnames(usage$PhenToPhenCor)) == 4)
+  expect_true(length(colnames(usage$PhenToGeneCor)) == 4)
+  unlink("usage_file.RDS")
+  
+  # Input invalid usage file.
+  expect_error(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
+                      usage_report_file = "/some_nonexistent_dir/usage_file.RDS"),
+               "/some_nonexistent_dir/usage_file.RDS could not be created.")
+  
+  # Save usage file (all but gene-gene)
+  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = FALSE, compute_phenotype_cor = TRUE, assoc_method = "linear",
+                      usage_report_file = "usage_file.RDS")
+  usage <- readRDS("usage_file.RDS")
+  expect_true(all(c("GeneToGeneCor", "PhenToPhenCor", "PhenToGeneCor") %in% names(usage)))
+  expect_true(is.na(usage$GeneToGeneCor))
+  expect_true(length(colnames(usage$PhenToPhenCor)) == 4)
+  expect_true(length(colnames(usage$PhenToGeneCor)) == 4)
+  unlink("usage_file.RDS")
+  
+  # Save usage file (all but phenotype-phenotype)
+  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = TRUE, compute_phenotype_cor = FALSE, assoc_method = "linear",
+                      usage_report_file = "usage_file.RDS")
+  usage <- readRDS("usage_file.RDS")
+  expect_true(all(c("GeneToGeneCor", "PhenToPhenCor", "PhenToGeneCor") %in% names(usage)))
+  expect_true(is.na(usage$PhenToPhenCor))
+  expect_true(length(colnames(usage$GeneToGeneCor)) == 4)
+  expect_true(length(colnames(usage$PhenToGeneCor)) == 4)
+  unlink("usage_file.RDS")
+  
+  # Save usage file (only phenotype-genotype)
+  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = FALSE, compute_phenotype_cor = FALSE, assoc_method = "linear",
+                      usage_report_file = "usage_file.RDS")
+  usage <- readRDS("usage_file.RDS")
+  expect_true(all(c("GeneToGeneCor", "PhenToPhenCor", "PhenToGeneCor") %in% names(usage)))
+  expect_true(is.na(usage$PhenToPhenCor))
+  expect_true(is.na(usage$GeneToGeneCor))
+  expect_true(length(colnames(usage$PhenToGeneCor)) == 4)
+  unlink("usage_file.RDS")
 })

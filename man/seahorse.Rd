@@ -19,7 +19,8 @@ seahorse(
   compute_gene_cor = TRUE,
   compute_phenotype_cor = TRUE,
   assoc_method = "pearson",
-  pval_adj_method = "none"
+  pval_adj_method = "none",
+  usage_report_file = NULL
 )
 }
 \arguments{
@@ -53,7 +54,9 @@ model of the form gene ~ phenotype1 + phenotype2 + ... + phenotypeN and returns 
 for each coefficient.}
 
 \item{pval_adj_method}{Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
-"holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
+"holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".}
+
+\item{usage_report_file}{Location where the usage report should be stored. Must be RDS format.
 Outputs:}
 }
 \value{

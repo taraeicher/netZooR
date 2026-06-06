@@ -12,9 +12,6 @@ phenotype_anova(phenotype, phenotypesToCompare, phenotypeType)
 \item{phenotypesToCompare}{A data frame containing all phenotypes against which to run associations.}
 
 \item{phenotypeType}{Whether the phenotype is nominal or continuous.}
-
-\item{phenotypesToCompareType}{A vector of types (nominal, continuous) corresponding to all
-phenotypes against which to compare.}
 }
 \value{
 A data frame with two vectors: "cor", which lists the ANOVA p-values, 
