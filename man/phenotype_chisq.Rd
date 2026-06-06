@@ -6,21 +6,14 @@
 If at least 5 samples exist in each group, run a Chi-square test and compute Cramer's V.
 Otherwise, run a Fisher-Freeman-Halton Test.}
 \usage{
-phenotype_chisq(
-  phenotype,
-  phenotypesToCompare,
-  phenotypeType,
-  phenotypesToCompareType
-)
+phenotype_chisq(phenotype, phenotypesToCompare, phenotypeType)
 }
 \arguments{
 \item{phenotype}{The phenotype vector to test.}
 
 \item{phenotypesToCompare}{A data frame containing all phenotypes against which to run associations.}
 
-\item{phenotypeType}{Whether the phenotype is dichotomous or nominal.}
-
-\item{phenotypesToCompareType}{A vector of types (dichotomous, nominal) corresponding to all
+\item{phenotypeType}{Whether the phenotype is dichotomous or nominal.
 phenotypes against which to compare.}
 }
 \value{

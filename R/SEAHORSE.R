@@ -79,6 +79,7 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   if (!requireNamespace("peakRAM", quietly = TRUE) && !is.null(usage_report_file)) {
     stop(paste("Package 'peakRAM' is required to monitor memory and time usage.",
                "Install it or set usage_report_file = NULL to turn off monitoring."))
+  }
   if (!requireNamespace("limma", quietly = TRUE)) {
     stop("Package 'limma' is required but not installed.")
   }
@@ -152,7 +153,7 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
     }
   }else{
     if(compute_gene_cor == TRUE){
-      usageGeneGene <- peakRAM({
+      usageGeneGene <- peakRAM::peakRAM({
         results$coexpression = cor(t(expression), use="pairwise.complete.obs") 
       })
     }
@@ -169,7 +170,7 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
     }
   }else{
     if(compute_phenotype_cor == TRUE){
-      usagePhenPhen <- peakRAM({
+      usagePhenPhen <- peakRAM::peakRAM({
         results$phenocor = computePhenotypeCorrelations(phenotype = phenotype,
                                                         phenotype_dictionary = phenotype_dictionary,
                                                         method = assoc_method, pval_adj_method = pval_adj_method)
@@ -196,7 +197,7 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
       results$GSEA <- linReg$gsea
     }
   }else{
-    usagePhenGene <- peakRAM({
+    usagePhenGene <- peakRAM::peakRAM({
       if(assoc_method %in% c("pearson", "spearman", "kendall")){
         corr <- computeCorrelations(expression = expression, phenotype = phenotype,
                                     pathways = pathways, phenotype_dictionary = phenotype_dictionary,
@@ -525,8 +526,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
       if(ncol(phenoCat) > 0){
         output_seahorse_cat <- phenotype_chisq(phenotype = pheno, 
                                                phenotypesToCompare = phenoCat, 
-                                               phenotypeType = phenoType, 
-                                               phenotypesToCompareType = typesAfter[whichCat])
+                                               phenotypeType = phenoType)
         output_seahorse_padj_cat <- rep(NA, nrow(output_seahorse_cat))
         output_seahorse_padj_cat[which(output_seahorse_cat$testType == "FFH")] <- 
           stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "FFH"), "cor"], method = pval_adj_method)
@@ -567,8 +567,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
       if(ncol(phenoCat) > 0){
         output_seahorse_cat <- phenotype_chisq(phenotype = pheno, 
                                                     phenotypesToCompare = phenoCat, 
-                                                    phenotypeType = phenoType, 
-                                                    phenotypesToCompareType = typesAfter[whichCat])
+                                                    phenotypeType = phenoType)
         output_seahorse_padj_cat <- rep(NA, nrow(output_seahorse_cat))
         output_seahorse_padj_cat[which(output_seahorse_cat$testType == "FFH")] <- 
           stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "FFH"), "cor"], method = pval_adj_method)
@@ -700,11 +699,10 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
 #' @param phenotype The phenotype vector to test.
 #' @param phenotypesToCompare A data frame containing all phenotypes against which to run associations.
 #' @param phenotypeType Whether the phenotype is dichotomous or nominal.
-#' @param phenotypesToCompareType A vector of types (dichotomous, nominal) corresponding to all
 #' phenotypes against which to compare.
 #' @returns A data frame with two vectors: "cor", which lists the Chi-square or Fisher-Freeman-Halton Test p-values, 
 #' and "V" which lists the Cramer's V statistics (will be NA if Fisher-Freeman-Halton Test is computed)
-phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType, phenotypesToCompareType){
+phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType){
   
   # Generate the tables for all phenotype pairs.
   allPhenoPairTables <- lapply(phenotypesToCompare, function(phen){
@@ -807,8 +805,6 @@ phenotype_ffs <- function(tables){
 #' @param phenotype The phenotype vector to test.
 #' @param phenotypesToCompare A data frame containing all phenotypes against which to run associations.
 #' @param phenotypeType Whether the phenotype is nominal or continuous.
-#' @param phenotypesToCompareType A vector of types (nominal, continuous) corresponding to all
-#' phenotypes against which to compare.
 #' @returns A data frame with two vectors: "cor", which lists the ANOVA p-values, 
 #' and "V" which is set to NA.
 phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
@@ -837,8 +833,6 @@ phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
 #' @param phenotype The phenotype vector to test.
 #' @param phenotypesToCompare A data frame containing all phenotypes against which to run associations.
 #' @param phenotypeType Whether the phenotype is dichotomous or continuous.
-#' @param phenotypesToCompareType A vector of types (dichotomous, continuous) corresponding to all
-#' phenotypes against which to compare.
 #' @returns A data frame with two vectors: "cor", which lists the t-test p-values, 
 #' and "V" which is set to NA.
 phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
