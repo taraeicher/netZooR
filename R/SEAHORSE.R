@@ -32,6 +32,7 @@
 #' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
 #' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
 #' @param usage_report_file Location where the usage report should be stored. Must be RDS format.
+#' @param verbose Whether or not to print statements notifying user of run status.
 #' Outputs:
 #' @return results    : a list containing three objects
 #'         results$coexpression: a gene x gene correlation matrix.
@@ -64,7 +65,7 @@
 seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, compute_gene_cor = TRUE,
                      compute_phenotype_cor = TRUE,
                      assoc_method = "spearman", pval_adj_method = "none",
-                     usage_report_file = NULL){
+                     usage_report_file = NULL, verbose = FALSE){
   
   # Check packages.
   if (!requireNamespace("fgsea", quietly = TRUE)) {
@@ -149,12 +150,24 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   results$coexpression <- NA
   if(is.null(usage_report_file)){
     if(compute_gene_cor == TRUE){
+      if(verbose == TRUE){
+        print("Running gene co-expression")
+      }
       results$coexpression = cor(t(expression), use="pairwise.complete.obs")
+      if(verbose == TRUE){
+        print("Gene co-expression complete")
+      }
     }
   }else{
     if(compute_gene_cor == TRUE){
       usageGeneGene <- peakRAM::peakRAM({
-        results$coexpression = cor(t(expression), use="pairwise.complete.obs") 
+        if(verbose == TRUE){
+          print("Running gene co-expression")
+        }
+        results$coexpression = cor(t(expression), use="pairwise.complete.obs")
+        if(verbose == TRUE){
+          print("Gene co-expression complete")
+        }
       })
     }
   }
@@ -164,21 +177,36 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   results$phenocor <- NA
   if(is.null(usage_report_file)){
     if(compute_phenotype_cor == TRUE){
+      if(verbose == TRUE){
+        print("Running phenotype associations")
+      }
       results$phenocor = computePhenotypeCorrelations(phenotype = phenotype,
                                                       phenotype_dictionary = phenotype_dictionary,
                                                       method = assoc_method, pval_adj_method = pval_adj_method)
+      if(verbose == TRUE){
+        print("Phenotype associations complete")
+      }
     }
   }else{
     if(compute_phenotype_cor == TRUE){
       usagePhenPhen <- peakRAM::peakRAM({
+        if(verbose == TRUE){
+          print("Running phenotype associations")
+        }
         results$phenocor = computePhenotypeCorrelations(phenotype = phenotype,
                                                         phenotype_dictionary = phenotype_dictionary,
                                                         method = assoc_method, pval_adj_method = pval_adj_method)
+        if(verbose == TRUE){
+          print("Phenotype associations complete")
+        }
       })
     } 
   }
   
   # Compute association of gene expression with phenotypes and run GSEA
+  if(verbose == TRUE){
+    print("Running gene-phenotype associations")
+  }
   usagePhenGene <- NA
   results$phenotype_association = list()
   results$GSEA = list()
@@ -212,6 +240,9 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
         results$GSEA <- linReg$gsea
       }
     })
+  }
+  if(verbose == TRUE){
+    print("Gene-phenotype associations complete")
   }
   
   # Save the results to a usage file.
@@ -545,6 +576,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
         output_seahorse_con <- phenotype_ttest(phenotype = pheno, 
                                               phenotypesToCompare = phenoCon, 
                                               phenotypeType = phenoType)
+        str(output_seahorse_con)
         output_seahorse_padj_con <- stats::p.adjust(output_seahorse_con$cor, method = pval_adj_method)
       }
       
@@ -586,6 +618,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
         output_seahorse_con <- phenotype_anova(phenotype = pheno, 
                                               phenotypesToCompare = phenoCon, 
                                               phenotypeType = phenoType)
+        str(output_seahorse_con)
         output_seahorse_padj_con <- stats::p.adjust(output_seahorse_con$cor, method = pval_adj_method)
       }
       
@@ -792,11 +825,27 @@ phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
   # Case 2 - the phenotype is numeric and the phenotypes to compare are nominal.
   if(phenotypeType == "nominal"){
     phenotype_vector = factor(as.character(phenotype))
-    cor <- unlist(apply(phenotypesToCompare, MARGIN=2, function(x){anova(lm(as.numeric(as.character(x))~phenotype_vector))$`Pr(>F)`[1]}))
+    cor <- unlist(apply(phenotypesToCompare, MARGIN=2, function(x){
+      results <- NA
+      names(results) <- colnames(phenotype_vector)
+      tryCatch({
+        results <- anova(lm(as.numeric(as.character(x))~phenotype_vector))$`Pr(>F)`[1]
+      }, error = function(cond){
+        warning("In this phenotype pair, all continuous values are missing for one phenotype level - NA result will be returned")
+      })
+      return(results)
+    }))
   }else{
     cor <- unlist(lapply(1:ncol(phenotypesToCompare), function(i){
+      results <- NA
+      names(results) <- colnames(phenotype_vector)
       phenotype_vector <- factor(as.character(phenotypesToCompare[,i]))
-      return(anova(lm(as.numeric(as.character(phenotype))~phenotype_vector))$`Pr(>F)`[1])
+      tryCatch({
+        results <- anova(lm(as.numeric(as.character(phenotype))~phenotype_vector))$`Pr(>F)`[1]
+      }, error = function(cond){
+        warning("In this phenotype pair, all continuous values are missing for one phenotype level - NA result will be returned")
+      })
+      return(results)
     }))
   }
     

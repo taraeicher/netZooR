@@ -20,7 +20,8 @@ seahorse(
   compute_phenotype_cor = TRUE,
   assoc_method = "spearman",
   pval_adj_method = "none",
-  usage_report_file = NULL
+  usage_report_file = NULL,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -56,7 +57,9 @@ for each coefficient.}
 \item{pval_adj_method}{Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
 "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".}
 
-\item{usage_report_file}{Location where the usage report should be stored. Must be RDS format.
+\item{usage_report_file}{Location where the usage report should be stored. Must be RDS format.}
+
+\item{verbose}{Whether or not to print statements notifying user of run status.
 Outputs:}
 }
 \value{
