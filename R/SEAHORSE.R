@@ -827,7 +827,6 @@ phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
     phenotype_vector = factor(as.character(phenotype))
     cor <- unlist(apply(phenotypesToCompare, MARGIN=2, function(x){
       results <- NA
-      names(results) <- colnames(phenotype_vector)
       tryCatch({
         results <- anova(lm(as.numeric(as.character(x))~phenotype_vector))$`Pr(>F)`[1]
       }, error = function(cond){
@@ -838,7 +837,6 @@ phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
   }else{
     cor <- unlist(lapply(1:ncol(phenotypesToCompare), function(i){
       results <- NA
-      names(results) <- colnames(phenotype_vector)
       phenotype_vector <- factor(as.character(phenotypesToCompare[,i]))
       tryCatch({
         results <- anova(lm(as.numeric(as.character(phenotype))~phenotype_vector))$`Pr(>F)`[1]
