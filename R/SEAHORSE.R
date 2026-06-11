@@ -476,32 +476,40 @@ gsea_dichotomous <- function(expression, pheno, pathways){
   hasVal <- which(!is.na(phenotype_vector))
   phenotype_vector <- phenotype_vector[hasVal]
   expression <- expression[,hasVal]
-  design <- model.matrix(~ phenotype_vector)
-  fit <- limma::lmFit(object = expression, design = design)
   
-  # Compute empirical Bayes statistics.
-  bayes <- limma::eBayes(fit = fit)
-  
-  coef_to_test <- setdiff(colnames(design), "(Intercept)")
-  t_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
-  
-  # Format p-values as a list for all covariates.
-  p <- t_res[,"P.Value"]
-  t <- t_res[,"t"]
-  output_seahorse$cor <- p
-  names(output_seahorse$cor) <- rownames(t_res)
-  names(t) <- rownames(t_res)
-  
-  # Run GSEA
-  fgseaRes <- NA
-  tryCatch({
-    statSorted <- sort(t, decreasing = TRUE)
-    fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500)
-  }, error = function(cond){
-    print(cond)
-  })
-  
-  output_seahorse$GSEA = fgseaRes
+  # Check that we still have multiple values. If not, return NA for this covariate.
+  output_seahorse$cor <- NA
+  output_seahorse$GSEA <- NA
+  if(length(unique(phenotype_vector)) > 1){
+    design <- model.matrix(~ phenotype_vector)
+    fit <- limma::lmFit(object = expression, design = design)
+    
+    # Compute empirical Bayes statistics.
+    bayes <- limma::eBayes(fit = fit)
+    
+    coef_to_test <- setdiff(colnames(design), "(Intercept)")
+    t_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
+    
+    # Format p-values as a list for all covariates.
+    p <- t_res[,"P.Value"]
+    t <- t_res[,"t"]
+    output_seahorse$cor <- p
+    names(output_seahorse$cor) <- rownames(t_res)
+    names(t) <- rownames(t_res)
+    
+    # Run GSEA
+    fgseaRes <- NA
+    tryCatch({
+      statSorted <- sort(t, decreasing = TRUE)
+      fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500)
+    }, error = function(cond){
+      print(cond)
+    })
+    
+    output_seahorse$GSEA = fgseaRes
+  }else{
+    warning("Phenotype has only one level. Returning NA for all gene associations.")
+  }
   
   return(output_seahorse)
 }
@@ -894,22 +902,41 @@ phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
     # Check that thresholds are met.
     whichLevel1 <- length(which(phenotype_vector == levels[1]))
     whichLevel2 <- length(which(phenotype_vector == levels[2]))
-    meetsThreshold <- colSums(!is.na(group1)) >= 2 & colSums(!is.na(group2)) >= 2
+    cor <- NA
     
-    # Initialize result to NA.
-    cor <- rep(NA, ncol(group1))
-    names(cor) <- colnames(group1)
-    
-    # Only compute correlations if both levels are represented in the phenotype vector.
-    if(whichLevel1 > 0 && whichLevel2 > 0 && length(which(meetsThreshold == TRUE)) > 0){
-      # Compute t-test where thresholds are met.
-      tresValid <- matrixTests::col_t_welch(
-        group1[, meetsThreshold, drop = FALSE],
-        group2[, meetsThreshold, drop = FALSE]
-      )
+    if(length(dim(group1)) >= 2 || length(dim(group2)) >= 2){
+      meetsThreshold <- colSums(!is.na(group1)) >= 2 & colSums(!is.na(group2)) >= 2
       
-      # Compute remaining t-tests.
-      cor[meetsThreshold] <- tresValid$pvalue
+      # Initialize result to NA.
+      cor <- rep(NA, ncol(group1))
+      names(cor) <- colnames(group1)
+      
+      # Only compute correlations if both levels are represented in the phenotype vector.
+      if(whichLevel1 > 0 && whichLevel2 > 0 && length(which(meetsThreshold == TRUE)) > 0){
+        # Compute t-test where thresholds are met.
+        tresValid <- matrixTests::col_t_welch(
+          group1[, meetsThreshold, drop = FALSE],
+          group2[, meetsThreshold, drop = FALSE]
+        )
+        
+        # Compute remaining t-tests.
+        cor[meetsThreshold] <- tresValid$pvalue
+      }
+    }else{
+      meetsThreshold <- sum(!is.na(group1)) >= 2 & sum(!is.na(group2)) >= 2
+      
+      # Initialize result to NA.
+      names(cor) <- names(group1)
+      
+      # Only compute correlations if both levels are represented in the phenotype vector.
+      if(whichLevel1 > 0 && whichLevel2 > 0 && length(which(meetsThreshold == TRUE)) > 0){
+        # Compute t-test where thresholds are met.
+        tresValid <- t.test(group1[meetsThreshold, drop = FALSE], 
+                            group2[meetsThreshold, drop = FALSE])
+        
+        # Compute remaining t-tests.
+        cor[meetsThreshold] <- tresValid$p.value
+      }
     }
     
   }else{
