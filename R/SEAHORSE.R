@@ -563,6 +563,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
           stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "FFH"), "cor"], method = pval_adj_method)
         output_seahorse_padj_cat[which(output_seahorse_cat$testType == "Chi-square")] <- 
           stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "Chi-square"), "cor"], method = pval_adj_method)
+        str(output_seahorse_cat)
       }
       
       # Do continuous phenotypes.
@@ -605,6 +606,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
           stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "FFH"), "cor"], method = pval_adj_method)
         output_seahorse_padj_cat[which(output_seahorse_cat$testType == "Chi-square")] <- 
           stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "Chi-square"), "cor"], method = pval_adj_method)
+        str(output_seahorse_cat)
       }
       
       # Do continuous phenotypes.
@@ -643,6 +645,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
                                                     phenotypesToCompare = phenoDich, 
                                                     phenotypeType = phenoType)
         output_seahorse_padj_dich <- stats::p.adjust(output_seahorse_dich$cor, method = pval_adj_method)
+        str(output_seahorse_dich)
       }
       
       # Do nominal phenotypes.
@@ -657,6 +660,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
                                               phenotypesToCompare = phenoNom, 
                                               phenotypeType = phenoType)
         output_seahorse_padj_nom <- stats::p.adjust(output_seahorse_nom$cor, method = pval_adj_method)
+        str(output_seahorse_nom)
       }
 
       # Do continuous phenotypes.
@@ -671,6 +675,7 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
                                               phenotypesToCompare = phenoCon, 
                                             method = method)
         output_seahorse_padj_con <- rep(NA, nrow(output_seahorse_con))
+        str(output_seahorse_con)
       }
       
       # Concatenate categorical and continuous results.
@@ -747,23 +752,32 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType){
   # Run the comparisons one at a time because Chi-square and FFH cannot be scaled.
   chisqRes <- lapply(allPhenoPairTables, function(chisqTable) {
     
-    # Run the test. If a warning is thrown, switch to FFH.
+    # Check that we have 2 or more non-zero row marginals. Only run the test if we do.
+    rowMarginals <- rowSums(chisqTable)
+    nonzeroMarginalCount <- length(which(rowMarginals > 0))
+    pval <- NA
+    V <- NA
     type <- "Chi-square"
-    chisq <- withCallingHandlers(
-      chisq.test(chisqTable),
-      warning = function(w) {
-        if (grepl("Chi-squared approximation may be incorrect", w$message)) {
-          # Do not change only within the warning scope but also within the parent scope.
-          type <<- "FFH"
-          invokeRestart("muffleWarning")
+    if(nonzeroMarginalCount > 2){
+      # Run the test. If a warning is thrown, switch to FFH.
+      chisq <- withCallingHandlers(
+        chisq.test(chisqTable),
+        warning = function(w) {
+          if (grepl("Chi-squared approximation may be incorrect", w$message)) {
+            # Do not change only within the warning scope but also within the parent scope.
+            type <<- "FFH"
+            invokeRestart("muffleWarning")
+          }
         }
-      }
-    )
-    
-    # Get the p-value and Cramer's V.
-    pval <- chisq$p.value
-    V <- sqrt(chisq$statistic / (sum(chisqTable) * min(nrow(chisqTable) - 1, 
-                                                       ncol(chisqTable) - 1)))
+      )
+      
+      # Get the p-value and Cramer's V.
+      pval <- chisq$p.value
+      V <- sqrt(chisq$statistic / (sum(chisqTable) * min(nrow(chisqTable) - 1, 
+                                                         ncol(chisqTable) - 1)))
+    }else{
+      warning("Less than 2 nonzero marginals in the contingency table - Chi-square will return NA")
+    }
     return(list(pval = pval, v = V, testType = type))
   })
   chisqP <- unlist(lapply(chisqRes, function(res){
@@ -874,20 +888,25 @@ phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
     group2 <- phenotypesToCompare[which(phenotype_vector == levels[2]),]
     
     # Check that thresholds are met.
+    whichLevel1 <- length(which(phenotype_vector == levels[1]))
+    whichLevel2 <- length(which(phenotype_vector == levels[2]))
     meetsThreshold <- colSums(!is.na(group1)) >= 2 & colSums(!is.na(group2)) >= 2
     
     # Initialize result to NA.
     cor <- rep(NA, ncol(group1))
     names(cor) <- colnames(group1)
     
-    # Compute t-test where thresholds are met.
-    tresValid <- matrixTests::col_t_welch(
-      group1[, meetsThreshold, drop = FALSE],
-      group2[, meetsThreshold, drop = FALSE]
-    )
-    
-    # Compute remaining t-tests.
-    cor[meetsThreshold] <- tresValid$pvalue
+    # Only compute correlations if both levels are represented in the phenotype vector.
+    if(whichLevel1 > 0 && whichLevel2 > 0){
+      # Compute t-test where thresholds are met.
+      tresValid <- matrixTests::col_t_welch(
+        group1[, meetsThreshold, drop = FALSE],
+        group2[, meetsThreshold, drop = FALSE]
+      )
+      
+      # Compute remaining t-tests.
+      cor[meetsThreshold] <- tresValid$pvalue
+    }
     
   }else{
     cor <- unlist(lapply(1:ncol(phenotypesToCompare), function(i){
