@@ -563,7 +563,6 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
           stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "FFH"), "cor"], method = pval_adj_method)
         output_seahorse_padj_cat[which(output_seahorse_cat$testType == "Chi-square")] <- 
           stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "Chi-square"), "cor"], method = pval_adj_method)
-        str(output_seahorse_cat)
       }
       
       # Do continuous phenotypes.
@@ -577,7 +576,6 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
         output_seahorse_con <- phenotype_ttest(phenotype = pheno, 
                                               phenotypesToCompare = phenoCon, 
                                               phenotypeType = phenoType)
-        str(output_seahorse_con)
         output_seahorse_padj_con <- stats::p.adjust(output_seahorse_con$cor, method = pval_adj_method)
       }
       
@@ -606,7 +604,6 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
           stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "FFH"), "cor"], method = pval_adj_method)
         output_seahorse_padj_cat[which(output_seahorse_cat$testType == "Chi-square")] <- 
           stats::p.adjust(output_seahorse_cat[which(output_seahorse_cat$testType == "Chi-square"), "cor"], method = pval_adj_method)
-        str(output_seahorse_cat)
       }
       
       # Do continuous phenotypes.
@@ -620,7 +617,6 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
         output_seahorse_con <- phenotype_anova(phenotype = pheno, 
                                               phenotypesToCompare = phenoCon, 
                                               phenotypeType = phenoType)
-        str(output_seahorse_con)
         output_seahorse_padj_con <- stats::p.adjust(output_seahorse_con$cor, method = pval_adj_method)
       }
       
@@ -645,7 +641,6 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
                                                     phenotypesToCompare = phenoDich, 
                                                     phenotypeType = phenoType)
         output_seahorse_padj_dich <- stats::p.adjust(output_seahorse_dich$cor, method = pval_adj_method)
-        str(output_seahorse_dich)
       }
       
       # Do nominal phenotypes.
@@ -660,7 +655,6 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
                                               phenotypesToCompare = phenoNom, 
                                               phenotypeType = phenoType)
         output_seahorse_padj_nom <- stats::p.adjust(output_seahorse_nom$cor, method = pval_adj_method)
-        str(output_seahorse_nom)
       }
 
       # Do continuous phenotypes.
@@ -675,7 +669,6 @@ computePhenotypeCorrelations <- function(phenotype, phenotype_dictionary, method
                                               phenotypesToCompare = phenoCon, 
                                             method = method)
         output_seahorse_padj_con <- rep(NA, nrow(output_seahorse_con))
-        str(output_seahorse_con)
       }
       
       # Concatenate categorical and continuous results.
@@ -899,7 +892,7 @@ phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
     names(cor) <- colnames(group1)
     
     # Only compute correlations if both levels are represented in the phenotype vector.
-    if(whichLevel1 > 0 && whichLevel2 > 0){
+    if(whichLevel1 > 0 && whichLevel2 > 0 && length(which(meetsThreshold == TRUE)) > 0){
       # Compute t-test where thresholds are met.
       tresValid <- matrixTests::col_t_welch(
         group1[, meetsThreshold, drop = FALSE],
