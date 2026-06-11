@@ -709,33 +709,10 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType){
     grpCounts <- table(phenotype, phen)
   })
   names(allPhenoPairTables) <- colnames(phenotypesToCompare)
-
-  # Check which phenotype pair tables have an entry below the cutoff for Chi-square.
-  ffhCutoff <- 5
-  isBelowCutoff <- unlist(lapply(allPhenoPairTables, function(tbl){
-    anyBelow <- FALSE
-    if(min(tbl) < ffhCutoff){
-      anyBelow <- TRUE
-    }
-    return(anyBelow)
-  }))
-  names(isBelowCutoff) <- colnames(phenotypesToCompare)
-  
-  # If one of the groups listed in the contingency table has < 5 samples, run FFH test instead.
-  # Separate phenotypes to compare into those which require an FFH test and
-  # those which can use a chi-square test.
-  phenotypesLess <- as.data.frame(phenotypesToCompare[,which(isBelowCutoff == TRUE)])
-  colnames(phenotypesLess) <- colnames(phenotypesToCompare)[which(isBelowCutoff == TRUE)]
-  phenotypesNotLess <- as.data.frame(phenotypesToCompare[,which(isBelowCutoff == FALSE)])
-  colnames(phenotypesNotLess) <- colnames(phenotypesToCompare)[which(isBelowCutoff == FALSE)]
-  
-  # Do an FFH test where necessary.
-  corResLess <- phenotype_ffs(allPhenoPairTables[which(isBelowCutoff == TRUE)])
   
   # Do a chi-square test everywhere else.
-  # Run the comparisons one at a time because FFH cannot be scaled.
-  notLessTables <- allPhenoPairTables[which(isBelowCutoff == FALSE)]
-  chisqRes <- lapply(notLessTables, function(chisqTable) {
+  # Run the comparisons one at a time because Chi-square and FFH cannot be scaled.
+  chisqRes <- lapply(allPhenoPairTables, function(chisqTable) {
     
     # Run the test. If a warning is thrown, switch to FFH.
     type <- "Chi-square"
@@ -768,15 +745,15 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType){
   corResNotLessFull <- data.frame(cor = chisqP,
                               V = cramerV,
                               testType = testType,
-                              row.names = colnames(phenotypesNotLess))
+                              row.names = colnames(phenotypesToCompare))
   
   # Run FFS where warning was issued.
   corResNotLess <- corResNotLessFull[which(corResNotLessFull$testType == "Chi-square"),]
-  switchedTables <- notLessTables[which(corResNotLessFull$testType == "FFH")]
+  switchedTables <- allPhenoPairTables[which(corResNotLessFull$testType == "FFH")]
   corResSwitched <- phenotype_ffs(switchedTables)
 
   # Bind together the results from the FFH and Chi-Square tests.
-  corRes <- rbind(corResLess, corResNotLess, corResSwitched)
+  corRes <- rbind(corResNotLess, corResSwitched)
   corRes <- corRes[colnames(phenotypesToCompare),]
 
   return(corRes)
