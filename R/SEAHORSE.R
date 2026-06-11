@@ -354,8 +354,7 @@ computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pat
   for (i in 1:ncol(phenotype)){
     pheno = phenotype[,i]
     pheno_name = colnames(phenotype)[i]
-    print(colnames(phenotype)[i])
-    
+
     if (phenotype_dictionary[i] == "continuous"){
       output_seahorse = gsea_continuous(expression, pheno, pathways, method = method)
       output_seahorse_padj <- rep("NA", length(output_seahorse$cor))
