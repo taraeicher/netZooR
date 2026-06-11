@@ -18,7 +18,7 @@ seahorse(
   pathways,
   compute_gene_cor = TRUE,
   compute_phenotype_cor = TRUE,
-  assoc_method = "pearson",
+  assoc_method = "spearman",
   pval_adj_method = "none",
   usage_report_file = NULL
 )
@@ -47,7 +47,7 @@ downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
 \item{compute_phenotype_cor}{: Whether or not to compute the phenotype-phenotype association matrix. Default is TRUE.}
 
 \item{assoc_method}{: The method used to infer associations between phenotypes and genes. Default
-is "pearson". Other options are "spearman", "kendall", and "linear". The "pearson", "kendall", and "spearman" options
+is "spearman". Other options are "pearson", "kendall", and "linear". The "pearson", "kendall", and "spearman" options
 compute correlations between each phenotype and gene independently for numeric phenotypes and
 compute an ANOVA for categorical phenotypes. linear" computes a linear regression
 model of the form gene ~ phenotype1 + phenotype2 + ... + phenotypeN and returns the p-values
@@ -61,7 +61,7 @@ Outputs:}
 }
 \value{
 results    : a list containing three objects
-        results$coexpression: a gene x gene Pearson correlation matrix.
+        results$coexpression: a gene x gene correlation matrix.
         results$phenotype_association : a list containing a vector for each phenotype
         results$GSEA: a list containing a matrix of GSEA results for each phenotype
 }
