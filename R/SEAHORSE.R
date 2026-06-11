@@ -752,13 +752,15 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType){
   # Run the comparisons one at a time because Chi-square and FFH cannot be scaled.
   chisqRes <- lapply(allPhenoPairTables, function(chisqTable) {
     
-    # Check that we have 2 or more non-zero row marginals. Only run the test if we do.
+    # Check that we have 2 or more non-zero marginals. Only run the test if we do.
     rowMarginals <- rowSums(chisqTable)
-    nonzeroMarginalCount <- length(which(rowMarginals > 0))
+    colMarginals <- colSums(chisqTable) 
+    nonzeroRowMarginalCount <- length(which(rowMarginals > 0))
+    nonzeroColMarginalCount <- length(which(colMarginals > 0))
     pval <- NA
     V <- NA
     type <- "Chi-square"
-    if(nonzeroMarginalCount > 2){
+    if(nonzeroRowMarginalCount > 2 && nonzeroColMarginalCount > 2){
       # Run the test. If a warning is thrown, switch to FFH.
       chisq <- withCallingHandlers(
         chisq.test(chisqTable),
