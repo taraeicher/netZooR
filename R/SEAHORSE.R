@@ -354,6 +354,7 @@ computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pat
   for (i in 1:ncol(phenotype)){
     pheno = phenotype[,i]
     pheno_name = colnames(phenotype)[i]
+    print(colnames(phenotype)[i])
     
     if (phenotype_dictionary[i] == "continuous"){
       output_seahorse = gsea_continuous(expression, pheno, pathways, method = method)
@@ -426,6 +427,10 @@ gsea_nominal <- function(expression, pheno, pathways){
   
   # Run the linear models.
   phenotype_vector = factor(as.character(pheno))
+  # Remove NA values.
+  hasVal <- which(!is.na(phenotype_vector))
+  phenotype_vector <- phenotype_vector[hasVal]
+  expression <- expression[,hasVal]
   design <- model.matrix(~ phenotype_vector)
   fit <- limma::lmFit(object = expression, design = design)
   
@@ -467,6 +472,10 @@ gsea_dichotomous <- function(expression, pheno, pathways){
   
   # Run the linear models.
   phenotype_vector = factor(as.character(pheno))
+  # Remove NA values.
+  hasVal <- which(!is.na(phenotype_vector))
+  phenotype_vector <- phenotype_vector[hasVal]
+  expression <- expression[,hasVal]
   design <- model.matrix(~ phenotype_vector)
   fit <- limma::lmFit(object = expression, design = design)
   
