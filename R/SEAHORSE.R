@@ -115,7 +115,7 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
     phenoName <- colnames(phenotype)[i]
     
     # Check that nominal have more than 2 levels.
-    levels <- unique(pheno)
+    levels <- unique(pheno[which(!is.na(pheno))])
     if(dictType == "nominal" && length(levels) <= 2){
       stop(paste("Phenotype", phenoName, "set to nominal but has 2 levels or fewer."))
     }
