@@ -868,24 +868,46 @@ phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
   # Case 2 - the phenotype is numeric and the phenotypes to compare are dichotomous.
   # We cannot vectorize this and use t.test instead, which defaults to Welch's t-test.
   if(phenotypeType == "dichotomous"){
+    
+    # Split groups.
     phenotype_vector = factor(as.character(phenotype))
     levels <- unique(phenotype_vector)
     group1 <- phenotypesToCompare[which(phenotype_vector == levels[1]),]
     group2 <- phenotypesToCompare[which(phenotype_vector == levels[2]),]
-    tres <- matrixTests::col_t_welch(group1, group2)
-    cor = tres$pvalue
-    names(cor) <- rownames(tres)
+    
+    # Check that thresholds are met.
+    meetsThreshold <- colSums(!is.na(group1)) >= 2 & colSums(!is.na(group2)) >= 2
+    
+    # Initialize result to NA.
+    cor <- rep(NA, ncol(group1))
+    names(cor) <- colnames(group1)
+    
+    # Compute t-test where thresholds are met.
+    tresValid <- matrixTests::col_t_welch(
+      group1[, meetsThreshold, drop = FALSE],
+      group2[, meetsThreshold, drop = FALSE]
+    )
+    
+    # Compute remaining t-tests.
+    cor[meetsThreshold] <- tresValid$pvalue
+    
   }else{
     cor <- unlist(lapply(1:ncol(phenotypesToCompare), function(i){
       phenotype_vector = factor(as.character(phenotypesToCompare[,i]))
       levels <- unique(phenotype_vector)
       group1 <- phenotype[which(phenotype_vector == levels[1])]
       group2 <- phenotype[which(phenotype_vector == levels[2])]
-      tres <- t.test(group1, group2)
-      stat = tres$p.value
-      names(stat) <- rownames(tres)
+      stat <- NA
+      if(length(which(!is.na(group1))) > 2 && length(which(!is.na(group2))) > 2){
+        tres <- t.test(group1, group2)
+        stat = tres$p.value
+      }
+      names(stat) <- colnames(phenotypesToCompare)[i]
       return(stat)
     }))
+  }
+  if(length(which(is.na(cor))) > 0){
+    warning("Some phenotypes did not have sufficient sample sizes to perform a t-test - NAs will be returned")
   }
   
   # Return the data frame.
