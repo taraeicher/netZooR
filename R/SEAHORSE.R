@@ -876,7 +876,6 @@ phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
       tryCatch({
         results <- anova(lm(as.numeric(as.character(phenotype))~phenotype_vector))$`Pr(>F)`[1]
       }, error = function(cond){
-        stop(cond)
         warning("In this phenotype pair, all continuous values are missing for all but one phenotype level - NA result will be returned")
       })
       return(results)
