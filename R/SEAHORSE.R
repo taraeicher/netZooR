@@ -434,20 +434,25 @@ gsea_nominal <- function(expression, pheno, pathways){
   fit <- limma::lmFit(object = expression, design = design)
   
   # Compute empirical Bayes statistics.
-  bayes <- limma::eBayes(fit = fit)
-  
-  coef_to_test <- setdiff(colnames(design), "(Intercept)")
-  anova_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
-  
-  # Format p-values as a list for all covariates.
-  p <- anova_res[,"P.Value"]
-  output_seahorse$cor <- p
-  names(output_seahorse$cor) <- rownames(anova_res)
-  
-  # Run GSEA
-  statSorted <- sort(-1 * log10(output_seahorse$cor), decreasing = TRUE)
-  fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500, scoreType = "pos")
-  output_seahorse$GSEA = fgseaRes
+  # If there are no residual degrees of freedom, catch it and do not return a value.
+  tryCatch({
+    bayes <- limma::eBayes(fit = fit)
+    
+    coef_to_test <- setdiff(colnames(design), "(Intercept)")
+    anova_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
+    
+    # Format p-values as a list for all covariates.
+    p <- anova_res[,"P.Value"]
+    output_seahorse$cor <- p
+    names(output_seahorse$cor) <- rownames(anova_res)
+    
+    # Run GSEA
+    statSorted <- sort(-1 * log10(output_seahorse$cor), decreasing = TRUE)
+    fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500, scoreType = "pos")
+    output_seahorse$GSEA = fgseaRes
+  }, error = function(cond){
+    warning("Could not compute empirical Bayes statistics for this phenotypic variable. Returning empty list.")
+  })
   
   return(output_seahorse)
 }
@@ -471,6 +476,7 @@ gsea_dichotomous <- function(expression, pheno, pathways){
   
   # Run the linear models.
   phenotype_vector = factor(as.character(pheno))
+
   # Remove NA values.
   hasVal <- which(!is.na(phenotype_vector))
   phenotype_vector <- phenotype_vector[hasVal]
@@ -484,28 +490,32 @@ gsea_dichotomous <- function(expression, pheno, pathways){
     fit <- limma::lmFit(object = expression, design = design)
     
     # Compute empirical Bayes statistics.
-    bayes <- limma::eBayes(fit = fit)
-    
-    coef_to_test <- setdiff(colnames(design), "(Intercept)")
-    t_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
-    
-    # Format p-values as a list for all covariates.
-    p <- t_res[,"P.Value"]
-    t <- t_res[,"t"]
-    output_seahorse$cor <- p
-    names(output_seahorse$cor) <- rownames(t_res)
-    names(t) <- rownames(t_res)
-    
-    # Run GSEA
-    fgseaRes <- NA
     tryCatch({
-      statSorted <- sort(t, decreasing = TRUE)
-      fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500)
+      bayes <- limma::eBayes(fit = fit)
+
+      coef_to_test <- setdiff(colnames(design), "(Intercept)")
+      t_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
+      
+      # Format p-values as a list for all covariates.
+      p <- t_res[,"P.Value"]
+      t <- t_res[,"t"]
+      output_seahorse$cor <- p
+      names(output_seahorse$cor) <- rownames(t_res)
+      names(t) <- rownames(t_res)
+      
+      # Run GSEA
+      fgseaRes <- NA
+      tryCatch({
+        statSorted <- sort(t, decreasing = TRUE)
+        fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500)
+      }, error = function(cond){
+        print(cond)
+      })
+      
+      output_seahorse$GSEA = fgseaRes
     }, error = function(cond){
-      print(cond)
+      warning("Could not compute empirical Bayes statistics for this phenotypic variable. Returning empty list.")
     })
-    
-    output_seahorse$GSEA = fgseaRes
   }else{
     warning("Phenotype has only one level. Returning NA for all gene associations.")
   }
@@ -769,7 +779,7 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType){
     pval <- NA
     V <- NA
     type <- "Chi-square"
-    if(nonzeroRowMarginalCount > 2 && nonzeroColMarginalCount > 2){
+    if(nonzeroRowMarginalCount >= 2 && nonzeroColMarginalCount >= 2){
       # Run the test. If a warning is thrown, switch to FFH.
       chisq <- withCallingHandlers(
         chisq.test(chisqTable),
@@ -855,7 +865,7 @@ phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
       tryCatch({
         results <- anova(lm(as.numeric(as.character(x))~phenotype_vector))$`Pr(>F)`[1]
       }, error = function(cond){
-        warning("In this phenotype pair, all continuous values are missing for one phenotype level - NA result will be returned")
+        warning("In this phenotype pair, all continuous values are missing for all but one phenotype level - NA result will be returned")
       })
       return(results)
     }))
@@ -866,7 +876,8 @@ phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
       tryCatch({
         results <- anova(lm(as.numeric(as.character(phenotype))~phenotype_vector))$`Pr(>F)`[1]
       }, error = function(cond){
-        warning("In this phenotype pair, all continuous values are missing for one phenotype level - NA result will be returned")
+        stop(cond)
+        warning("In this phenotype pair, all continuous values are missing for all but one phenotype level - NA result will be returned")
       })
       return(results)
     }))
