@@ -611,4 +611,14 @@ test_that("seahorse function works", {
   result <- seahorse(expression_data_2, phenotype_data_2_na, phenotype_dictionary_2, pathways,
                      compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
   expect_true(is.na(result$phenocor$stat["sex", "WBC"]))
+  
+  # Check that a gene-phenotype association will be set to NA if there is no variance in either
+  # phenotype level.
+  phenotype_data_smaller <- phenotype_data_2[,c("sex", "WBC")]
+  phenotype_dictionary_smaller <- c("dichotomous", "continuous")
+  phenotype_data_smaller[which(phenotype_data_smaller$sex == "female"), "WBC"] <- 1
+  phenotype_data_smaller[which(phenotype_data_smaller$sex == "male"), "WBC"] <- 1
+  result <- seahorse(expression_data_2, phenotype_data_smaller, phenotype_dictionary_smaller, pathways,
+                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
+  expect_true(is.na(result$phenocor$stat["sex", "WBC"]))
 })
