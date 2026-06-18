@@ -593,7 +593,7 @@ test_that("seahorse function works", {
   phenotype_data_2_zeros[which(phenotype_data_2$grade == "C"), "sex"] <- NA
   result <- seahorse(expression_data_2, phenotype_data_2_zeros, phenotype_dictionary_2, pathways,
                      compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
-  expect_true(is.na(result$phenocor$stat["sex", "grade"])
+  expect_true(is.na(result$phenocor$stat["sex", "grade"]))
   
   # Check that a phenotype pair result will be set to NA if we have all continuous data missing
   # for all but one level (nominal).
