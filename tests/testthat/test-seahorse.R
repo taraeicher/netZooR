@@ -580,9 +580,9 @@ test_that("seahorse function works", {
                                        "Dark Energy", "Binary Star System", "Black Dwarf"))
   result <- seahorse(expression_data, phenotype_data, phenotype_dictionary, uselessPathways,
                      compute_gene_cor = FALSE, compute_phenotype_cor = FALSE)
-  expect_equal(nrow(result$GSEA$sex, 0))
-  expect_equal(nrow(result$GSEA$height, 0))
-  expect_equal(nrow(result$GSEA$group, 0))
+  expect_equal(nrow(result$GSEA$sex), 0)
+  expect_equal(nrow(result$GSEA$height), 0)
+  expect_equal(nrow(result$GSEA$group), 0)
   
   # Check that a phenotype pair result will be set to NA if we have 2 or more zero marginals.
   phenotype_data_2_zeros <- phenotype_data_2
