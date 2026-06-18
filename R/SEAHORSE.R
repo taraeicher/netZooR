@@ -956,8 +956,12 @@ phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
       group2 <- phenotype[which(phenotype_vector == levels[2])]
       stat <- NA
       if(length(which(!is.na(group1))) > 2 && length(which(!is.na(group2))) > 2){
-        tres <- t.test(group1, group2)
-        stat = tres$p.value
+        tryCatch({
+          tres <- t.test(group1, group2)
+          stat = tres$p.value
+        }, error = function(cond){
+          warning("Could not compute t-test (it is possible that variance is too low). Returning NA.")
+        })
       }
       names(stat) <- colnames(phenotypesToCompare)[i]
       return(stat)
