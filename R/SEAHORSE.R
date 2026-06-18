@@ -32,6 +32,7 @@
 #' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
 #' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
 #' @param usage_report_file Location where the usage report should be stored. Must be RDS format.
+#' @param verbose Whether or not to print statements notifying user of run status.
 #' Outputs:
 #' @return results    : a list containing three objects
 #'         results$coexpression: a gene x gene correlation matrix.
@@ -64,7 +65,7 @@
 seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, compute_gene_cor = TRUE,
                      compute_phenotype_cor = TRUE,
                      assoc_method = "spearman", pval_adj_method = "none",
-                     usage_report_file = NULL){
+                     usage_report_file = NULL, verbose = FALSE){
   
   # Check packages.
   if (!requireNamespace("fgsea", quietly = TRUE)) {
@@ -115,7 +116,7 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
     phenoName <- colnames(phenotype)[i]
     
     # Check that nominal have more than 2 levels.
-    levels <- unique(pheno)
+    levels <- unique(pheno[which(!is.na(pheno))])
     if(dictType == "nominal" && length(levels) <= 2){
       stop(paste("Phenotype", phenoName, "set to nominal but has 2 levels or fewer."))
     }
@@ -149,12 +150,24 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   results$coexpression <- NA
   if(is.null(usage_report_file)){
     if(compute_gene_cor == TRUE){
+      if(verbose == TRUE){
+        print("Running gene co-expression")
+      }
       results$coexpression = cor(t(expression), use="pairwise.complete.obs")
+      if(verbose == TRUE){
+        print("Gene co-expression complete")
+      }
     }
   }else{
     if(compute_gene_cor == TRUE){
       usageGeneGene <- peakRAM::peakRAM({
-        results$coexpression = cor(t(expression), use="pairwise.complete.obs") 
+        if(verbose == TRUE){
+          print("Running gene co-expression")
+        }
+        results$coexpression = cor(t(expression), use="pairwise.complete.obs")
+        if(verbose == TRUE){
+          print("Gene co-expression complete")
+        }
       })
     }
   }
@@ -164,21 +177,36 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   results$phenocor <- NA
   if(is.null(usage_report_file)){
     if(compute_phenotype_cor == TRUE){
+      if(verbose == TRUE){
+        print("Running phenotype associations")
+      }
       results$phenocor = computePhenotypeCorrelations(phenotype = phenotype,
                                                       phenotype_dictionary = phenotype_dictionary,
                                                       method = assoc_method, pval_adj_method = pval_adj_method)
+      if(verbose == TRUE){
+        print("Phenotype associations complete")
+      }
     }
   }else{
     if(compute_phenotype_cor == TRUE){
       usagePhenPhen <- peakRAM::peakRAM({
+        if(verbose == TRUE){
+          print("Running phenotype associations")
+        }
         results$phenocor = computePhenotypeCorrelations(phenotype = phenotype,
                                                         phenotype_dictionary = phenotype_dictionary,
                                                         method = assoc_method, pval_adj_method = pval_adj_method)
+        if(verbose == TRUE){
+          print("Phenotype associations complete")
+        }
       })
     } 
   }
   
   # Compute association of gene expression with phenotypes and run GSEA
+  if(verbose == TRUE){
+    print("Running gene-phenotype associations")
+  }
   usagePhenGene <- NA
   results$phenotype_association = list()
   results$GSEA = list()
@@ -212,6 +240,9 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
         results$GSEA <- linReg$gsea
       }
     })
+  }
+  if(verbose == TRUE){
+    print("Gene-phenotype associations complete")
   }
   
   # Save the results to a usage file.
@@ -323,7 +354,7 @@ computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pat
   for (i in 1:ncol(phenotype)){
     pheno = phenotype[,i]
     pheno_name = colnames(phenotype)[i]
-    
+
     if (phenotype_dictionary[i] == "continuous"){
       output_seahorse = gsea_continuous(expression, pheno, pathways, method = method)
       output_seahorse_padj <- rep("NA", length(output_seahorse$cor))
@@ -395,24 +426,33 @@ gsea_nominal <- function(expression, pheno, pathways){
   
   # Run the linear models.
   phenotype_vector = factor(as.character(pheno))
+  # Remove NA values.
+  hasVal <- which(!is.na(phenotype_vector))
+  phenotype_vector <- phenotype_vector[hasVal]
+  expression <- expression[,hasVal]
   design <- model.matrix(~ phenotype_vector)
   fit <- limma::lmFit(object = expression, design = design)
   
   # Compute empirical Bayes statistics.
-  bayes <- limma::eBayes(fit = fit)
-  
-  coef_to_test <- setdiff(colnames(design), "(Intercept)")
-  anova_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
-  
-  # Format p-values as a list for all covariates.
-  p <- anova_res[,"P.Value"]
-  output_seahorse$cor <- p
-  names(output_seahorse$cor) <- rownames(anova_res)
-  
-  # Run GSEA
-  statSorted <- sort(-1 * log10(output_seahorse$cor), decreasing = TRUE)
-  fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500, scoreType = "pos")
-  output_seahorse$GSEA = fgseaRes
+  # If there are no residual degrees of freedom, catch it and do not return a value.
+  tryCatch({
+    bayes <- limma::eBayes(fit = fit)
+    
+    coef_to_test <- setdiff(colnames(design), "(Intercept)")
+    anova_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
+    
+    # Format p-values as a list for all covariates.
+    p <- anova_res[,"P.Value"]
+    output_seahorse$cor <- p
+    names(output_seahorse$cor) <- rownames(anova_res)
+    
+    # Run GSEA
+    statSorted <- sort(-1 * log10(output_seahorse$cor), decreasing = TRUE)
+    fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500, scoreType = "pos")
+    output_seahorse$GSEA = fgseaRes
+  }, error = function(cond){
+    warning("Could not compute empirical Bayes statistics for this phenotypic variable. Returning empty list.")
+  })
   
   return(output_seahorse)
 }
@@ -436,32 +476,49 @@ gsea_dichotomous <- function(expression, pheno, pathways){
   
   # Run the linear models.
   phenotype_vector = factor(as.character(pheno))
-  design <- model.matrix(~ phenotype_vector)
-  fit <- limma::lmFit(object = expression, design = design)
+
+  # Remove NA values.
+  hasVal <- which(!is.na(phenotype_vector))
+  phenotype_vector <- phenotype_vector[hasVal]
+  expression <- expression[,hasVal]
   
-  # Compute empirical Bayes statistics.
-  bayes <- limma::eBayes(fit = fit)
-  
-  coef_to_test <- setdiff(colnames(design), "(Intercept)")
-  t_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
-  
-  # Format p-values as a list for all covariates.
-  p <- t_res[,"P.Value"]
-  t <- t_res[,"t"]
-  output_seahorse$cor <- p
-  names(output_seahorse$cor) <- rownames(t_res)
-  names(t) <- rownames(t_res)
-  
-  # Run GSEA
-  fgseaRes <- NA
-  tryCatch({
-    statSorted <- sort(t, decreasing = TRUE)
-    fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500)
-  }, error = function(cond){
-    print(cond)
-  })
-  
-  output_seahorse$GSEA = fgseaRes
+  # Check that we still have multiple values. If not, return NA for this covariate.
+  output_seahorse$cor <- NA
+  output_seahorse$GSEA <- NA
+  if(length(unique(phenotype_vector)) > 1){
+    design <- model.matrix(~ phenotype_vector)
+    fit <- limma::lmFit(object = expression, design = design)
+    
+    # Compute empirical Bayes statistics.
+    tryCatch({
+      bayes <- limma::eBayes(fit = fit)
+
+      coef_to_test <- setdiff(colnames(design), "(Intercept)")
+      t_res <- limma::topTable(bayes, coef = coef_to_test, number = Inf, sort.by = "none")
+      
+      # Format p-values as a list for all covariates.
+      p <- t_res[,"P.Value"]
+      t <- t_res[,"t"]
+      output_seahorse$cor <- p
+      names(output_seahorse$cor) <- rownames(t_res)
+      names(t) <- rownames(t_res)
+      
+      # Run GSEA
+      fgseaRes <- NA
+      tryCatch({
+        statSorted <- sort(t, decreasing = TRUE)
+        fgseaRes <- fgsea::fgsea(pathways, statSorted, minSize=15, maxSize=500)
+      }, error = function(cond){
+        print(cond)
+      })
+      
+      output_seahorse$GSEA = fgseaRes
+    }, error = function(cond){
+      warning("Could not compute empirical Bayes statistics for this phenotypic variable. Returning empty list.")
+    })
+  }else{
+    warning("Phenotype has only one level. Returning NA for all gene associations.")
+  }
   
   return(output_seahorse)
 }
@@ -714,23 +771,34 @@ phenotype_chisq <- function(phenotype, phenotypesToCompare, phenotypeType){
   # Run the comparisons one at a time because Chi-square and FFH cannot be scaled.
   chisqRes <- lapply(allPhenoPairTables, function(chisqTable) {
     
-    # Run the test. If a warning is thrown, switch to FFH.
+    # Check that we have 2 or more non-zero marginals. Only run the test if we do.
+    rowMarginals <- rowSums(chisqTable)
+    colMarginals <- colSums(chisqTable) 
+    nonzeroRowMarginalCount <- length(which(rowMarginals > 0))
+    nonzeroColMarginalCount <- length(which(colMarginals > 0))
+    pval <- NA
+    V <- NA
     type <- "Chi-square"
-    chisq <- withCallingHandlers(
-      chisq.test(chisqTable),
-      warning = function(w) {
-        if (grepl("Chi-squared approximation may be incorrect", w$message)) {
-          # Do not change only within the warning scope but also within the parent scope.
-          type <<- "FFH"
-          invokeRestart("muffleWarning")
+    if(nonzeroRowMarginalCount >= 2 && nonzeroColMarginalCount >= 2){
+      # Run the test. If a warning is thrown, switch to FFH.
+      chisq <- withCallingHandlers(
+        chisq.test(chisqTable),
+        warning = function(w) {
+          if (grepl("Chi-squared approximation may be incorrect", w$message)) {
+            # Do not change only within the warning scope but also within the parent scope.
+            type <<- "FFH"
+            invokeRestart("muffleWarning")
+          }
         }
-      }
-    )
-    
-    # Get the p-value and Cramer's V.
-    pval <- chisq$p.value
-    V <- sqrt(chisq$statistic / (sum(chisqTable) * min(nrow(chisqTable) - 1, 
-                                                       ncol(chisqTable) - 1)))
+      )
+      
+      # Get the p-value and Cramer's V.
+      pval <- chisq$p.value
+      V <- sqrt(chisq$statistic / (sum(chisqTable) * min(nrow(chisqTable) - 1, 
+                                                         ncol(chisqTable) - 1)))
+    }else{
+      warning("Less than 2 nonzero marginals in the contingency table - Chi-square will return NA")
+    }
     return(list(pval = pval, v = V, testType = type))
   })
   chisqP <- unlist(lapply(chisqRes, function(res){
@@ -792,11 +860,25 @@ phenotype_anova <- function(phenotype, phenotypesToCompare, phenotypeType){
   # Case 2 - the phenotype is numeric and the phenotypes to compare are nominal.
   if(phenotypeType == "nominal"){
     phenotype_vector = factor(as.character(phenotype))
-    cor <- unlist(apply(phenotypesToCompare, MARGIN=2, function(x){anova(lm(as.numeric(as.character(x))~phenotype_vector))$`Pr(>F)`[1]}))
+    cor <- unlist(apply(phenotypesToCompare, MARGIN=2, function(x){
+      results <- NA
+      tryCatch({
+        results <- anova(lm(as.numeric(as.character(x))~phenotype_vector))$`Pr(>F)`[1]
+      }, error = function(cond){
+        warning("In this phenotype pair, all continuous values are missing for all but one phenotype level - NA result will be returned")
+      })
+      return(results)
+    }))
   }else{
     cor <- unlist(lapply(1:ncol(phenotypesToCompare), function(i){
+      results <- NA
       phenotype_vector <- factor(as.character(phenotypesToCompare[,i]))
-      return(anova(lm(as.numeric(as.character(phenotype))~phenotype_vector))$`Pr(>F)`[1])
+      tryCatch({
+        results <- anova(lm(as.numeric(as.character(phenotype))~phenotype_vector))$`Pr(>F)`[1]
+      }, error = function(cond){
+        warning("In this phenotype pair, all continuous values are missing for all but one phenotype level - NA result will be returned")
+      })
+      return(results)
     }))
   }
     
@@ -819,24 +901,70 @@ phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
   # Case 2 - the phenotype is numeric and the phenotypes to compare are dichotomous.
   # We cannot vectorize this and use t.test instead, which defaults to Welch's t-test.
   if(phenotypeType == "dichotomous"){
+    
+    # Split groups.
     phenotype_vector = factor(as.character(phenotype))
     levels <- unique(phenotype_vector)
     group1 <- phenotypesToCompare[which(phenotype_vector == levels[1]),]
     group2 <- phenotypesToCompare[which(phenotype_vector == levels[2]),]
-    tres <- matrixTests::col_t_welch(group1, group2)
-    cor = tres$pvalue
-    names(cor) <- rownames(tres)
+    
+    # Check that thresholds are met.
+    whichLevel1 <- length(which(phenotype_vector == levels[1]))
+    whichLevel2 <- length(which(phenotype_vector == levels[2]))
+    cor <- NA
+    
+    if(length(dim(group1)) >= 2 || length(dim(group2)) >= 2){
+      meetsThreshold <- colSums(!is.na(group1)) >= 2 & colSums(!is.na(group2)) >= 2
+      
+      # Initialize result to NA.
+      cor <- rep(NA, ncol(group1))
+      names(cor) <- colnames(group1)
+      
+      # Only compute correlations if both levels are represented in the phenotype vector.
+      if(whichLevel1 > 0 && whichLevel2 > 0 && length(which(meetsThreshold == TRUE)) > 0){
+        # Compute t-test where thresholds are met.
+        tresValid <- matrixTests::col_t_welch(
+          group1[, meetsThreshold, drop = FALSE],
+          group2[, meetsThreshold, drop = FALSE]
+        )
+        
+        # Compute remaining t-tests.
+        cor[meetsThreshold] <- tresValid$pvalue
+      }
+    }else{
+      meetsThreshold <- sum(!is.na(group1)) >= 2 & sum(!is.na(group2)) >= 2
+      
+      # Initialize result to NA.
+      names(cor) <- names(group1)
+      
+      # Only compute correlations if both levels are represented in the phenotype vector.
+      if(whichLevel1 > 0 && whichLevel2 > 0 && length(which(meetsThreshold == TRUE)) > 0){
+        # Compute t-test where thresholds are met.
+        tresValid <- t.test(group1[meetsThreshold, drop = FALSE], 
+                            group2[meetsThreshold, drop = FALSE])
+        
+        # Compute remaining t-tests.
+        cor[meetsThreshold] <- tresValid$p.value
+      }
+    }
+    
   }else{
     cor <- unlist(lapply(1:ncol(phenotypesToCompare), function(i){
       phenotype_vector = factor(as.character(phenotypesToCompare[,i]))
       levels <- unique(phenotype_vector)
       group1 <- phenotype[which(phenotype_vector == levels[1])]
       group2 <- phenotype[which(phenotype_vector == levels[2])]
-      tres <- t.test(group1, group2)
-      stat = tres$p.value
-      names(stat) <- rownames(tres)
+      stat <- NA
+      if(length(which(!is.na(group1))) > 2 && length(which(!is.na(group2))) > 2){
+        tres <- t.test(group1, group2)
+        stat = tres$p.value
+      }
+      names(stat) <- colnames(phenotypesToCompare)[i]
       return(stat)
     }))
+  }
+  if(length(which(is.na(cor))) > 0){
+    warning("Some phenotypes did not have sufficient sample sizes to perform a t-test - NAs will be returned")
   }
   
   # Return the data frame.

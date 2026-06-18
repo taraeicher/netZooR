@@ -535,4 +535,80 @@ test_that("seahorse function works", {
   expect_true(is.na(usage$GeneToGeneCor))
   expect_true(length(colnames(usage$PhenToGeneCor)) == 4)
   unlink("usage_file.RDS")
+  
+  # Test that statements print when verbose = TRUE.
+  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
+                      verbose = TRUE),
+                "Running gene co-expression")
+  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                         compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
+                         verbose = TRUE),
+                "Gene co-expression complete")
+  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                         compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
+                         verbose = TRUE),
+                "Running phenotype associations")
+  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                         compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
+                         verbose = TRUE),
+                "Phenotype associations complete")
+  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                         compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
+                         verbose = TRUE),
+                "Running gene-phenotype associations")
+  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                         compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
+                         verbose = TRUE),
+                "Gene-phenotype associations complete")
+  
+  # Check that NA values are returned when the phenotype has less than 2 levels.
+  phenotype_data_1_lev <- phenotype_data
+  phenotype_data_1_lev$sex <- rep("male", nrow(phenotype_data_1_lev))
+  result <- seahorse(expression_data, phenotype_data_1_lev, phenotype_dictionary, pathways,
+           compute_gene_cor = FALSE, compute_phenotype_cor = FALSE)
+  expect_equal(result$phenotype_association$sex$stat, NA)
+  expect_equal(result$GSEA$sex, NA)
+  
+  # Check that GSEA returns an empty list if it cannot run, e.g. if there is no pathway overlap.
+  uselessPathways <- list(pathway1 = paste(rep(c("Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Neptune"), 2),
+                                           c(rep(1, 8), rep(2, 8))),
+                          pathway2 = paste(rep(c("Nina", "Pinta", "Santa Maria"), 6),
+                                           c(rep(1, 3), rep(2, 3), rep(3, 3), rep(4, 3), rep(5, 3), rep(6, 3))),
+                          pathway3 = c("Neutron Star", "Supernova", "Black Hole", "Red Dwarf", "White Dwarf", "Red Giant",
+                                       "Blue Giant", "Nebula", "Oort Cloud", "Brown Dwarf", "Comet", "Asteroid", "Dark Matter",
+                                       "Dark Energy", "Binary Star System", "Black Dwarf"))
+  result <- seahorse(expression_data, phenotype_data, phenotype_dictionary, uselessPathways,
+                     compute_gene_cor = FALSE, compute_phenotype_cor = FALSE)
+  expect_equal(nrow(result$GSEA$sex), 0)
+  expect_equal(nrow(result$GSEA$height), 0)
+  expect_equal(nrow(result$GSEA$group), 0)
+  
+  # Check that a phenotype pair result will be set to NA if we have 2 or more zero marginals.
+  phenotype_data_2_zeros <- phenotype_data_2
+  phenotype_data_2_zeros[which(phenotype_data_2$grade == "A")[1:10], "sex"] <- "female"
+  phenotype_data_2_zeros[which(phenotype_data_2$grade == "A")[2:20], "sex"] <- "male"
+  phenotype_data_2_zeros[which(phenotype_data_2$grade == "A")[21:45], "sex"] <- NA
+  phenotype_data_2_zeros[which(phenotype_data_2$grade == "B"), "sex"] <- NA
+  phenotype_data_2_zeros[which(phenotype_data_2$grade == "C"), "sex"] <- NA
+  result <- seahorse(expression_data_2, phenotype_data_2_zeros, phenotype_dictionary_2, pathways,
+                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
+  expect_true(is.na(result$phenocor$stat["sex", "grade"]))
+  
+  # Check that a phenotype pair result will be set to NA if we have all continuous data missing
+  # for all but one level (nominal).
+  phenotype_data_2_na <- phenotype_data_2
+  phenotype_data_2_na[which(phenotype_data_2$grade == "A"), "WBC"] <- NA
+  phenotype_data_2_na[which(phenotype_data_2$grade == "B"), "WBC"] <- NA
+  result <- seahorse(expression_data_2, phenotype_data_2_na, phenotype_dictionary_2, pathways,
+                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
+  expect_true(is.na(result$phenocor$stat["grade", "WBC"]))
+  
+  # Check that a phenotype pair result will be set to NA if we have all continuous data missing
+  # for one level (dichotomous).
+  phenotype_data_2_na <- phenotype_data_2
+  phenotype_data_2_na[which(phenotype_data_2$sex == "female"), "WBC"] <- NA
+  result <- seahorse(expression_data_2, phenotype_data_2_na, phenotype_dictionary_2, pathways,
+                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
+  expect_true(is.na(result$phenocor$stat["sex", "WBC"]))
 })
