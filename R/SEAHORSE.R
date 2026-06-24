@@ -939,12 +939,16 @@ phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
       
       # Only compute correlations if both levels are represented in the phenotype vector.
       if(whichLevel1 > 0 && whichLevel2 > 0 && length(which(meetsThreshold == TRUE)) > 0){
-        # Compute t-test where thresholds are met.
-        tresValid <- t.test(group1[meetsThreshold, drop = FALSE], 
-                            group2[meetsThreshold, drop = FALSE])
-        
-        # Compute remaining t-tests.
-        cor[meetsThreshold] <- tresValid$p.value
+        tryCatch({
+          # Compute t-test where thresholds are met.
+          tresValid <- t.test(group1[meetsThreshold, drop = FALSE], 
+                              group2[meetsThreshold, drop = FALSE])
+          
+          # Compute remaining t-tests.
+          cor[meetsThreshold] <- tresValid$p.value
+        }, error = function(cond){
+          warning("Could not compute t-test (it is possible that variance is too low). Returning NA.")
+        })
       }
     }
     
@@ -956,8 +960,12 @@ phenotype_ttest <- function(phenotype, phenotypesToCompare, phenotypeType){
       group2 <- phenotype[which(phenotype_vector == levels[2])]
       stat <- NA
       if(length(which(!is.na(group1))) > 2 && length(which(!is.na(group2))) > 2){
-        tres <- t.test(group1, group2)
-        stat = tres$p.value
+        tryCatch({
+          tres <- t.test(group1, group2)
+          stat = tres$p.value
+        }, error = function(cond){
+          warning("Could not compute t-test (it is possible that variance is too low). Returning NA.")
+        })
       }
       names(stat) <- colnames(phenotypesToCompare)[i]
       return(stat)
