@@ -279,6 +279,27 @@ test_that("seahorse function works", {
   expect_true(is.na(results$phenocor))
   expect_true(all(!is.na(results$coexpression)))
   
+  # Run seahorse without gene-phenotype matrix
+  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_phenotype_cor = FALSE)
+  
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA", "phenocor") %in% names(results)))
+  expect_true(all(!is.na(results$phenocor)))
+  expect_true(all(!is.na(results$coexpression)))
+  expect_equal(length(results$phenotype_association), 0)
+  expect_equal(length(results$GSEA), 0)
+  expect_true(all(c("stat", "cramerV", "padj", "testType") %in% names(results$phenocor)))
+  expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$stat)))
+  expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$stat)))
+  expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$cramerV)))
+  expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$cramerV)))
+  expect_true(all(c("sex", "height", "group") %in% rownames(results$phenocor$padj)))
+  expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
+  
   # Run seahorse with bonferroni correction
   results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                       compute_gene_cor = FALSE, pval_adj_method = "bonferroni")

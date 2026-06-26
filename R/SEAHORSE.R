@@ -23,6 +23,7 @@
 #'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
 #' @param compute_gene_cor : Whether or not to compute the gene-gene correlation matrix. Default is TRUE.
 #' @param compute_phenotype_cor : Whether or not to compute the phenotype-phenotype association matrix. Default is TRUE.
+#' @param compute_gene_phenotype_cor: Whether or not to compute the gene-phenotype association matrix. Default is TRUE.
 #' @param assoc_method : The method used to infer associations between phenotypes and genes. Default
 #' is "spearman". Other options are "pearson", "kendall", and "linear". The "pearson", "kendall", and "spearman" options
 #' compute correlations between each phenotype and gene independently for numeric phenotypes and
@@ -38,6 +39,7 @@
 #'         results$coexpression: a gene x gene correlation matrix.
 #'         results$phenotype_association : a list containing a vector for each phenotype
 #'         results$GSEA: a list containing a matrix of GSEA results for each phenotype
+#'         results$phenocor: an upper-triangular matrix of phenotype-phenotype associations
 #'
 #' @examples
 #'
@@ -63,7 +65,7 @@
 #'  
 #' @export
 seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, compute_gene_cor = TRUE,
-                     compute_phenotype_cor = TRUE,
+                     compute_phenotype_cor = TRUE, compute_gene_phenotype_cor = TRUE,
                      assoc_method = "spearman", pval_adj_method = "none",
                      usage_report_file = NULL, verbose = FALSE){
   
@@ -204,28 +206,14 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
   }
   
   # Compute association of gene expression with phenotypes and run GSEA
-  if(verbose == TRUE){
-    print("Running gene-phenotype associations")
-  }
   usagePhenGene <- NA
   results$phenotype_association = list()
   results$GSEA = list()
   if(is.null(usage_report_file)){
-    if(assoc_method %in% c("pearson", "spearman", "kendall")){
-      corr <- computeCorrelations(expression = expression, phenotype = phenotype,
-                                  pathways = pathways, phenotype_dictionary = phenotype_dictionary,
-                                  method = assoc_method, pval_adj_method = pval_adj_method)
-      results$phenotype_association <- corr$pheno
-      results$GSEA <- corr$gsea
-    }else{
-      linReg <- computeLinearRegression(expression = expression, phenotype = phenotype,
-                                        pathways = pathways, phenotype_dictionary = phenotype_dictionary,
-                                        pval_adj_method = pval_adj_method)
-      results$phenotype_association <- linReg$pheno
-      results$GSEA <- linReg$gsea
-    }
-  }else{
-    usagePhenGene <- peakRAM::peakRAM({
+    if(compute_gene_phenotype_cor == TRUE){
+      if(verbose == TRUE){
+        print("Running gene-phenotype associations")
+      }
       if(assoc_method %in% c("pearson", "spearman", "kendall")){
         corr <- computeCorrelations(expression = expression, phenotype = phenotype,
                                     pathways = pathways, phenotype_dictionary = phenotype_dictionary,
@@ -239,10 +227,34 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
         results$phenotype_association <- linReg$pheno
         results$GSEA <- linReg$gsea
       }
-    })
-  }
-  if(verbose == TRUE){
-    print("Gene-phenotype associations complete")
+      if(verbose == TRUE){
+        print("Gene-phenotype associations complete")
+      }
+    }
+  }else{
+    if(compute_gene_phenotype_cor == TRUE){
+      usagePhenGene <- peakRAM::peakRAM({
+        if(verbose == TRUE){
+          print("Running gene-phenotype associations")
+        }
+        if(assoc_method %in% c("pearson", "spearman", "kendall")){
+          corr <- computeCorrelations(expression = expression, phenotype = phenotype,
+                                      pathways = pathways, phenotype_dictionary = phenotype_dictionary,
+                                      method = assoc_method, pval_adj_method = pval_adj_method)
+          results$phenotype_association <- corr$pheno
+          results$GSEA <- corr$gsea
+        }else{
+          linReg <- computeLinearRegression(expression = expression, phenotype = phenotype,
+                                            pathways = pathways, phenotype_dictionary = phenotype_dictionary,
+                                            pval_adj_method = pval_adj_method)
+          results$phenotype_association <- linReg$pheno
+          results$GSEA <- linReg$gsea
+        }
+        if(verbose == TRUE){
+          print("Gene-phenotype associations complete")
+        }
+      })
+    }
   }
   
   # Save the results to a usage file.
