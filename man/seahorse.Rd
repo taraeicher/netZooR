@@ -18,6 +18,7 @@ seahorse(
   pathways,
   compute_gene_cor = TRUE,
   compute_phenotype_cor = TRUE,
+  compute_gene_phenotype_cor = TRUE,
   assoc_method = "spearman",
   pval_adj_method = "none",
   usage_report_file = NULL,
@@ -61,12 +62,15 @@ for each coefficient.}
 
 \item{verbose}{Whether or not to print statements notifying user of run status.
 Outputs:}
+
+\item{compute_gene_phenotype_cor:}{Whether or not to compute the gene-phenotype association matrix. Default is TRUE.}
 }
 \value{
 results    : a list containing three objects
         results$coexpression: a gene x gene correlation matrix.
         results$phenotype_association : a list containing a vector for each phenotype
         results$GSEA: a list containing a matrix of GSEA results for each phenotype
+        results$phenocor: an upper-triangular matrix of phenotype-phenotype associations
 }
 \description{
 Run SEAHORSE in R
