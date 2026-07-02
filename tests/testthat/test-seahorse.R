@@ -643,3 +643,439 @@ test_that("seahorse function works", {
                      compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
   expect_true(is.na(result$phenocor$stat["sex", "WBC"]))
 })
+test_that(".tsv.gz output works", {
+  # Check packages.
+  skip_if_not_installed("AnnotationDbi")
+  skip_if_not_installed("org.Hs.eg.db")
+
+  # Simulate expression data
+  expression_data = data.frame(matrix(rexp(1000, rate=.1), ncol=10, nrow = 100))
+  rownames(expression_data) = sprintf("ENSG%011d", 1:100)
+  colnames(expression_data) = paste("sample", 1:10, sep = "")
+  
+  # Simulate phenotypic data
+  phenotype_data = data.frame(matrix(0, ncol=3, nrow = 10))
+  colnames(phenotype_data) = c("sex", "height", "group")
+  rownames(phenotype_data) = colnames(expression_data)
+  phenotype_data$sex = c(rep("male", nrow(phenotype_data)/2), rep("female", nrow(phenotype_data)/2))
+  phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = T)
+  phenotype_data$group = c(rep("1", 3), rep("2", 4), rep("3", 3))
+  
+  phenotype_dictionary = c("dichotomous", "continuous", "nominal")
+  
+  # Create toy pathways
+  pathways = list()
+  pathways$pathway1 = sample(rownames(expression_data), 50)
+  pathways$pathway2 = sample(rownames(expression_data), 30)
+  pathways$pathway3 = sample(rownames(expression_data), 70)
+  
+  # Make input data and write it.
+  dir.create("~/tmpInputDir")
+  input <- list(expression = expression_data, phenotype = phenotype_data, dict = phenotype_dictionary)
+  saveRDS(input, "~/tmpInputDir/tissue1.RDS")
+  saveRDS(input, "~/tmpInputDir/tissue2.RDS")
+  saveRDS(input, "~/tmpInputDir/tissue3.RDS")
+  saveRDS(c(1, 2, 3), "~/tmpInputDir/badInput.RDS")
+  
+  # Get toy SEAHORSE results and write them.
+  dir.create("~/tmpResultDir")
+  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
+  saveRDS(results, "~/tmpResultDir/tissue1.RDS")
+  saveRDS(results, "~/tmpResultDir/tissue2.RDS")
+  saveRDS(results, "~/tmpResultDir/tissue3.RDS")
+  saveRDS(c(1, 2, 3), "~/tmpResultDir/badInput.RDS")
+  
+  # Make the data dictionary.
+  dataDict <- data.frame(VARNAME = colnames(phenotype_data),
+                         VARDESC = c("Sex (male or female)",
+                                     "Height in inches",
+                                     "Group membership"),
+                         VARMETA = rep("phenotype", 3),
+                         TYPE = c("string", "decimal", "integer, encoded value"))
+  dataDictCols <- c("VARNAME", "VARDESC", "VARMETA", "TYPE")
+  
+  # Create the output directory.
+  outputDir <- "~/tmpOutputDir/"
+  dir.create(outputDir)
+  
+  # Check that an error is thrown if the SEAHORSE input object is formatted incorrectly.
+  expect_error(seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                   result_directory = "~/tmpResultDir",
+                                   output_directory = outputDir,
+                                   data_dictionary = dataDict,
+                                   pathways = pathways),
+               "Incorrect format for input file")
+  unlink("~/tmpInputDir/badInput.RDS")
+  unlink("~/tmpResultDir/badInput.RDS")
+  
+  # Check that an error is thrown if the SEAHORSE result object is formatted incorrectly.
+  saveRDS(input, "~/tmpInputDir/badInput.RDS")
+  saveRDS(c(1, 2, 3), "~/tmpResultDir/badInput.RDS")
+  expect_error(seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                   result_directory = "~/tmpResultDir",
+                                   output_directory = outputDir,
+                                   data_dictionary = dataDict,
+                                   pathways = pathways),
+               "Incorrect format for result file")
+  unlink("~/tmpInputDir/badInput.RDS")
+  unlink("~/tmpResultDir/badInput.RDS")
+  
+  # Check that an error is thrown if the data dictionary is formatted incorrectly.
+  badDataDict <- dataDict[,c(1:2)]
+  expect_error(seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                   result_directory = "~/tmpResultDir",
+                                   output_directory = outputDir,
+                                   data_dictionary = badDataDict,
+                                   pathways = pathways),
+               "Incorrect format for data dictionary")
+
+  # Check that an error is thrown if the number of input and result files do not match.
+  saveRDS(results, "~/tmpInputDir/tissue4.RDS")
+  expect_error(seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                   result_directory = "~/tmpResultDir",
+                                   output_directory = outputDir,
+                                   data_dictionary = dataDict,
+                                   pathways = pathways),
+               "Number of result and input files do not match")
+  unlink("~/tmpInputDir/tissue4.RDS")
+  
+  # Check that an error is thrown if the input and result file names do not match.
+  saveRDS(results, "~/tmpInputDir/badName.RDS")
+  unlink("~/tmpInputDir/tissue2.RDS")
+  expect_error(seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                   result_directory = "~/tmpResultDir",
+                                   output_directory = outputDir,
+                                   data_dictionary = dataDict,
+                                   pathways = pathways),
+               "Result and input file names do not match")
+  saveRDS(input, "~/tmpInputDir/tissue2.RDS")
+  unlink("~/tmpInputDir/badName.RDS")
+  
+  # Check that the files exist and are the correct format when we read them.
+  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                result_directory = "~/tmpResultDir",
+                                output_directory = outputDir,
+                                data_dictionary = dataDict,
+                                pathways = pathways)
+  readFile <- function(fname){
+    con <- gzfile(fname, "rt")
+    data <- read.delim(con, sep = "\t", header = TRUE)
+    return(data)
+  }
+  # Map genes.
+  mappedSymbols <- mapIds(
+    x = org.Hs.eg.db,
+    keys = rownames(expression_data),
+    column = "SYMBOL",
+    keytype = "ENSEMBL",
+    multiVals = "first" # Returns one value for each ENSEMBL ID.
+  )
+  mappedEntrez <- mapIds(
+    x = org.Hs.eg.db,
+    keys = rownames(expression_data),
+    column = "ENTREZID",
+    keytype = "ENSEMBL",
+    multiVals = "first" # Returns one value for each ENSEMBL ID.
+  )
+  mappingResults <- data.frame(ENSEMBL = rownames(expression_data), SYMBOL = mappedSymbols, ENTREZID = mappedEntrez)
+  mappingResults$ALIAS <- mappingResults$SYMBOL
+  mappingResults <- mappingResults[,c("ALIAS", "ENSEMBL", "SYMBOL", "ENTREZID")]
+  mappingResults$ENTREZID <- as.numeric(mappingResults$ENTREZID)
+  rownames(mappingResults) <- NULL
+  
+  expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
+  expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               c("VARNAME","VARDESC",	"VARMETA",	"TYPE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+  expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
+               mappingResults)
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               c("SAMPID","tissue",	"VARNAME", "VALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               c("VARNAME","GENE",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               c("VARNAME1","VARNAME2",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(nrow(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               3 * ncol(phenotype_data) * length(pathways))
+  expect_equal(nrow(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               nrow(dataDict))
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               (nrow(expression_data) * (nrow(expression_data) - 1)) / 2 * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               nrow(expression_data) * ncol(expression_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               nrow(phenotype_data) * ncol(phenotype_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               nrow(expression_data) * ncol(phenotype_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               (ncol(phenotype_data) * (ncol(phenotype_data) - 1)) / 2 * 3)
+  
+  # Check that the output directory is created if we didn't create it.
+  outputDir = "~/newOutputDir/"
+  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                result_directory = "~/tmpResultDir",
+                                output_directory = outputDir,
+                                data_dictionary = dataDict,
+                                pathways = pathways)
+  
+  expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
+  expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               c("VARNAME","VARDESC",	"VARMETA",	"TYPE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+  expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
+               mappingResults)
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               c("SAMPID","tissue",	"VARNAME", "VALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               c("VARNAME","GENE",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               c("VARNAME1","VARNAME2",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(nrow(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               3 * ncol(phenotype_data) * length(pathways))
+  expect_equal(nrow(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               nrow(dataDict))
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               (nrow(expression_data) * (nrow(expression_data) - 1)) / 2 * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               nrow(expression_data) * ncol(expression_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               nrow(phenotype_data) * ncol(phenotype_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               nrow(expression_data) * ncol(phenotype_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               (ncol(phenotype_data) * (ncol(phenotype_data) - 1)) / 2 * 3)
+  unlink("~/newOutputDir", recursive = TRUE)
+  
+  # Check that function still works if we did not infer gene-gene associations.
+  outputDir <- "~/tmpOutputDir/"
+  resultsNoGene <- results
+  resultsNoGene$coexpression <- NA
+  saveRDS(resultsNoGene, "~/tmpResultDir/tissue1.RDS")
+  saveRDS(resultsNoGene, "~/tmpResultDir/tissue2.RDS")
+  saveRDS(resultsNoGene, "~/tmpResultDir/tissue3.RDS")
+
+  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                result_directory = "~/tmpResultDir",
+                                output_directory = outputDir,
+                                data_dictionary = dataDict,
+                                pathways = pathways)
+  expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
+  expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               c("VARNAME","VARDESC",	"VARMETA",	"TYPE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+  expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
+               mappingResults)
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               c("SAMPID","tissue",	"VARNAME", "VALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               c("VARNAME","GENE",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               c("VARNAME1","VARNAME2",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(nrow(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               3 * ncol(phenotype_data) * length(pathways))
+  expect_equal(nrow(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               nrow(dataDict))
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               0)
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               nrow(expression_data) * ncol(expression_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               nrow(phenotype_data) * ncol(phenotype_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               nrow(expression_data) * ncol(phenotype_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               (ncol(phenotype_data) * (ncol(phenotype_data) - 1)) / 2 * 3)
+  
+  # Check that function still works if we did not infer gene-phenotype associations.
+  resultsNoGenePhen <- results
+  resultsNoGenePhen$phenotype_association <- list()
+  resultsNoGenePhen$GSEA <- list()
+  saveRDS(resultsNoGenePhen, "~/tmpResultDir/tissue1.RDS")
+  saveRDS(resultsNoGenePhen, "~/tmpResultDir/tissue2.RDS")
+  saveRDS(resultsNoGenePhen, "~/tmpResultDir/tissue3.RDS")
+  
+  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                      result_directory = "~/tmpResultDir",
+                                      output_directory = outputDir,
+                                      data_dictionary = dataDict,
+                                      pathways = pathways)
+  expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
+  expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               c("VARNAME","VARDESC",	"VARMETA",	"TYPE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+  expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
+               mappingResults)
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               c("SAMPID","tissue",	"VARNAME", "VALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               c("VARNAME","GENE",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               c("VARNAME1","VARNAME2",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(nrow(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               0)
+  expect_equal(nrow(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               nrow(dataDict))
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               (nrow(expression_data) * (nrow(expression_data) - 1)) / 2 * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               nrow(expression_data) * ncol(expression_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               nrow(phenotype_data) * ncol(phenotype_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               0)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               (ncol(phenotype_data) * (ncol(phenotype_data) - 1)) / 2 * 3)
+  
+  # Check that function still works if we did not infer phenotype-phenotype associations.
+  resultsNoPhen <- results
+  resultsNoPhen$phenocor <- NA
+  saveRDS(resultsNoPhen, "~/tmpResultDir/tissue1.RDS")
+  saveRDS(resultsNoPhen, "~/tmpResultDir/tissue2.RDS")
+  saveRDS(resultsNoPhen, "~/tmpResultDir/tissue3.RDS")
+  
+  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                      result_directory = "~/tmpResultDir",
+                                      output_directory = outputDir,
+                                      data_dictionary = dataDict,
+                                      pathways = pathways)
+  expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
+  expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               c("VARNAME","VARDESC",	"VARMETA",	"TYPE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+  expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
+               mappingResults)
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               c("SAMPID","tissue",	"VARNAME", "VALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               c("VARNAME","GENE",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               c("VARNAME1","VARNAME2",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(nrow(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               3 * ncol(phenotype_data) * length(pathways))
+  expect_equal(nrow(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               nrow(dataDict))
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               (nrow(expression_data) * (nrow(expression_data) - 1)) / 2 * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               nrow(expression_data) * ncol(expression_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               nrow(phenotype_data) * ncol(phenotype_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               nrow(expression_data) * ncol(phenotype_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               0)
+  
+  # Check that function still works if we did not infer anything.
+  resultsNothing <- results
+  resultsNothing$coexpression <- NA
+  resultsNothing$phenocor <- NA
+  resultsNothing$phenotype_association <- list()
+  resultsNothing$GSEA <- list()
+  saveRDS(resultsNothing, "~/tmpResultDir/tissue1.RDS")
+  saveRDS(resultsNothing, "~/tmpResultDir/tissue2.RDS")
+  saveRDS(resultsNothing, "~/tmpResultDir/tissue3.RDS")
+  
+  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                      result_directory = "~/tmpResultDir",
+                                      output_directory = outputDir,
+                                      data_dictionary = dataDict,
+                                      pathways = pathways)
+  expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
+  expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               c("VARNAME","VARDESC",	"VARMETA",	"TYPE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+  expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
+               mappingResults)
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               c("SAMPID","tissue",	"VARNAME", "VALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               c("VARNAME","GENE",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               c("VARNAME1","VARNAME2",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(nrow(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               0)
+  expect_equal(nrow(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               nrow(dataDict))
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               0)
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               nrow(expression_data) * ncol(expression_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               nrow(phenotype_data) * ncol(phenotype_data) * 3)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               0)
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               0)
+  
+  # Check that function still works if there is only one tissue.
+  saveRDS(results, "~/tmpResultDir/tissue1.RDS")
+  unlink("~/tmpResultDir/tissue2.RDS")
+  unlink("~/tmpResultDir/tissue3.RDS")
+  unlink("~/tmpInputDir/tissue2.RDS")
+  unlink("~/tmpInputDir/tissue3.RDS")
+  
+  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+                                      result_directory = "~/tmpResultDir",
+                                      output_directory = outputDir,
+                                      data_dictionary = dataDict,
+                                      pathways = pathways)
+  expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
+  expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               c("VARNAME","VARDESC",	"VARMETA",	"TYPE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
+  expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+  expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
+               mappingResults)
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               c("SAMPID","tissue",	"VARNAME", "VALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               c("VARNAME","GENE",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(colnames(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               c("VARNAME1","VARNAME2",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(nrow(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
+               ncol(phenotype_data) * length(pathways))
+  expect_equal(nrow(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
+               nrow(dataDict))
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
+               (nrow(expression_data) * (nrow(expression_data) - 1)) / 2)
+  expect_equal(nrow(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
+               nrow(expression_data) * ncol(expression_data))
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata.tsv.gz"))),
+               nrow(phenotype_data) * ncol(phenotype_data))
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2expression.tsv.gz"))),
+               nrow(expression_data) * ncol(phenotype_data))
+  expect_equal(nrow(readFile(paste0(outputDir, "metadata2metadata.tsv.gz"))),
+               (ncol(phenotype_data) * (ncol(phenotype_data) - 1)) / 2)
+  
+  # Remove files.
+  unlink("~/tmpInputDir", recursive = TRUE)
+  unlink("~/tmpResultDir", recursive = TRUE)
+  unlink("~/tmpOutputDir", recursive = TRUE)
+})
