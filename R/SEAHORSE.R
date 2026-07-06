@@ -1338,14 +1338,14 @@ writeMapping <- function(inFiles, file){
     stop("Incorrect format for input file")})
 
   # Map genes.
-  mappedSymbols <- mapIds(
+  mappedSymbols <- AnnotationDbi::mapIds(
     x = org.Hs.eg.db,
     keys = ensembl,
     column = "SYMBOL",
     keytype = "ENSEMBL",
     multiVals = "first" # Returns one value for each ENSEMBL ID.
   )
-  mappedEntrez <- mapIds(
+  mappedEntrez <- AnnotationDbi::mapIds(
     x = org.Hs.eg.db,
     keys = ensembl,
     column = "ENTREZID",
