@@ -1066,8 +1066,6 @@ seahorseFormatForUI <- function(input_directory, result_directory, output_direct
   tissue_names_input <- formatTissueNames(inputfiles)
   
   # Check that names match.
-  str(resultfiles)
-  str(inputfiles)
   if(length(tissue_names_result) == length(tissue_names_input)){
     if(!identical(tissue_names_result, tissue_names_input)){
       stop("Result and input file names do not match")
@@ -1082,23 +1080,39 @@ seahorseFormatForUI <- function(input_directory, result_directory, output_direct
   }
   
   # Write results.
-  writeExpression(inFiles = paste(input_directory, inputfiles, sep = "/"), 
+  message("Preparing to write expression...")
+  writeExpression(inFiles = paste(input_directory, inputfiles, sep = "/"),
                   file = paste(output_directory, "geneexpression_data", sep = "/"))
-  writeMapping(inFiles = paste(input_directory, inputfiles, sep = "/"), 
+  message("Expression file done.")
+  message("Preparing to write gene mapping...")
+  writeMapping(inFiles = paste(input_directory, inputfiles, sep = "/"),
                file = paste(output_directory, "human_ensembl2symbol_map", sep = "/"))
+  message("Mapping file done.")
+  message("Preparing to write data dictionary...")
   writeToGz(data = data_dictionary, file = paste(output_directory, "data_dictionary", sep = "/"))
+  message("Data dictionary done.")
+  message("Preparing to write GSEA results...")
   writePathwayEnrichment(inFiles = paste(result_directory, resultfiles, sep = "/"),
                          file = paste(output_directory, "all_gsea_results", sep = "/"),
                          pathways = pathways)
+  message("GSEA result file done.")
+  message("Preparing to write phenotype data...")
   writePhenotype(inFiles = paste(input_directory, inputfiles, sep = "/"),
                          file = paste(output_directory, "metadata", sep = "/"))
+  message("Phenotype data done.")
+  message("Preparing to write phenotype-gene associations...")
   writePhenotypeGeneAssociations(inFiles = paste(input_directory, inputfiles, sep = "/"),
                   resultFiles = paste(result_directory, resultfiles, sep = "/"),
                  file = paste(output_directory, "metadata2expression", sep = "/"))
+  message("Phenotype-gene associations done.")
+  message("Preparing to write phenotype associations...")
   writePhenotypePhenotypeAssociations(inFiles = paste(result_directory, resultfiles, sep = "/"),
                                  file = paste(output_directory, "metadata2metadata", sep = "/"))
+  message("Phenotype associations done")
+  message("Preparing to write gene associations...")
   writeGeneGene(inFiles = paste(result_directory, resultfiles, sep = "/"),
                                       file = paste(output_directory, "geneexpression2geneexpression", sep = "/"))
+  message("Gene associations done.")
   
 }
 
@@ -1110,8 +1124,15 @@ seahorseFormatForUI <- function(input_directory, result_directory, output_direct
 #' @return NULL
 writePathwayEnrichment <- function(inFiles, file, pathways){
   
+  # Get input file names.
+  tissueNames <- formatTissueNames(inFiles)
+  
+  # Open the file.
+  con <- gzfile(paste0(file, ".tsv.gz"), "wt")
+  on.exit(close(con))
+  
   # Write the pathway enrichment results.
-  pathwayEnrichment <- tryCatch({do.call(rbind, lapply(1:length(inFiles), function(i){
+  pathwayEnrichment <- tryCatch({for(i in 1:length(inFiles)){
     
     # Get tissue name and read file.
     results = readRDS(inFiles[i])
@@ -1131,50 +1152,59 @@ writePathwayEnrichment <- function(inFiles, file, pathways){
         # P-values are log-transformed and absolute values are used for correlations.
         # The largest values should then receive the lowest (best) ranking.
         transformedStats <- results$phenotype_association[[var]]$stat
-        transformedStats[which(!is.na(results$phenotype_association[[var]]$padj))] <- -log10(transformedStats[which(!is.na(results$phenotype_association[[var]]$padj))])
-        transformedStats[which(is.na(results$phenotype_association[[var]]$padj))] <- abs(transformedStats[which(is.na(results$phenotype_association[[var]]$padj))])
-        pvalRanking <- order(-transformedStats)
-        names(pvalRanking) <- rownames(results$phenotype_association[[var]])
+        if(!all(is.null(transformedStats))){
+          transformedStats[which(!is.na(results$phenotype_association[[var]]$padj))] <- -log10(transformedStats[which(!is.na(results$phenotype_association[[var]]$padj))])
+          transformedStats[which(is.na(results$phenotype_association[[var]]$padj))] <- abs(transformedStats[which(is.na(results$phenotype_association[[var]]$padj))])
+          pvalRanking <- order(-transformedStats)
+          names(pvalRanking) <- rownames(results$phenotype_association[[var]])
+        }
         
         # Build basic pathway data.
-        returnDat <- results$GSEA[[var]][,c("pathway", "pval", "padj", "log2err", "ES", "NES", "size")]
-        # Get ranking of pathway genes.
-        varResults <- as.data.frame(results$GSEA[[var]])
-        rankVec <- unlist(lapply(1:nrow(varResults), function(pw){
-          # Get pathway genes.
-          pathwayGenes <- pathways[[varResults[pw, "pathway"]]]
-          # Get adjusted p-value rankings.
-          rankForLeadingEdge <- pvalRanking[pathwayGenes]
-          return(paste0("{", paste(rankForLeadingEdge, collapse = ","), "}"))
-        }))
-        returnDat$ranks <- rankVec
-        # Format leading edges as string.
-        leadingEdgeVec <- unlist(lapply(results$GSEA[[var]][,"leadingEdge"][[1]], function(edge){
-          return(paste0("{", paste(edge, collapse = ","), "}"))
-        }))
-        returnDat$leadingEdge <- leadingEdgeVec
-        
-        # Add variable name.
-        returnDat$varname <- rep(var, nrow(returnDat))
-        
-        # Add tissue.
-        splitPath <- strsplit(inFiles[i], "/")[[1]]
-        localFile <- splitPath[length(splitPath)]
-        withoutFileExt <- strsplit(localFile, ".RDS")[[1]][1]
-        returnDat$tissue <- rep(withoutFileExt, nrow(returnDat))
-        
+        returnDat <- data.frame(pathway = character(), pval = numeric(), 
+                                padj = numeric(), log2err = numeric(),
+                                ES = numeric(), NES = numeric(),
+                                size = numeric(), ranks = character(),
+                                leadingEdge = character(), varname = character(),
+                                tissue = character())
+        if(!all(is.na(results$GSEA[[var]]))){
+          returnDat <- results$GSEA[[var]][,c("pathway", "pval", "padj", "log2err", "ES", "NES", "size")]
+          # Get ranking of pathway genes.
+          varResults <- as.data.frame(results$GSEA[[var]])
+          rankVec <- unlist(lapply(1:nrow(varResults), function(pw){
+            # Get pathway genes.
+            pathwayGenes <- pathways[[varResults[pw, "pathway"]]]
+            # Get adjusted p-value rankings.
+            rankForLeadingEdge <- pvalRanking[pathwayGenes]
+            return(paste0("{", paste(rankForLeadingEdge, collapse = ","), "}"))
+          }))
+          returnDat$ranks <- rankVec
+          # Format leading edges as string.
+          leadingEdgeVec <- unlist(lapply(results$GSEA[[var]][,"leadingEdge"][[1]], function(edge){
+            return(paste0("{", paste(edge, collapse = ","), "}"))
+          }))
+          returnDat$leadingEdge <- leadingEdgeVec
+          
+          # Add variable name.
+          returnDat$varname <- rep(var, nrow(returnDat))
+          
+          # Add tissue.
+          splitPath <- strsplit(inFiles[i], "/")[[1]]
+          localFile <- splitPath[length(splitPath)]
+          withoutFileExt <- strsplit(localFile, ".RDS")[[1]][1]
+          returnDat$tissue <- rep(withoutFileExt, nrow(returnDat))
+        }
         return(returnDat)
       }))
-      
     }
     
-    # Return the data frame.
-    return(enrichmentVar)
-  }))}, error = function(cond){
-    stop("Incorrect format for result file")})
-
-  # Write the file.
-  writeToGz(data = pathwayEnrichment, file = file)
+    # Write the chunk.
+    write.table(enrichmentVar, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
+                col.names = i == 1)
+    message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
+    
+  }}, error = function(cond){
+    print(cond)
+    stop(paste("Could not format pathway enrichment"))})
 }
 
 #' Formats the tissue names by removing the .RDS extension from the input files.
@@ -1196,22 +1226,25 @@ formatTissueNames <- function(names){
 #' @return NULL 
 writeGeneGene <- function(inFiles, file){
   
+  # Open the file.
+  con <- gzfile(paste0(file, ".tsv.gz"), "wt")
+  on.exit(close(con))
+  
   # Get input file names.
   tissueNames <- formatTissueNames(inFiles)
   
   # Write the gene correlation results.
-  geneCor <- do.call(rbind, lapply(1:length(tissueNames), function(i){
+  geneCor <- for(i in 1:length(tissueNames)){
     
     # Get tissue name and read file.
     results = readRDS(inFiles[i])
     
     # Remove duplicate pairs.
     geneCor <- results$coexpression
-    if(length(which(!is.na(geneCor) == TRUE)) == 0){
-      flatTable <- data.frame(A = character(), B = character(), 
-                              Tissue = character(), Correlation = numeric())
-      colnames(flatTable) <- c("Gene A", "Gene B", "Tissue", "Correlation")
-    }else{
+    flatTable <- data.frame(A = character(), B = character(), 
+                            Tissue = character(), Correlation = numeric())
+    colnames(flatTable) <- c("Gene A", "Gene B", "Tissue", "Correlation")
+    if(length(which(!is.na(geneCor) == TRUE)) > 0){
       geneCor[lower.tri(geneCor, diag = TRUE)] <- NA
       
       flatTable <- data.frame(
@@ -1232,11 +1265,12 @@ writeGeneGene <- function(inFiles, file){
       # Rearrange columns.
       flatTable <- flatTable[,c("Gene A", "Gene B", "Tissue", "Correlation")]
     }
-    return(flatTable)
-  }))
-  
-  # Write the file.
-  writeToGz(data = geneCor, file = file)
+    
+    # Write the chunk.
+    write.table(flatTable, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
+                col.names = i == 1)
+    message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
+  }
 }
 
 #' Generates the expression data in the format expected by the UI. Writes a
@@ -1245,9 +1279,16 @@ writeGeneGene <- function(inFiles, file){
 #' @param file The name of the file to write. .tsv.gz. will be appended.
 #' @return NULL
 writeExpression <- function(inFiles, file){
+  
+  # Open the file.
+  con <- gzfile(paste0(file, ".tsv.gz"), "wt")
+  on.exit(close(con))
+  
+  # Get input file names.
+  tissueNames <- formatTissueNames(inFiles)
 
   # Write the pathway enrichment results.
-  expression <- tryCatch({do.call(rbind, lapply(1:length(inFiles), function(i){
+  expression <- tryCatch({for(i in 1:length(inFiles)){
     
     # Get tissue name and read file.
     results = readRDS(inFiles[i])
@@ -1257,15 +1298,17 @@ writeExpression <- function(inFiles, file){
     flatTable <- data.frame(
       ENSG = rep(rownames(exprMat), times = ncol(exprMat)),
       SAMPID = rep(colnames(exprMat), each = nrow(exprMat)),
-      GENE_EXPRESSION = as.vector(exprMat)
+      GENE_EXPRESSION = as.vector(exprMat),
+      tissue = tissueNames[i]
     )
-    return(flatTable)
-  }))
+    
+    write.table(flatTable, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
+                col.names = i == 1)
+    message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
+  }
   }, error = function(cond){
-    stop("Incorrect format for input file")})
-  
-  # Write the file.
-  writeToGz(data = expression, file = file)
+    print(cond)
+    stop("Could not format expression")})
 }
 
 #' Writes a data frame as .csv.gz.
@@ -1324,11 +1367,15 @@ writeMapping <- function(inFiles, file){
 #' @return NULL
 writePhenotype <- function(inFiles, file){
   
+  # Open the file.
+  con <- gzfile(paste0(file, ".tsv.gz"), "wt")
+  on.exit(close(con))
+  
   # Get input file names.
   tissueNames <- formatTissueNames(inFiles)
 
   # Write the pathway enrichment results.
-  pheno <- tryCatch({do.call(rbind, lapply(1:length(tissueNames), function(i){
+  pheno <- tryCatch({for(i in 1:length(tissueNames)){
     
     # Get tissue name and read file.
     results = readRDS(inFiles[i])
@@ -1336,8 +1383,8 @@ writePhenotype <- function(inFiles, file){
     # Convert to a table.
     phenoMat <- as.matrix(results$phenotype)
     flatTable <- data.frame(
-      VARNAME = rep(colnames(phenoMat), times = nrow(phenoMat)),
-      SAMPID = rep(rownames(phenoMat), each = ncol(phenoMat)),
+      VARNAME = rep(colnames(phenoMat), each = nrow(phenoMat)),
+      SAMPID = rep(rownames(phenoMat), times = ncol(phenoMat)),
       VALUE = as.vector(phenoMat)
     )
 
@@ -1346,12 +1393,13 @@ writePhenotype <- function(inFiles, file){
 
     # Rearrange columns.
     flatTable <- flatTable[,c("SAMPID", "tissue", "VARNAME", "VALUE")]
-    return(flatTable)
-  }))}, error = function(cond){
+    
+    write.table(flatTable, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
+                col.names = i == 1)
+    message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
+
+  }}, error = function(cond){
     stop("Incorrect format for input file")})
-  
-  # Write the file.
-  writeToGz(data = pheno, file = file)
 }
 
 #' Generates the phenotype data in the format expected by the UI.
@@ -1362,11 +1410,15 @@ writePhenotype <- function(inFiles, file){
 #' @return NULL
 writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file){
   
+  # Open the file.
+  con <- gzfile(paste0(file, ".tsv.gz"), "wt")
+  on.exit(close(con))
+  
   # Get input file names.
   tissueNames <- formatTissueNames(inFiles)
   
   # Write the pathway enrichment results.
-  phenotypeGene <- do.call(rbind, lapply(1:length(tissueNames), function(i){
+  phenotypeGene <- for(i in 1:length(tissueNames)){
     
     # Get tissue name and read file.
     results <- readRDS(resultFiles[i])
@@ -1375,32 +1427,38 @@ writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file){
     phenotypeToGeneDf <- data.frame(VARNAME = character(), GENE = character(), 
                                     tissue = character(), TEST = character(),
                                     TESTSTAT = numeric(), TESTPVALUE = numeric())
-    
-    
+
     if(length(results$phenotype_association) > 0){
         phenotypeToGeneList <- lapply(names(results$phenotype_association), function(var){
-          outDf <- results$phenotype_association[[var]]
-          colnames(outDf) <- c("TESTSTAT", "TESTPVALUE")
-          outDf$GENE <- rownames(outDf)
-          outDf$VARNAME <- rep(var, nrow(outDf))
-          outDf$tissue <- tissueNames[i]
-          outDf$TEST <- "Correlation"
-          dictVal <- inputs$dict[which(colnames(input$phenotype) == var)]
-          if(dictVal == "dichotomous"){
-            outDf$TEST <- "LIMMA Moderated t-test"
-          }else if(dictVal == "nominal"){
-            outDf$TEST <- "ANOVA"
+          outDf <- data.frame(VARNAME = character(), GENE = character(), 
+                              tissue = character(), TEST = character(),
+                              TESTSTAT = numeric(), TESTPVALUE = numeric())
+          if(var %in% colnames(inputs$phenotype)){
+            outDf <- results$phenotype_association[[var]]
+            if(length(outDf) > 1){
+              colnames(outDf) <- c("TESTSTAT", "TESTPVALUE")
+              outDf$GENE <- rownames(outDf)
+              outDf$VARNAME <- rep(var, nrow(outDf))
+              outDf$tissue <- tissueNames[i]
+              outDf$TEST <- "Correlation"
+              dictVal <- inputs$dict[which(colnames(inputs$phenotype) == var)]
+              if(dictVal == "dichotomous"){
+                outDf$TEST <- "LIMMA Moderated t-test"
+              }else if(dictVal == "nominal"){
+                outDf$TEST <- "ANOVA"
+              }
+              outDf <- outDf[,c("VARNAME", "GENE", "tissue", "TEST", "TESTSTAT", "TESTPVALUE")]
+            }
           }
-          outDf <- outDf[,c("VARNAME", "GENE", "tissue", "TEST", "TESTSTAT", "TESTPVALUE")]
+          
           return(outDf)
         })
         phenotypeToGeneDf <- do.call(rbind, phenotypeToGeneList)
     }
-    return(phenotypeToGeneDf)
-  }))
-  
-  # Write the file.
-  writeToGz(data = phenotypeGene, file = file)
+    write.table(phenotypeToGeneDf, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
+                col.names = i == 1)
+    message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
+  }
 }
 
 #' Generates the phenotype results in the format expected by the UI.
@@ -1410,11 +1468,15 @@ writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file){
 #' @return NULL
 writePhenotypePhenotypeAssociations <- function(inFiles, file){
   
+  # Open the file.
+  con <- gzfile(paste0(file, ".tsv.gz"), "wt")
+  on.exit(close(con))
+  
   # Get input file names.
   tissueNames <- formatTissueNames(inFiles)
   
   # Write the pathway enrichment results.
-  phenotype <- do.call(rbind, lapply(1:length(tissueNames), function(i){
+  phenotype <- for(i in 1:length(tissueNames)){
     
     # Get tissue name and read file.
     results = readRDS(inFiles[i])
@@ -1423,21 +1485,21 @@ writePhenotypePhenotypeAssociations <- function(inFiles, file){
                                          TEST = character(), TESTSTAT = numeric(), TESTPVALUE = numeric())
     
     if(all(!is.na(results$phenocor)) == TRUE){
-      phenotypeToPhenotypeList <- lapply(1:(nrow(results$phenocor$stat)-1), function(i){
-        VARNAME2 <- colnames(results$phenocor$stat)[(i+1):ncol(results$phenocor$stat)]
-        TEST <- results$phenocor$testType[i,(i+1):ncol(results$phenocor$stat)]
-        TESTSTAT <- results$phenocor$stat[i,(i+1):ncol(results$phenocor$stat)]
-        TESTPVALUE <- results$phenocor$padj[i,(i+1):ncol(results$phenocor$padj)]
-        VARNAME1 <- rep(rownames(results$phenocor$stat)[i], length((i+1):ncol(results$phenocor$padj)))
-        tissue <- rep(tissueNames[i], length((i+1):ncol(results$phenocor$padj)))
+      phenotypeToPhenotypeList <- lapply(1:(nrow(results$phenocor$stat)-1), function(j){
+        VARNAME2 <- colnames(results$phenocor$stat)[(j+1):ncol(results$phenocor$stat)]
+        TEST <- results$phenocor$testType[j,(j+1):ncol(results$phenocor$stat)]
+        TESTSTAT <- results$phenocor$stat[j,(j+1):ncol(results$phenocor$stat)]
+        TESTPVALUE <- results$phenocor$padj[j,(j+1):ncol(results$phenocor$padj)]
+        VARNAME1 <- rep(rownames(results$phenocor$stat)[j], length((j+1):ncol(results$phenocor$padj)))
+        tissue <- tissueNames[i]
         return(data.frame(VARNAME1 = VARNAME1, VARNAME2 = VARNAME2, tissue = tissue,
                           TEST = TEST, TESTSTAT = TESTSTAT, TESTPVALUE = TESTPVALUE))
       })
       phenotypeToPhenotypeDf <- do.call(rbind, phenotypeToPhenotypeList)
     }
-    return(phenotypeToPhenotypeDf)
-  }))
-
-  # Write the file.
-  writeToGz(data = phenotype, file = file)
+    
+    write.table(phenotypeToPhenotypeDf, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
+                col.names = i == 1)
+    message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
+  }
 }

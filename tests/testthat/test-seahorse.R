@@ -48,7 +48,7 @@ test_that("seahorse function works", {
                "Phenotype sex set to continuous but cannot be converted to numeric.")
   
   # Run seahorse
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways))
 
   # Verify structure
   expect_type(results, "list")
@@ -83,7 +83,7 @@ test_that("seahorse function works", {
   expression_data_2 = data.frame(matrix(rexp(1000, rate=.1), ncol=100, nrow = 100))
   rownames(expression_data_2) = paste("gene", 1:100, sep = "")
   colnames(expression_data_2) = paste("sample", 1:100, sep = "")
-  results <- seahorse(expression_data_2, phenotype_data_2, phenotype_dictionary_2, pathways)
+  results <- suppressWarnings(seahorse(expression_data_2, phenotype_data_2, phenotype_dictionary_2, pathways))
   
   # Verify structure
   expect_type(results, "list")
@@ -160,8 +160,8 @@ test_that("seahorse function works", {
   expect_all_equal(results$phenocor$testType["height", "WBC"], "Cor")
   
   # Verify the phenotype data with FDR adjustment.
-  results <- seahorse(expression_data_2, phenotype_data_2, phenotype_dictionary_2, pathways,
-                      pval_adj_method = "fdr")
+  results <- suppressWarnings(seahorse(expression_data_2, phenotype_data_2, phenotype_dictionary_2, pathways,
+                      pval_adj_method = "fdr"))
   
   # Verify structure
   expect_type(results, "list")
@@ -240,8 +240,8 @@ test_that("seahorse function works", {
   expect_all_equal(results$phenocor$testType["height", "WBC"], "Cor")
   
   # Run seahorse without correlation matrix
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
-                      compute_gene_cor = FALSE)
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = FALSE))
   
   # Verify structure
   expect_type(results, "list")
@@ -263,8 +263,8 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run seahorse without phenotype matrix
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
-                      compute_phenotype_cor = FALSE)
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_phenotype_cor = FALSE))
   
   # Verify structure
   expect_type(results, "list")
@@ -280,8 +280,8 @@ test_that("seahorse function works", {
   expect_true(all(!is.na(results$coexpression)))
   
   # Run seahorse without gene-phenotype matrix
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
-                      compute_gene_phenotype_cor = FALSE)
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_phenotype_cor = FALSE))
   
   # Verify structure
   expect_type(results, "list")
@@ -301,8 +301,8 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run seahorse with bonferroni correction
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
-                      compute_gene_cor = FALSE, pval_adj_method = "bonferroni")
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = FALSE, pval_adj_method = "bonferroni"))
   
   # Verify structure
   expect_type(results, "list")
@@ -326,8 +326,8 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run seahorse with fdr correction
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
-                      compute_gene_cor = FALSE, pval_adj_method = "fdr")
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = FALSE, pval_adj_method = "fdr"))
   
   # Verify structure
   expect_type(results, "list")
@@ -352,8 +352,8 @@ test_that("seahorse function works", {
   
   
   # Run SEAHORSE with linear regression.
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
-                      compute_gene_cor = FALSE, assoc_method = "linear")
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = FALSE, assoc_method = "linear"))
   # Verify structure
   expect_type(results, "list")
   expect_true(length(results) > 0)
@@ -375,9 +375,9 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run SEAHORSE with linear regression and Bonferroni adjustment
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                       compute_gene_cor = FALSE, assoc_method = "linear",
-                      pval_adj_method = "bonferroni")
+                      pval_adj_method = "bonferroni"))
   # Verify structure
   expect_type(results, "list")
   expect_true(length(results) > 0)
@@ -403,8 +403,8 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run SEAHORSE with linear regression and FDR adjustment
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
-                      compute_gene_cor = FALSE, assoc_method = "linear", pval_adj_method = "fdr")
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = FALSE, assoc_method = "linear", pval_adj_method = "fdr"))
   # Verify structure
   expect_type(results, "list")
   expect_true(length(results) > 0)
@@ -432,8 +432,8 @@ test_that("seahorse function works", {
   # Check that SEAHORSE runs with linear regression and a malformed column name.
   phenotype_data_mal <- phenotype_data
   colnames(phenotype_data_mal) <- c("?sex", "height in inches", "123group")
-  results <- seahorse(expression_data, phenotype_data_mal, phenotype_dictionary, pathways,
-                      compute_gene_cor = FALSE, assoc_method = "linear")
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data_mal, phenotype_dictionary, pathways,
+                      compute_gene_cor = FALSE, assoc_method = "linear"))
   # Verify structure
   expect_type(results, "list")
   expect_true(length(results) > 0)
@@ -451,8 +451,8 @@ test_that("seahorse function works", {
   expect_true(all(c("X.sex", "height.in.inches", "X123group") %in% colnames(results$phenocor$padj)))
   
   # Check that SEAHORSE runs with correlation and a malformed column name.
-  results <- seahorse(expression_data, phenotype_data_mal, phenotype_dictionary, pathways,
-                      compute_gene_cor = FALSE, assoc_method = "pearson")
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data_mal, phenotype_dictionary, pathways,
+                      compute_gene_cor = FALSE, assoc_method = "pearson"))
   # Verify structure
   expect_type(results, "list")
   expect_true(length(results) > 0)
@@ -473,11 +473,11 @@ test_that("seahorse function works", {
   # included.
   phenotype_data_na <- phenotype_data
   phenotype_data_na[5,"height"] <- NA
-  expect_message(seahorse(expression_data, phenotype_data_na, phenotype_dictionary, pathways,
-                          compute_gene_cor = FALSE, assoc_method = "linear"),
+  expect_message(suppressWarnings(seahorse(expression_data, phenotype_data_na, phenotype_dictionary, pathways,
+                          compute_gene_cor = FALSE, assoc_method = "linear")),
                  "Out of 10 we retained 9 samples.")
-  results <- seahorse(expression_data, phenotype_data_na, phenotype_dictionary, pathways,
-                      compute_gene_cor = FALSE, assoc_method = "linear")
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data_na, phenotype_dictionary, pathways,
+                      compute_gene_cor = FALSE, assoc_method = "linear"))
   # Verify structure
   expect_type(results, "list")
   expect_true(length(results) > 0)
@@ -495,8 +495,8 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run SEAHORSE with linear regression and the correlation matrix.
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
-                      compute_gene_cor = TRUE, compute_phenotype_cor = FALSE, assoc_method = "linear")
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+                      compute_gene_cor = TRUE, compute_phenotype_cor = FALSE, assoc_method = "linear"))
   # Verify structure
   expect_type(results, "list")
   expect_true(length(results) > 0)
@@ -508,9 +508,9 @@ test_that("seahorse function works", {
   
   # Run SEAHORSE and save usage file (all).
   skip_if_not_installed("peakRAM")
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                       compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
-                      usage_report_file = "usage_file.RDS")
+                      usage_report_file = "usage_file.RDS"))
   usage <- readRDS("usage_file.RDS")
   expect_true(all(c("GeneToGeneCor", "PhenToPhenCor", "PhenToGeneCor") %in% names(usage)))
   expect_true(length(colnames(usage$GeneToGeneCor)) == 4)
@@ -519,15 +519,15 @@ test_that("seahorse function works", {
   unlink("usage_file.RDS")
   
   # Input invalid usage file.
-  expect_error(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_error(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                       compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
-                      usage_report_file = "/some_nonexistent_dir/usage_file.RDS"),
+                      usage_report_file = "/some_nonexistent_dir/usage_file.RDS")),
                "/some_nonexistent_dir/usage_file.RDS could not be created.")
   
   # Save usage file (all but gene-gene)
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                       compute_gene_cor = FALSE, compute_phenotype_cor = TRUE, assoc_method = "linear",
-                      usage_report_file = "usage_file.RDS")
+                      usage_report_file = "usage_file.RDS"))
   usage <- readRDS("usage_file.RDS")
   expect_true(all(c("GeneToGeneCor", "PhenToPhenCor", "PhenToGeneCor") %in% names(usage)))
   expect_true(is.na(usage$GeneToGeneCor))
@@ -536,9 +536,9 @@ test_that("seahorse function works", {
   unlink("usage_file.RDS")
   
   # Save usage file (all but phenotype-phenotype)
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                       compute_gene_cor = TRUE, compute_phenotype_cor = FALSE, assoc_method = "linear",
-                      usage_report_file = "usage_file.RDS")
+                      usage_report_file = "usage_file.RDS"))
   usage <- readRDS("usage_file.RDS")
   expect_true(all(c("GeneToGeneCor", "PhenToPhenCor", "PhenToGeneCor") %in% names(usage)))
   expect_true(is.na(usage$PhenToPhenCor))
@@ -547,9 +547,9 @@ test_that("seahorse function works", {
   unlink("usage_file.RDS")
   
   # Save usage file (only phenotype-genotype)
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                       compute_gene_cor = FALSE, compute_phenotype_cor = FALSE, assoc_method = "linear",
-                      usage_report_file = "usage_file.RDS")
+                      usage_report_file = "usage_file.RDS"))
   usage <- readRDS("usage_file.RDS")
   expect_true(all(c("GeneToGeneCor", "PhenToPhenCor", "PhenToGeneCor") %in% names(usage)))
   expect_true(is.na(usage$PhenToPhenCor))
@@ -558,36 +558,36 @@ test_that("seahorse function works", {
   unlink("usage_file.RDS")
   
   # Test that statements print when verbose = TRUE.
-  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                       compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
-                      verbose = TRUE),
+                      verbose = TRUE)),
                 "Running gene co-expression")
-  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                          compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
-                         verbose = TRUE),
+                         verbose = TRUE)),
                 "Gene co-expression complete")
-  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                          compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
-                         verbose = TRUE),
+                         verbose = TRUE)),
                 "Running phenotype associations")
-  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                          compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
-                         verbose = TRUE),
+                         verbose = TRUE)),
                 "Phenotype associations complete")
-  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                          compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
-                         verbose = TRUE),
+                         verbose = TRUE)),
                 "Running gene-phenotype associations")
-  expect_output(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
                          compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
-                         verbose = TRUE),
+                         verbose = TRUE)),
                 "Gene-phenotype associations complete")
   
   # Check that NA values are returned when the phenotype has less than 2 levels.
   phenotype_data_1_lev <- phenotype_data
   phenotype_data_1_lev$sex <- rep("male", nrow(phenotype_data_1_lev))
-  result <- seahorse(expression_data, phenotype_data_1_lev, phenotype_dictionary, pathways,
-           compute_gene_cor = FALSE, compute_phenotype_cor = FALSE)
+  result <- suppressWarnings(seahorse(expression_data, phenotype_data_1_lev, phenotype_dictionary, pathways,
+           compute_gene_cor = FALSE, compute_phenotype_cor = FALSE))
   expect_equal(result$phenotype_association$sex$stat, NA)
   expect_equal(result$GSEA$sex, NA)
   
@@ -599,8 +599,8 @@ test_that("seahorse function works", {
                           pathway3 = c("Neutron Star", "Supernova", "Black Hole", "Red Dwarf", "White Dwarf", "Red Giant",
                                        "Blue Giant", "Nebula", "Oort Cloud", "Brown Dwarf", "Comet", "Asteroid", "Dark Matter",
                                        "Dark Energy", "Binary Star System", "Black Dwarf"))
-  result <- seahorse(expression_data, phenotype_data, phenotype_dictionary, uselessPathways,
-                     compute_gene_cor = FALSE, compute_phenotype_cor = FALSE)
+  result <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, uselessPathways,
+                     compute_gene_cor = FALSE, compute_phenotype_cor = FALSE))
   expect_equal(nrow(result$GSEA$sex), 0)
   expect_equal(nrow(result$GSEA$height), 0)
   expect_equal(nrow(result$GSEA$group), 0)
@@ -612,8 +612,8 @@ test_that("seahorse function works", {
   phenotype_data_2_zeros[which(phenotype_data_2$grade == "A")[21:45], "sex"] <- NA
   phenotype_data_2_zeros[which(phenotype_data_2$grade == "B"), "sex"] <- NA
   phenotype_data_2_zeros[which(phenotype_data_2$grade == "C"), "sex"] <- NA
-  result <- seahorse(expression_data_2, phenotype_data_2_zeros, phenotype_dictionary_2, pathways,
-                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
+  result <- suppressWarnings(seahorse(expression_data_2, phenotype_data_2_zeros, phenotype_dictionary_2, pathways,
+                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE))
   expect_true(is.na(result$phenocor$stat["sex", "grade"]))
   
   # Check that a phenotype pair result will be set to NA if we have all continuous data missing
@@ -621,16 +621,16 @@ test_that("seahorse function works", {
   phenotype_data_2_na <- phenotype_data_2
   phenotype_data_2_na[which(phenotype_data_2$grade == "A"), "WBC"] <- NA
   phenotype_data_2_na[which(phenotype_data_2$grade == "B"), "WBC"] <- NA
-  result <- seahorse(expression_data_2, phenotype_data_2_na, phenotype_dictionary_2, pathways,
-                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
+  result <- suppressWarnings(seahorse(expression_data_2, phenotype_data_2_na, phenotype_dictionary_2, pathways,
+                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE))
   expect_true(is.na(result$phenocor$stat["grade", "WBC"]))
   
   # Check that a phenotype pair result will be set to NA if we have all continuous data missing
   # for one level (dichotomous).
   phenotype_data_2_na <- phenotype_data_2
   phenotype_data_2_na[which(phenotype_data_2$sex == "female"), "WBC"] <- NA
-  result <- seahorse(expression_data_2, phenotype_data_2_na, phenotype_dictionary_2, pathways,
-                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
+  result <- suppressWarnings(seahorse(expression_data_2, phenotype_data_2_na, phenotype_dictionary_2, pathways,
+                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE))
   expect_true(is.na(result$phenocor$stat["sex", "WBC"]))
   
   # Check that a gene-phenotype association will be set to NA if there is no variance in either
@@ -639,8 +639,8 @@ test_that("seahorse function works", {
   phenotype_dictionary_smaller <- c("dichotomous", "continuous")
   phenotype_data_smaller[which(phenotype_data_smaller$sex == "female"), "WBC"] <- 1
   phenotype_data_smaller[which(phenotype_data_smaller$sex == "male"), "WBC"] <- 1
-  result <- seahorse(expression_data_2, phenotype_data_smaller, phenotype_dictionary_smaller, pathways,
-                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE)
+  result <- suppressWarnings(seahorse(expression_data_2, phenotype_data_smaller, phenotype_dictionary_smaller, pathways,
+                     compute_gene_cor = FALSE, compute_phenotype_cor = TRUE))
   expect_true(is.na(result$phenocor$stat["sex", "WBC"]))
 })
 test_that(".tsv.gz output works", {
@@ -679,7 +679,7 @@ test_that(".tsv.gz output works", {
   
   # Get toy SEAHORSE results and write them.
   dir.create("~/tmpResultDir")
-  results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways))
   saveRDS(results, "~/tmpResultDir/tissue1.RDS")
   saveRDS(results, "~/tmpResultDir/tissue2.RDS")
   saveRDS(results, "~/tmpResultDir/tissue3.RDS")
@@ -699,64 +699,64 @@ test_that(".tsv.gz output works", {
   dir.create(outputDir)
   
   # Check that an error is thrown if the SEAHORSE input object is formatted incorrectly.
-  expect_error(seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  expect_error(suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                    result_directory = "~/tmpResultDir",
                                    output_directory = outputDir,
                                    data_dictionary = dataDict,
-                                   pathways = pathways),
-               "Incorrect format for input file")
+                                   pathways = pathways)),
+               "Could not format expression")
   unlink("~/tmpInputDir/badInput.RDS")
   unlink("~/tmpResultDir/badInput.RDS")
   
   # Check that an error is thrown if the SEAHORSE result object is formatted incorrectly.
   saveRDS(input, "~/tmpInputDir/badInput.RDS")
   saveRDS(c(1, 2, 3), "~/tmpResultDir/badInput.RDS")
-  expect_error(seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  expect_error(suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                    result_directory = "~/tmpResultDir",
                                    output_directory = outputDir,
                                    data_dictionary = dataDict,
-                                   pathways = pathways),
-               "Incorrect format for result file")
+                                   pathways = pathways)),
+               "Could not format pathway enrichment")
   unlink("~/tmpInputDir/badInput.RDS")
   unlink("~/tmpResultDir/badInput.RDS")
   
   # Check that an error is thrown if the data dictionary is formatted incorrectly.
   badDataDict <- dataDict[,c(1:2)]
-  expect_error(seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  expect_error(suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                    result_directory = "~/tmpResultDir",
                                    output_directory = outputDir,
                                    data_dictionary = badDataDict,
-                                   pathways = pathways),
+                                   pathways = pathways)),
                "Incorrect format for data dictionary")
 
   # Check that an error is thrown if the number of input and result files do not match.
   saveRDS(results, "~/tmpInputDir/tissue4.RDS")
-  expect_error(seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  expect_error(suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                    result_directory = "~/tmpResultDir",
                                    output_directory = outputDir,
                                    data_dictionary = dataDict,
-                                   pathways = pathways),
+                                   pathways = pathways)),
                "Number of result and input files do not match")
   unlink("~/tmpInputDir/tissue4.RDS")
   
   # Check that an error is thrown if the input and result file names do not match.
   saveRDS(results, "~/tmpInputDir/badName.RDS")
   unlink("~/tmpInputDir/tissue2.RDS")
-  expect_error(seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  expect_error(suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                    result_directory = "~/tmpResultDir",
                                    output_directory = outputDir,
                                    data_dictionary = dataDict,
-                                   pathways = pathways),
+                                   pathways = pathways)),
                "Result and input file names do not match")
   saveRDS(input, "~/tmpInputDir/tissue2.RDS")
   unlink("~/tmpInputDir/badName.RDS")
   
   # Check that the files exist and are the correct format when we read them.
-  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  resultFormat <- suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                 result_directory = "~/tmpResultDir",
                                 output_directory = outputDir,
                                 data_dictionary = dataDict,
-                                pathways = pathways)
+                                pathways = pathways))
   readFile <- function(fname){
     con <- gzfile(fname, "rt")
     data <- read.delim(con, sep = "\t", header = TRUE)
@@ -790,7 +790,7 @@ test_that(".tsv.gz output works", {
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
                c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
-               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+               c("ENSG","SAMPID",	"GENE_EXPRESSION", "tissue"))
   expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
                mappingResults)
   expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
@@ -816,11 +816,11 @@ test_that(".tsv.gz output works", {
   
   # Check that the output directory is created if we didn't create it.
   outputDir = "~/newOutputDir/"
-  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  resultFormat <- suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                 result_directory = "~/tmpResultDir",
                                 output_directory = outputDir,
                                 data_dictionary = dataDict,
-                                pathways = pathways)
+                                pathways = pathways))
   
   expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
                c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
@@ -829,7 +829,7 @@ test_that(".tsv.gz output works", {
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
                c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
-               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+               c("ENSG","SAMPID",	"GENE_EXPRESSION", "tissue"))
   expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
                mappingResults)
   expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
@@ -862,11 +862,11 @@ test_that(".tsv.gz output works", {
   saveRDS(resultsNoGene, "~/tmpResultDir/tissue2.RDS")
   saveRDS(resultsNoGene, "~/tmpResultDir/tissue3.RDS")
 
-  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  resultFormat <- suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                 result_directory = "~/tmpResultDir",
                                 output_directory = outputDir,
                                 data_dictionary = dataDict,
-                                pathways = pathways)
+                                pathways = pathways))
   expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
                c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
   expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
@@ -874,7 +874,7 @@ test_that(".tsv.gz output works", {
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
                c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
-               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+               c("ENSG","SAMPID",	"GENE_EXPRESSION", "tissue"))
   expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
                mappingResults)
   expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
@@ -906,11 +906,11 @@ test_that(".tsv.gz output works", {
   saveRDS(resultsNoGenePhen, "~/tmpResultDir/tissue2.RDS")
   saveRDS(resultsNoGenePhen, "~/tmpResultDir/tissue3.RDS")
   
-  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  resultFormat <- suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                       result_directory = "~/tmpResultDir",
                                       output_directory = outputDir,
                                       data_dictionary = dataDict,
-                                      pathways = pathways)
+                                      pathways = pathways))
   expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
                c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
   expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
@@ -918,7 +918,7 @@ test_that(".tsv.gz output works", {
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
                c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
-               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+               c("ENSG","SAMPID",	"GENE_EXPRESSION", "tissue"))
   expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
                mappingResults)
   expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
@@ -949,11 +949,11 @@ test_that(".tsv.gz output works", {
   saveRDS(resultsNoPhen, "~/tmpResultDir/tissue2.RDS")
   saveRDS(resultsNoPhen, "~/tmpResultDir/tissue3.RDS")
   
-  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  resultFormat <- suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                       result_directory = "~/tmpResultDir",
                                       output_directory = outputDir,
                                       data_dictionary = dataDict,
-                                      pathways = pathways)
+                                      pathways = pathways))
   expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
                c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
   expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
@@ -961,7 +961,7 @@ test_that(".tsv.gz output works", {
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
                c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
-               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+               c("ENSG","SAMPID",	"GENE_EXPRESSION", "tissue"))
   expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
                mappingResults)
   expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
@@ -995,11 +995,11 @@ test_that(".tsv.gz output works", {
   saveRDS(resultsNothing, "~/tmpResultDir/tissue2.RDS")
   saveRDS(resultsNothing, "~/tmpResultDir/tissue3.RDS")
   
-  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  resultFormat <- suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                       result_directory = "~/tmpResultDir",
                                       output_directory = outputDir,
                                       data_dictionary = dataDict,
-                                      pathways = pathways)
+                                      pathways = pathways))
   expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
                c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
   expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
@@ -1007,7 +1007,7 @@ test_that(".tsv.gz output works", {
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
                c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
-               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+               c("ENSG","SAMPID",	"GENE_EXPRESSION", "tissue"))
   expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
                mappingResults)
   expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
@@ -1038,11 +1038,11 @@ test_that(".tsv.gz output works", {
   unlink("~/tmpInputDir/tissue2.RDS")
   unlink("~/tmpInputDir/tissue3.RDS")
   
-  resultFormat <- seahorseFormatForUI(input_directory = "~/tmpInputDir",
+  resultFormat <- suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                       result_directory = "~/tmpResultDir",
                                       output_directory = outputDir,
                                       data_dictionary = dataDict,
-                                      pathways = pathways)
+                                      pathways = pathways))
   expect_equal(colnames(readFile(paste0(outputDir, "all_gsea_results.tsv.gz"))),
                c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
   expect_equal(colnames(readFile(paste0(outputDir, "data_dictionary.tsv.gz"))),
@@ -1050,7 +1050,7 @@ test_that(".tsv.gz output works", {
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression2geneexpression.tsv.gz"))),
                c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
   expect_equal(colnames(readFile(paste0(outputDir, "geneexpression_data.tsv.gz"))),
-               c("ENSG","SAMPID",	"GENE_EXPRESSION"))
+               c("ENSG","SAMPID",	"GENE_EXPRESSION", "tissue"))
   expect_equal(readFile(paste0(outputDir, "human_ensembl2symbol_map.tsv.gz")),
                mappingResults)
   expect_equal(colnames(readFile(paste0(outputDir, "metadata.tsv.gz"))),
