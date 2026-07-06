@@ -763,15 +763,15 @@ test_that(".tsv.gz output works", {
     return(data)
   }
   # Map genes.
-  mappedSymbols <- mapIds(
-    x = org.Hs.eg.db,
+  mappedSymbols <- AnnotationDbi::mapIds(
+    x = org.Hs.eg.db::org.Hs.eg.db,
     keys = rownames(expression_data),
     column = "SYMBOL",
     keytype = "ENSEMBL",
     multiVals = "first" # Returns one value for each ENSEMBL ID.
   )
-  mappedEntrez <- mapIds(
-    x = org.Hs.eg.db,
+  mappedEntrez <- AnnotationDbi::mapIds(
+    x = org.Hs.eg.db::org.Hs.eg.db,
     keys = rownames(expression_data),
     column = "ENTREZID",
     keytype = "ENSEMBL",
