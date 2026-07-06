@@ -1079,3 +1079,68 @@ test_that(".tsv.gz output works", {
   unlink("~/tmpResultDir", recursive = TRUE)
   unlink("~/tmpOutputDir", recursive = TRUE)
 })
+test_that("plotting functions work", {
+  
+  # Simulate expression data
+  expression_data = data.frame(matrix(rexp(1000, rate=.1), ncol=10, nrow = 100))
+  rownames(expression_data) = sprintf("ENSG%011d", 1:100)
+  colnames(expression_data) = paste("sample", 1:10, sep = "")
+  
+  # Simulate phenotypic data
+  phenotype_data = data.frame(matrix(0, ncol=3, nrow = 10))
+  colnames(phenotype_data) = c("sex", "height", "group")
+  rownames(phenotype_data) = colnames(expression_data)
+  phenotype_data$sex = c(rep("male", nrow(phenotype_data)/2), rep("female", nrow(phenotype_data)/2))
+  phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = T)
+  phenotype_data$group = c(rep("1", 3), rep("2", 4), rep("3", 3))
+  
+  phenotype_dictionary = c("dichotomous", "continuous", "nominal")
+  
+  # Create toy pathways
+  pathways = list()
+  pathways$pathway1 = sample(rownames(expression_data), 50)
+  pathways$pathway2 = sample(rownames(expression_data), 30)
+  pathways$pathway3 = sample(rownames(expression_data), 70)
+  
+  # Make input data.
+  input <- list(expression = expression_data, phenotype = phenotype_data, dict = phenotype_dictionary)
+  
+  # Get toy SEAHORSE results.
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways))
+  
+  # Test that rug plot throws an error if the pathway does not exist.
+  expect_error(rugPlot(result = results, pathwayName = "pathwayX", pathways = pathways,
+                       phenotypeName = "height"),
+               "Pathway pathwayX does not exist in the list of pathways")
+  
+  # Test that rug plot throws an error if the phenotype does not exist.
+  expect_error(rugPlot(result = results, pathwayName = "pathway1", pathways = pathways,
+                       phenotypeName = "BMI"),
+               "Phenotype BMI does not have a pathway enrichment result")
+  
+  # Test that rug plot throws an error if the results are in the wrong format.
+  expect_error(rugPlot(result = c("a", "b", "c"), pathwayName = "pathway1", pathways = pathways,
+                       phenotypeName = "height"),
+               "Result format is incorrect")
+  expect_error(rugPlot(result = list(letters = c("a", "b", "c")), pathwayName = "pathway1", 
+                       pathways = pathways,
+                       phenotypeName = "height"),
+               "Result format is incorrect")
+  
+  # Test that rug plot throws an error if the pathways are in the wrong format.
+  expect_error(rugPlot(result = results, pathwayName = "height", pathways = c("a", "b", "c"),
+                       phenotypeName = "height"),
+               "Pathway format is incorrect")
+  
+  # Test that rug plot completes when the phenotype is continuous.
+  expect_no_error(suppressWarnings(rugPlot(result = results, pathwayName = "pathway1", pathways = pathways,
+          phenotypeName = "height")))
+  
+  # Test that rug plot completes when the phenotype is dichotomous
+  expect_no_error(suppressWarnings(rugPlot(result = results, pathwayName = "pathway1", pathways = pathways,
+                                           phenotypeName = "sex")))
+  
+  # Test that rug plot completes when the phenotype is nominal
+  expect_no_error(suppressWarnings(rugPlot(result = results, pathwayName = "pathway1", pathways = pathways,
+                                           phenotypeName = "group")))
+})

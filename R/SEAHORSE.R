@@ -1503,3 +1503,84 @@ writePhenotypePhenotypeAssociations <- function(inFiles, file){
     message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
   }
 }
+
+#' Generates a rug plot for a single pathway-phenotype association.
+#' @param result The SEAHORSE result
+#' @param phenotype The phenotype of interest
+#' @param pathwayName The pathway of interest
+#' @param phenotypeName The phenotype of interest
+#' @param pathways The pathways used as input to SEAHORSE
+#' @return NULL
+rugPlot <- function(result, pathwayName, pathways, phenotypeName) {
+
+  # Check for formatting errors.
+  if(is.null(names(result))){
+    stop("Result format is incorrect")
+  }else if(!("GSEA" %in% names(result)) ||
+     !("phenotype_association" %in% names(result))){
+    stop("Result format is incorrect")
+  }
+  if(is.null(names(pathways))){
+    stop("Pathway format is incorrect")
+  }
+  
+  # Extract result.
+  fgseaResAll <- result$GSEA
+  if(!(phenotypeName %in% names(fgseaResAll))){
+    stop(paste("Phenotype", phenotypeName, "does not have a pathway enrichment result"))
+  }
+  fgseaRes <- fgseaResAll[[phenotypeName]]
+  
+  # Extract genes.
+  if(!(pathwayName %in% names(pathways))){
+    stop(paste("Pathway", pathwayName, "does not exist in the list of pathways"))
+  }
+  pathwayGenes <- pathways[[pathwayName]]
+  
+  # Extract gene association data.
+  result$phenotype_association[[phenotypeName]]$padj <- as.numeric(result$phenotype_association[[phenotypeName]]$padj)
+  transformedStats <- result$phenotype_association[[phenotypeName]]$stat
+  names(transformedStats) <- rownames(result$phenotype_association[[phenotypeName]])
+  
+  # Only proceed if gene association data are available.
+  if(!all(is.null(transformedStats))){
+    
+    # Transform to absolute valued correlation or negative log p-value, then sort to obtain
+    # ranks.
+    transformedStats[which(!is.na(result$phenotype_association[[phenotypeName]]$padj))] <- 
+      -log10(pmax(transformedStats[which(!is.na(result$phenotype_association[[phenotypeName]]$padj))],
+                  .Machine$double.xmin))
+    transformedStats[which(is.na(result$phenotype_association[[phenotypeName]]$padj))] <- 
+      abs(transformedStats[which(is.na(result$phenotype_association[[phenotypeName]]$padj))])
+    sortedStats <- transformedStats[order(-transformedStats)]
+    N <- length(sortedStats)
+    
+    # Assign rank based on sorting.
+    hitPositions <- which(names(sortedStats) %in% pathwayGenes)
+    hitPositions <- sort(unique(hitPositions))
+    
+    par(mar = c(4, 4, 4, 1))
+    plot(
+      seq_len(N),
+      rep(0, N),
+      type = "n",
+      axes = FALSE,
+      xlab = "Gene rank position",
+      ylab = "",
+      ylim = c(0, 1),
+      main = paste("Association Between", pathwayName, "and", phenotypeName)
+    )
+    
+    segments(
+      x0 = hitPositions,
+      y0 = 0,
+      x1 = hitPositions,
+      y1 = 1
+    )
+    
+    axis(1)
+    box()
+  }else{
+    stop(paste("No gene association data for", phenotypeName))
+  }
+}
