@@ -1339,14 +1339,14 @@ writeMapping <- function(inFiles, file){
 
   # Map genes.
   mappedSymbols <- AnnotationDbi::mapIds(
-    x = org.Hs.eg.db,
+    x = org.Hs.eg.db::org.Hs.eg.db,
     keys = ensembl,
     column = "SYMBOL",
     keytype = "ENSEMBL",
     multiVals = "first" # Returns one value for each ENSEMBL ID.
   )
   mappedEntrez <- AnnotationDbi::mapIds(
-    x = org.Hs.eg.db,
+    x = org.Hs.eg.db::org.Hs.eg.db,
     keys = ensembl,
     column = "ENTREZID",
     keytype = "ENSEMBL",
