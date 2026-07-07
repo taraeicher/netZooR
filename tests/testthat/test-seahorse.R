@@ -1143,4 +1143,23 @@ test_that("plotting functions work", {
   # Test that rug plot completes when the phenotype is nominal
   expect_no_error(suppressWarnings(rugPlot(result = results, pathwayName = "pathway1", pathways = pathways,
                                            phenotypeName = "group")))
+  
+  # Test that summaryHistogramGene throws an error if the expression data are in the wrong format.
+  expect_error(summaryHistogramGene(expression = c("a", "b", "c"), geneName = sprintf("ENSG%011d", 1),
+                                    breaks = 20),
+               "Expression data format must be a data frame or matrix")
+  
+  # Test that summaryHistogramGene throws an error if the gene is not found.
+  expect_error(summaryHistogramGene(expression = expression_data, geneName = "gene1",
+                                       breaks = 20),
+               "Gene gene1 not found in expression data")
+
+  # Test that summaryHistogramGene throws an error if the number of breaks is less than 1.
+  expect_error(summaryHistogramGene(expression = expression_data, geneName = sprintf("ENSG%011d", 1),
+                                    breaks = 0),
+               "Number of breaks must be at least 1")
+  
+  # Test that summaryHistogramGene completes.
+  expect_no_error(summaryHistogramGene(expression = expression_data, geneName = sprintf("ENSG%011d", 1),
+                                       breaks = 20))
 })

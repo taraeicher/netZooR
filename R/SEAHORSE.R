@@ -1584,3 +1584,25 @@ rugPlot <- function(result, pathwayName, pathways, phenotypeName) {
     stop(paste("No gene association data for", phenotypeName))
   }
 }
+
+#' Generates a summary histogram for a gene.
+#' @param expression The gene expression data, formatted as for SEAHORSE
+#' @param breaks The number of breaks in the histogram
+#' @return NULL
+summaryHistogramGene <- function(expression, geneName, breaks = 20){
+  
+  # Formatting check
+  if(!is.data.frame(expression) && !is.matrix(expression)){
+    stop("Expression data format must be a data frame or matrix")
+  }
+  if(!(geneName %in% rownames(expression))){
+    stop(paste("Gene", geneName, "not found in expression data"))
+  }
+  if(breaks < 1){
+    stop("Number of breaks must be at least 1")
+  }
+  
+  # Plot histogram.
+  hist(as.numeric(expression[geneName,]), breaks = breaks, xlab = paste(geneName, "Expression"),
+       main = paste("Histogram of", geneName, "Expression"))
+}
