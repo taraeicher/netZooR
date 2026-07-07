@@ -1162,4 +1162,179 @@ test_that("plotting functions work", {
   # Test that summaryHistogramGene completes.
   expect_no_error(summaryHistogramGene(expression = expression_data, geneName = sprintf("ENSG%011d", 1),
                                        breaks = 20))
+  
+  # Test that summaryHistogramPhentoype completes.
+  expect_no_error(summaryHistogramPhenotype(phenotype = phenotype_data, phenotypeName = "height",
+                                       breaks = 20, phenotype_dictionary = phenotype_dictionary))
+  expect_no_error(summaryHistogramPhenotype(phenotype = phenotype_data, phenotypeName = "sex",
+                                            breaks = 20, phenotype_dictionary = phenotype_dictionary))
+  
+  # Test for error when gene is not in expression data or phenotype is not in phenotype data.
+  expect_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                               phenotype_dictionary = phenotype_dictionary, variableX = "myvar",
+                               variableTypeX = "gene", variableY = sprintf("ENSG%011d", 1), variableTypeY = "gene"),
+               "Gene myvar is not in the expression data")
+  expect_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                               phenotype_dictionary = phenotype_dictionary, variableY = "myvar",
+                               variableTypeX = "gene", variableX = sprintf("ENSG%011d", 1), variableTypeY = "gene"),
+               "Gene myvar is not in the expression data")
+  expect_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                               phenotype_dictionary = phenotype_dictionary, variableX = "myvar",
+                               variableTypeX = "phenotype", variableY = sprintf("ENSG%011d", 1), variableTypeY = "gene"),
+               "Phenotype myvar is not in the phenotype data")
+  expect_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                               phenotype_dictionary = phenotype_dictionary, variableY = "myvar",
+                               variableTypeX = "gene", variableX = sprintf("ENSG%011d", 1), variableTypeY = "phenotype"),
+               "Phenotype myvar is not in the phenotype data")
+  
+  # Test for error with expression data or phenotype data in the wrong format.
+  expect_error(plotAssociation(phenotype = phenotype_data, expression = c("a", "b", "c"),
+                               phenotype_dictionary = phenotype_dictionary, variableX = "height",
+                               variableTypeX = "phenotype", variableY = sprintf("ENSG%011d", 1), variableTypeY = "gene"),
+               "Expression data are in the wrong format")
+  expect_error(plotAssociation(expression = expression_data, phenotype = c("a", "b", "c"),
+                               phenotype_dictionary = phenotype_dictionary, variableX = "height",
+                               variableTypeX = "phenotype", variableY = sprintf("ENSG%011d", 1), variableTypeY = "gene"),
+               "Phenotype data are in the wrong format")
+  
+  # Test for error with incorrect data types.
+  expect_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                               phenotype_dictionary = phenotype_dictionary, variableY = "height",
+                               variableTypeX = "mytype", variableX = sprintf("ENSG%011d", 1), variableTypeY = "phenotype"),
+               "Type mytype is invalid")
+  expect_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                               phenotype_dictionary = phenotype_dictionary, variableY = "height",
+                               variableTypeY = "mytype", variableX = sprintf("ENSG%011d", 1), variableTypeX = "gene"),
+               "Type mytype is invalid")
+  
+  # Test that plotAssociation completes for scatterplots.
+  expect_no_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                  phenotype_dictionary = phenotype_dictionary, variableY = "height",
+                  variableTypeY = "phenotype", variableX = sprintf("ENSG%011d", 1), variableTypeX = "gene"))
+  expect_no_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                                  phenotype_dictionary = phenotype_dictionary, variableX = "height",
+                                  variableTypeX = "phenotype", variableY = sprintf("ENSG%011d", 1), variableTypeY = "gene"))
+  expect_no_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                                  phenotype_dictionary = phenotype_dictionary, variableX = sprintf("ENSG%011d", 2),
+                                  variableTypeX = "gene", variableY = sprintf("ENSG%011d", 1), variableTypeY = "gene"))
+  phenotype_data$WBC <- runif(nrow(phenotype_data), min = 4500, max = 11000)
+  phenotype_dictionary[4] <- "continuous"
+  expect_no_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                                  phenotype_dictionary = phenotype_dictionary, variableY = "height",
+                                  variableTypeY = "phenotype", variableX = "WBC", variableTypeX = "phenotype"))
+  
+  # Test that plotAssociation completes for boxplots.
+  expect_no_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                                  phenotype_dictionary = phenotype_dictionary, variableY = "group",
+                                  variableTypeY = "phenotype", variableX = sprintf("ENSG%011d", 1), variableTypeX = "gene"))
+  expect_no_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                                  phenotype_dictionary = phenotype_dictionary, variableX = "group",
+                                  variableTypeX = "phenotype", variableY = sprintf("ENSG%011d", 1), variableTypeY = "gene"))
+  expect_no_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                                  phenotype_dictionary = phenotype_dictionary, variableY = "group",
+                                  variableTypeY = "phenotype", variableX = "height", variableTypeX = "phenotype"))
+  expect_no_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                                  phenotype_dictionary = phenotype_dictionary, variableX = "group",
+                                  variableTypeX = "phenotype", variableY = "height", variableTypeY = "phenotype"))
+  
+  # Test that plotAssociation completes for heatmaps.
+  expect_no_error(plotAssociation(expression = expression_data, phenotype = phenotype_data,
+                                  phenotype_dictionary = phenotype_dictionary, variableX = "group",
+                                  variableTypeX = "phenotype", variableY = "sex", variableTypeY = "phenotype"))
+  
+  # Test that table is not written for variables that don't exist (expression or phenotype)
+  expect_error(writeTable(result = results, variable = sprintf("ENSG%011d", 1), 
+                          variableType = "phenotype", resultType = "coexpression", 
+                          tmpFile = "~/tmp.RDS", resultFile = "~/result.RDS"),
+               paste(sprintf("ENSG%011d", 1), "not in phenotype data"))
+  expect_error(writeTable(result = results, variable = "height", 
+                          variableType = "gene", resultType = "coexpression", 
+                          tmpFile = "~/tmp.RDS", resultFile = "~/result.RDS"),
+               paste("height not in expression data"))
+  
+  # Test that table is not written if the wrong type of variable is provided
+  expect_error(writeTable(result = results, variable = "height", 
+                          variableType = "phenotype", resultType = "coexpression", 
+                          tmpFile = "~/tmp.RDS", resultFile = "~/result.RDS"),
+               paste("Cannot filter coexpression data by phenotype"))
+  expect_error(writeTable(result = results, variable = sprintf("ENSG%011d", 1), 
+                          variableType = "gene", resultType = "phenocor", 
+                          tmpFile = "~/tmp.RDS", resultFile = "~/result.RDS"),
+               paste("Cannot filter phenocor results by gene"))
+  expect_error(writeTable(result = results, variable = sprintf("ENSG%011d", 1), 
+                          variableType = "gene", resultType = "GSEA", 
+                          tmpFile = "~/tmp.RDS", resultFile = "~/result.RDS"),
+               paste("Cannot filter GSEA results by gene"))
+  
+  # Test that each type of table is written with the expected format
+  readFile <- function(fname){
+    con <- gzfile(fname, "rt")
+    data <- read.delim(con, sep = "\t", header = TRUE)
+    return(data)
+  }
+  writeTable(result = results, variable = sprintf("ENSG%011d", 1), 
+             variableType = "gene", resultType = "coexpression", 
+             tmpFile = "~/tmp.RDS", resultFile = "~/result")
+  resFile <- readFile("~/result.tsv.gz")
+  expect_equal(colnames(resFile), c("Gene.A", "Gene.B",	"Tissue",	"Correlation"))
+  expect_all_equal(resFile$Gene.A, sprintf("ENSG%011d", 1))
+  expect_true(is.numeric(resFile$Correlation))
+  expect_lt(length(which(is.na(resFile$Correlation))), nrow(resFile))
+  unlink("~/result.tsv.gz")
+
+  writeTable(result = results, phenotype = phenotype_data, dictionary = phenotype_dictionary,
+             variable = sprintf("ENSG%011d", 1), 
+             variableType = "gene", resultType = "phenotype_association", 
+             tmpFile = "~/tmp.RDS", resultFile = "~/result")
+  resFile <- readFile("~/result.tsv.gz")
+  expect_equal(colnames(resFile), c("VARNAME", "GENE", "tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_all_equal(resFile$GENE, sprintf("ENSG%011d", 1))
+  expect_true(is.numeric(resFile$TESTSTAT))
+  expect_true(is.numeric(resFile$TESTPVALUE))
+  expect_lt(length(which(is.na(resFile$TESTSTAT))), nrow(resFile))
+  unlink("~/result.tsv.gz")
+  
+  writeTable(result = results, phenotype = phenotype_data, dictionary = phenotype_dictionary,
+             variable = "height", 
+             variableType = "phenotype", resultType = "phenotype_association", 
+             tmpFile = "~/tmp.RDS", resultFile = "~/result")
+  resFile <- readFile("~/result.tsv.gz")
+  expect_equal(colnames(resFile), c("VARNAME", "GENE", "tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_all_equal(resFile$VARNAME, "height")
+  expect_true(is.numeric(resFile$TESTSTAT))
+  expect_lt(length(which(is.na(resFile$TESTSTAT))), nrow(resFile))
+  unlink("~/result.tsv.gz")
+  
+  writeTable(result = results, variable = "height", pathways = pathways,
+             variableType = "phenotype", resultType = "GSEA", 
+             tmpFile = "~/tmp.RDS", resultFile = "~/result")
+  resFile <- readFile("~/result.tsv.gz")
+  expect_equal(colnames(resFile), c("pathway", "pval", "padj", "log2err", "ES", "NES",
+                                    "size", "ranks", "leadingEdge", "varname", "tissue"))
+  expect_all_equal(resFile$varname, "height")
+  expect_true(is.numeric(resFile$pval))
+  expect_lt(length(which(is.na(resFile$pval))), nrow(resFile))
+  expect_true(is.numeric(resFile$padj))
+  expect_lt(length(which(is.na(resFile$padj))), nrow(resFile))
+  expect_true(is.numeric(resFile$log2err))
+  expect_lt(length(which(is.na(resFile$log2err))), nrow(resFile))
+  expect_true(is.numeric(resFile$ES))
+  expect_lt(length(which(is.na(resFile$ES))), nrow(resFile))
+  expect_true(is.numeric(resFile$NES))
+  expect_lt(length(which(is.na(resFile$NES))), nrow(resFile))
+  expect_true(is.numeric(resFile$size))
+  expect_lt(length(which(is.na(resFile$size))), nrow(resFile))
+  unlink("~/result.tsv.gz")
+  
+  writeTable(result = results, variable = "height", 
+             variableType = "phenotype", resultType = "phenocor", 
+             tmpFile = "~/tmp.RDS", resultFile = "~/result")
+  resFile <- readFile("~/result.tsv.gz")
+  expect_equal(colnames(resFile), c("VARNAME1", "VARNAME2", "tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_true(is.numeric(resFile$TESTSTAT))
+  expect_lt(length(which(is.na(resFile$TESTSTAT))), nrow(resFile))
+  expect_true(is.numeric(resFile$TESTPVALUE))
+  expect_lt(length(which(is.na(resFile$TESTPVALUE))), nrow(resFile))
+  unlink("~/result.tsv.gz")
+  
 })

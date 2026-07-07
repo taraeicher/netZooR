@@ -5,12 +5,15 @@
 \title{Generates the gene correlation results in the format expected by the UI.
 Format is Gene A	Gene B	Tissue	Correlation}
 \usage{
-writeGeneGene(inFiles, file)
+writeGeneGene(inFiles, file, removeLowerTri = TRUE)
 }
 \arguments{
 \item{inFiles}{The SEAHORSE files}
 
 \item{file}{The file where results should be stored. .tsv.gz will be appended.}
+
+\item{removeLowerTri}{Whether or not to remove the lower triangular matrix
+(default is TRUE)}
 }
 \description{
 Generates the gene correlation results in the format expected by the UI.

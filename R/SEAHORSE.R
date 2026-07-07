@@ -1136,7 +1136,7 @@ writePathwayEnrichment <- function(inFiles, file, pathways){
     
     # Get tissue name and read file.
     results = readRDS(inFiles[i])
-    
+
     enrichmentVar <- data.frame(pathway = character(), pval = numeric(), 
                                 padj = numeric(), log2err = numeric(),
                                 ES = numeric(), NES = numeric(),
@@ -1173,6 +1173,7 @@ writePathwayEnrichment <- function(inFiles, file, pathways){
           rankVec <- unlist(lapply(1:nrow(varResults), function(pw){
             # Get pathway genes.
             pathwayGenes <- pathways[[varResults[pw, "pathway"]]]
+            
             # Get adjusted p-value rankings.
             rankForLeadingEdge <- pvalRanking[pathwayGenes]
             return(paste0("{", paste(rankForLeadingEdge, collapse = ","), "}"))
@@ -1223,8 +1224,10 @@ formatTissueNames <- function(names){
 #' Format is Gene A	Gene B	Tissue	Correlation
 #' @param inFiles The SEAHORSE files
 #' @param file The file where results should be stored. .tsv.gz will be appended.
+#' @param removeLowerTri Whether or not to remove the lower triangular matrix
+#' (default is TRUE)
 #' @return NULL 
-writeGeneGene <- function(inFiles, file){
+writeGeneGene <- function(inFiles, file, removeLowerTri = TRUE){
   
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
@@ -1232,7 +1235,7 @@ writeGeneGene <- function(inFiles, file){
   
   # Get input file names.
   tissueNames <- formatTissueNames(inFiles)
-  
+
   # Write the gene correlation results.
   geneCor <- for(i in 1:length(tissueNames)){
     
@@ -1245,8 +1248,9 @@ writeGeneGene <- function(inFiles, file){
                             Tissue = character(), Correlation = numeric())
     colnames(flatTable) <- c("Gene A", "Gene B", "Tissue", "Correlation")
     if(length(which(!is.na(geneCor) == TRUE)) > 0){
-      geneCor[lower.tri(geneCor, diag = TRUE)] <- NA
-      
+      if(removeLowerTri == TRUE){
+        geneCor[lower.tri(geneCor, diag = TRUE)] <- NA
+      }
       flatTable <- data.frame(
         A = rep(colnames(geneCor), times = nrow(geneCor)),
         B = rep(rownames(geneCor), each = ncol(geneCor)),
@@ -1427,7 +1431,6 @@ writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file){
     phenotypeToGeneDf <- data.frame(VARNAME = character(), GENE = character(), 
                                     tissue = character(), TEST = character(),
                                     TESTSTAT = numeric(), TESTPVALUE = numeric())
-
     if(length(results$phenotype_association) > 0){
         phenotypeToGeneList <- lapply(names(results$phenotype_association), function(var){
           outDf <- data.frame(VARNAME = character(), GENE = character(), 
@@ -1587,6 +1590,7 @@ rugPlot <- function(result, pathwayName, pathways, phenotypeName) {
 
 #' Generates a summary histogram for a gene.
 #' @param expression The gene expression data, formatted as for SEAHORSE
+#' @param geneName The name of the gene
 #' @param breaks The number of breaks in the histogram
 #' @return NULL
 summaryHistogramGene <- function(expression, geneName, breaks = 20){
@@ -1605,4 +1609,313 @@ summaryHistogramGene <- function(expression, geneName, breaks = 20){
   # Plot histogram.
   hist(as.numeric(expression[geneName,]), breaks = breaks, xlab = paste(geneName, "Expression"),
        main = paste("Histogram of", geneName, "Expression"))
+}
+
+#' Generates a summary histogram for a phenotype.
+#' @param phenotype The phenotype data, formatted as for SEAHORSE
+#' @param phenotypeName The name of the phenotype
+#' @param phenotype_dictionary The phenotype dictionary, formatted as for SEAHORSE
+#' @param breaks The number of breaks in the histogram
+#' @return NULL
+summaryHistogramPhenotype <- function(phenotype, phenotypeName, phenotype_dictionary, breaks = 20){
+  
+  # Formatting check
+  if(!is.data.frame(phenotype) && !is.matrix(phenotype)){
+    stop("Phenotype data format must be a data frame or matrix")
+  }
+  if(!(phenotypeName %in% colnames(phenotype))){
+    stop(paste("Phenotype", phenotypeName, "not found in phenotype data"))
+  }
+  if(breaks < 1){
+    stop("Number of breaks must be at least 1")
+  }
+  
+  # Plot histogram.
+  if(phenotype_dictionary[which(colnames(phenotype) == phenotypeName)] == "continuous"){
+    hist(as.numeric(phenotype[,phenotypeName]), breaks = breaks, xlab = phenotypeName,
+         main = paste("Histogram of", phenotypeName))
+  }else{
+    barplot(table(phenotype[,phenotypeName]), xlab = phenotypeName, ylab = "frequency",
+            main = paste("Bar plot of", phenotypeName))
+  }
+  
+}
+
+#' Plots the association between two variables
+#' @param expression The gene expression data, formatted as for SEAHORSE
+#' @param phenotype The phenotype data, formatted as for SEAHORSE
+#' @param phenotype_dictionary The phenotype dictionary, formatted as for SEAHORSE
+#' @param variableX The variable of interest to plot on the x-axis (a phenotype or gene)
+#' @param variableY The variable of interest to plot on the y-axis (a phenotype or gene)
+#' @param variableTypeX Either "gene" or "phenotype" (x-axis variable)
+#' @param variableTypeY Either "gene" or "phenotype" (y-axis variable)
+#' @return NULL
+plotAssociation <- function(expression, phenotype, phenotype_dictionary,
+                            variableX, variableY, variableTypeX, variableTypeY){
+  
+  # Check formatting.
+  if(!is.data.frame(expression) && !is.matrix(expression)){
+    stop("Expression data are in the wrong format")
+  }
+  if(!is.data.frame(phenotype) && !is.matrix(phenotype)){
+    stop("Phenotype data are in the wrong format")
+  }
+  if(!(variableTypeX %in% c("gene", "phenotype"))){
+    stop(paste("Type", variableTypeX, "is invalid"))
+  }
+  if(!(variableTypeY %in% c("gene", "phenotype"))){
+    stop(paste("Type", variableTypeY, "is invalid"))
+  }
+  if(variableTypeX == "gene"){
+    if(!variableX %in% rownames(expression)){
+      stop(paste("Gene", variableX, "is not in the expression data"))
+    }
+  }
+  if(variableTypeY == "gene"){
+    if(!variableY %in% rownames(expression)){
+      stop(paste("Gene", variableY, "is not in the expression data"))
+    }
+  }
+  if(variableTypeX == "phenotype"){
+    if(!variableX %in% colnames(phenotype)){
+      stop(paste("Phenotype", variableX, "is not in the phenotype data"))
+    }
+  }
+  if(variableTypeY == "phenotype"){
+    if(!variableY %in% colnames(phenotype)){
+      stop(paste("Phenotype", variableY, "is not in the phenotype data"))
+    }
+  }
+  
+  # Extract the variables.
+  xData <- NULL
+  yData <- NULL
+  if(variableTypeX == "gene"){
+    xData <- expression[variableX,]
+  }else{
+    xData <- phenotype[,variableX]
+  }
+  if(variableTypeY == "gene"){
+    yData <- expression[variableY,]
+  }else{
+    yData <- phenotype[,variableY]
+  }
+  xData <- unname(unlist(xData))
+  yData <- unname(unlist(yData))
+  
+  # Determine which function to call
+  isContinuousX <- FALSE
+  isContinuousY <- FALSE
+  if(variableTypeX == "phenotype"){
+    if(phenotype_dictionary[which(colnames(phenotype) == variableX)] == "continuous"){
+      isContinuousX <- TRUE
+    }
+  }
+  if(variableTypeY == "phenotype"){
+    if(phenotype_dictionary[which(colnames(phenotype) == variableY)] == "continuous"){
+      isContinuousY <- TRUE
+    }
+  }
+
+  if(variableTypeX == "gene" || isContinuousX){
+    
+    # Plot scatter or box.
+    if(variableTypeY == "gene" || isContinuousY){
+      plotScatter(x = xData, y = yData, xName = variableX, yName = variableY)
+    }else{
+      plotBoxplot(x = xData, y = yData, xName = variableX, yName = variableY)
+    }
+  }else{
+    
+    # Plot box or heatmap
+    if(variableTypeY == "gene" || isContinuousY){
+      plotBoxplot(x = xData, y = yData, xName = variableX, yName = variableY)
+    }else{
+      plotHeat(x = xData, y = yData, xName = variableX, yName = variableY)
+    }
+  }
+}
+
+#' A helper function for plotAssociation(). Called when both variables are dichotomous phenotypes.
+#' @param x The data for the x axis
+#' @param y The data for the y axis
+#' @param xName The variable name to use for the x axis
+#' @param yName The variable name to use for the y axis
+#' @return NULL
+plotHeat <- function(x, y, xName, yName){
+  
+  # Make contingency table.
+  tbl <- table(x, y)
+
+  # Plot.
+  heatmap(t(tbl), Rowv = NA, Colv = NA, scale = "none", xlab = xName, ylab = yName)
+}
+
+#' A helper function for plotAssociation(). Called when one is a dichotomous phenotype and
+#' the other is a continuous variable.
+#' @param x The data for the x axis
+#' @param y The data for the y axis
+#' @param xName The variable name to use for the x axis
+#' @param yName The variable name to use for the y axis 
+#' @return NULL
+plotBoxplot <- function(x, y, xName, yName){
+  if(is.numeric(x)){
+    boxplot(x ~ y, xlab = xName, ylab = yName, horizontal = TRUE)
+  }else{
+    boxplot(y ~ x, xlab = xName, ylab = yName)
+  }
+}
+
+#' A helper function for plotAssociation(). Called when both variables are continuous.
+#' @param x The data for the x axis
+#' @param y The data for the y axis
+#' @param xName The variable name to use for the x axis
+#' @param yName The variable name to use for the y axis
+#' @return NULL
+plotScatter <- function(x, y, xName, yName){
+  plot(x = x, y = y, xlab = xName, ylab = yName)
+}
+
+#' Write the table containing the results for one phenotype or gene.
+#' @param result The full SEAHORSE result
+#' @param phenotype The phenotype data in the format used by SEAHORSE
+#' @param dictionary The phenotype dictionary in the format used by SEAHORSE
+#' @param pathways The pathways in the format used by SEAHORSE
+#' @param variable The variable of interest by which to filter (a phenotype or gene)
+#' @param variableType Either "gene" or "phenotype"
+#' @param resultType The name of the result component ("coexpression", "phenotype_association",
+#' "phenocor", or "GSEA")
+#' @param tmpFile The temporary file you wish to create for constructing the table.
+#' @param resultFile The location where you wish to save your result file.
+#' @return NULL
+writeTable <- function(result, phenotype = NULL, variable, variableType, resultType, tmpFile,
+                            resultFile, dictionary = NULL, pathways = NULL){
+  
+  # Check formatting.
+  if(variableType == "gene" && !(variable %in% colnames(result$coexpression))){
+    stop(paste(variable, "not in expression data"))
+  }else if(variableType == "phenotype" && !variable %in% names(result$phenotype_association)){
+    stop(paste(variable, "not in phenotype data"))
+  }
+  
+  # Obtain the filtered data.
+  filteredDat <- result
+  if(variableType == "gene" && resultType == "coexpression"){
+    
+    # Write coexpression data filtered by gene.
+    corMat <- result$coexpression[variable,]
+    filteredDat$coexpression <- as.matrix(as.data.frame(x = corMat))
+    colnames(filteredDat$coexpression) <- variable
+    saveRDS(filteredDat, tmpFile)
+    writeGeneGene(tmpFile, resultFile, removeLowerTri = FALSE)
+    
+  }else if(variableType == "phenotype" && resultType == "coexpression"){
+    
+    # Error if user tries to filter coexpression data by phenotype.
+    stop("Cannot filter coexpression data by phenotype")
+    
+  }else if(variableType == "gene" && resultType == "phenotype_association"){
+    
+    # Write gene-phenotype associations filtered by gene.
+    assoc <- lapply(result$phenotype_association, function(pheno){
+      return(pheno[variable,])
+    })
+    names(assoc) <- names(result$phenotype_association)
+    filteredDat$phenotype_association <- assoc
+    saveRDS(filteredDat, tmpFile)
+    
+    # Write input data.
+    inputDat <- list(phenotype = phenotype, dict = dictionary)
+    tmpFileInput <- paste0(tmpFile, "_phenotype.RDS")
+    saveRDS(inputDat, tmpFileInput)
+    
+    # Write the phenotype-gene associations.
+    writePhenotypeGeneAssociations(resultFiles = tmpFile, inFiles = tmpFileInput, resultFile)
+    
+  }else if(variableType == "phenotype" && resultType == "phenotype_association"){
+    
+    # Write gene-phenotype associations filtered by phenotype.
+    filteredDat$phenotype_association <- list(x = result$phenotype_association[[variable]])
+    names(filteredDat$phenotype_association) <- variable
+    saveRDS(filteredDat, tmpFile)
+    
+    # Write input data.
+    inputDat <- list(phenotype = phenotype, dict = dictionary)
+    tmpFileInput <- paste0(tmpFile, "_phenotype.RDS")
+    saveRDS(inputDat, tmpFileInput)
+    
+    # Write the phenotype-gene associations.
+    writePhenotypeGeneAssociations(resultFiles = tmpFile, inFiles = tmpFileInput, resultFile)
+    
+  }else if(variableType == "gene" && resultType == "GSEA"){
+    
+    # Error if user tries to filter GSEA results by gene
+    stop("Cannot filter GSEA results by gene")
+    
+  }else if(variableType == "phenotype" && resultType == "GSEA"){
+    
+    # Write GSEA associations filtered by phenotype.
+    filteredDat$GSEA <- list(x = result$GSEA[[variable]])
+    names(filteredDat$GSEA) <- variable
+    saveRDS(filteredDat, tmpFile)
+    writePathwayEnrichment(tmpFile, resultFile, pathways)
+    
+  }else if(variableType == "gene" && resultType == "phenocor"){
+    
+    # Error if user tries to filter phenotype correlation results by gene
+    stop("Cannot filter phenocor results by gene")
+    
+  }else if(variableType == "phenotype" && resultType == "phenocor"){
+    
+    # Subset filtered data.
+    otherVars <- setdiff(rownames(result$phenocor$stat), variable)
+    filteredDat$phenocor$stat <- rbind(as.matrix(result$phenocor$stat[variable,otherVars]),
+                                   as.matrix(result$phenocor$stat[otherVars, variable]))
+    filteredDat$phenocor$cramerV <- rbind(as.matrix(result$phenocor$cramerV[variable,otherVars]),
+                                      as.matrix(result$phenocor$cramerV[otherVars, variable]))
+    filteredDat$phenocor$padj <- rbind(as.matrix(result$phenocor$padj[variable,otherVars]),
+                                   as.matrix(result$phenocor$padj[otherVars, variable]))
+    filteredDat$phenocor$testType <-rbind(as.matrix(result$phenocor$testType[variable,otherVars]),
+                                      as.matrix(result$phenocor$testType[otherVars, variable]))
+    row <- rownames(filteredDat$phenocor$stat)
+    whichNotNA <- which(!is.na(filteredDat$phenocor$stat))
+    filteredDat$phenocor$stat <- as.matrix(filteredDat$phenocor$stat[whichNotNA])
+    filteredDat$phenocor$cramerV <- as.matrix(filteredDat$phenocor$cramerV[whichNotNA])
+    filteredDat$phenocor$padj <- as.matrix(filteredDat$phenocor$padj[whichNotNA])
+    filteredDat$phenocor$testType <- as.matrix(filteredDat$phenocor$testType[whichNotNA])
+    rowFinal <- row[whichNotNA]
+    rownames(filteredDat$phenocor$stat) <-
+      rownames(filteredDat$phenocor$cramerV) <-
+      rownames(filteredDat$phenocor$padj) <-
+      rownames(filteredDat$phenocor$testType) <- rowFinal
+    colnames(filteredDat$phenocor$stat) <-
+      colnames(filteredDat$phenocor$cramerV) <-
+      colnames(filteredDat$phenocor$padj) <-
+      colnames(filteredDat$phenocor$testType) <- variable
+
+    # Build data frame.
+    VARNAME2 <- rownames(filteredDat$phenocor$stat)
+    TEST <- unname(filteredDat$phenocor$testType)
+    TESTSTAT <- unname(filteredDat$phenocor$stat)
+    TESTPVALUE <- unname(filteredDat$phenocor$padj)
+    VARNAME1 <- variable
+    tissueSplit <- strsplit(tmpFile, "/")[[1]]
+    tissueDot <- strsplit(tissueSplit[length(tissueSplit)], ".", fixed = TRUE)[[1]]
+    tissue <- tissueDot[1]
+    dfReturn <- data.frame(VARNAME1 = VARNAME1, VARNAME2 = VARNAME2, tissue = tissue,
+                           TEST = TEST, TESTSTAT = TESTSTAT, TESTPVALUE = TESTPVALUE)
+    
+    # Write File
+    con <- gzfile(paste0(resultFile, ".tsv.gz"), "wt")
+    on.exit(close(con))
+    write.table(dfReturn, file = con, sep = "\t", row.names = FALSE, quote = FALSE)
+  }
+  
+  # Delete temporary file.
+  if(file.exists(paste0(tmpFile, ".RDS"))){
+    unlink(paste0(tmpFile, ".RDS"))
+  }
+  if(file.exists(paste0(tmpFile, "_phenotype.RDS"))){
+    unlink(paste0(tmpFile, "_phenotype.RDS"))
+  }
 }

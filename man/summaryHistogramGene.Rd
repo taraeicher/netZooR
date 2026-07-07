@@ -9,6 +9,8 @@ summaryHistogramGene(expression, geneName, breaks = 20)
 \arguments{
 \item{expression}{The gene expression data, formatted as for SEAHORSE}
 
+\item{geneName}{The name of the gene}
+
 \item{breaks}{The number of breaks in the histogram}
 }
 \description{
