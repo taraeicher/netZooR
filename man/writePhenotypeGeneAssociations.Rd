@@ -5,7 +5,13 @@
 \title{Generates the phenotype data in the format expected by the UI.
 Format is VARNAME GENE    tissue  TEST    TESTSTAT        TESTPVALUE}
 \usage{
-writePhenotypeGeneAssociations(inFiles, resultFiles, file)
+writePhenotypeGeneAssociations(
+  inFiles,
+  resultFiles,
+  file,
+  corCutoff = -2,
+  padjCutoff = 2
+)
 }
 \arguments{
 \item{inFiles}{The SEAHORSE inputs}
@@ -13,6 +19,10 @@ writePhenotypeGeneAssociations(inFiles, resultFiles, file)
 \item{resultFiles}{The SEAHORSE results}
 
 \item{file}{The file where results should be stored. .tsv.gz will be appended.}
+
+\item{corCutoff}{The cutoff for correlation. Default is -2 (all values will be retained.)}
+
+\item{padjCutoff}{The cutoff for adjusted p-value. Default is 2 (all values will be retained.)}
 }
 \description{
 Generates the phenotype data in the format expected by the UI.

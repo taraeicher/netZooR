@@ -5,7 +5,7 @@
 \title{Generates the pathway enrichment scores across all tissues and writes them.
 Format is pathway	pval	padj	log2err	ES	NES	size	ranks	leadingEdge	varname	tissue}
 \usage{
-writePathwayEnrichment(inFiles, file, pathways)
+writePathwayEnrichment(inFiles, file, pathways, cutoff = 2)
 }
 \arguments{
 \item{inFiles}{The SEAHORSE files}
@@ -13,6 +13,8 @@ writePathwayEnrichment(inFiles, file, pathways)
 \item{file}{The file where results should be stored. .tsv.gz will be appended.}
 
 \item{pathways}{The pathways used to run SEAHORSE}
+
+\item{cutoff}{The adjusted p-value cutoff for pathway enrichment. Default is 2 (all retained).}
 }
 \description{
 Generates the pathway enrichment scores across all tissues and writes them.

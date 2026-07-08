@@ -1121,8 +1121,9 @@ seahorseFormatForUI <- function(input_directory, result_directory, output_direct
 #' @param inFiles The SEAHORSE files
 #' @param file The file where results should be stored. .tsv.gz will be appended.
 #' @param pathways The pathways used to run SEAHORSE
+#' @param cutoff The adjusted p-value cutoff for pathway enrichment. Default is 2 (all retained).
 #' @return NULL
-writePathwayEnrichment <- function(inFiles, file, pathways){
+writePathwayEnrichment <- function(inFiles, file, pathways, cutoff = 2){
   
   # Get input file names.
   tissueNames <- formatTissueNames(inFiles)
@@ -1193,6 +1194,9 @@ writePathwayEnrichment <- function(inFiles, file, pathways){
           localFile <- splitPath[length(splitPath)]
           withoutFileExt <- strsplit(localFile, ".RDS")[[1]][1]
           returnDat$tissue <- rep(withoutFileExt, nrow(returnDat))
+          
+          # Subset by cutoff.
+          returnDat <- returnDat[which(returnDat$padj < cutoff),]
         }
         return(returnDat)
       }))
@@ -1225,9 +1229,10 @@ formatTissueNames <- function(names){
 #' @param inFiles The SEAHORSE files
 #' @param file The file where results should be stored. .tsv.gz will be appended.
 #' @param removeLowerTri Whether or not to remove the lower triangular matrix
+#' @param cutoff The correlation cutoff for filtering. Default is -2 (all retained).
 #' (default is TRUE)
 #' @return NULL 
-writeGeneGene <- function(inFiles, file, removeLowerTri = TRUE){
+writeGeneGene <- function(inFiles, file, removeLowerTri = TRUE, cutoff = -2){
   
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
@@ -1268,6 +1273,9 @@ writeGeneGene <- function(inFiles, file, removeLowerTri = TRUE){
       
       # Rearrange columns.
       flatTable <- flatTable[,c("Gene A", "Gene B", "Tissue", "Correlation")]
+      
+      # Subset by cutoff.
+      flatTable <- flatTable[which(flatTable$Correlation > cutoff),]
     }
     
     # Write the chunk.
@@ -1411,8 +1419,10 @@ writePhenotype <- function(inFiles, file){
 #' @param inFiles The SEAHORSE inputs
 #' @param resultFiles The SEAHORSE results
 #' @param file The file where results should be stored. .tsv.gz will be appended.
+#' @param corCutoff The cutoff for correlation. Default is -2 (all values will be retained.)
+#' @param padjCutoff The cutoff for adjusted p-value. Default is 2 (all values will be retained.)
 #' @return NULL
-writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file){
+writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file, corCutoff = -2, padjCutoff = 2){
   
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
@@ -1457,6 +1467,13 @@ writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file){
           return(outDf)
         })
         phenotypeToGeneDf <- do.call(rbind, phenotypeToGeneList)
+        
+        # Subset by cutoffs.
+        whichCorCutoff <- intersect(which(phenotypeToGeneDf$TESTSTAT > corCutoff),
+                                    which(phenotypeToGeneDf$TEST == "Correlation"))
+        whichPadjCutoff <- intersect(which(phenotypeToGeneDf$TESTSTAT < padjCutoff),
+                                    which(phenotypeToGeneDf$TEST != "Correlation"))
+        phenotypeToGeneDf <- phenotypeToGeneDf[sort(c(whichCorCutoff, whichPadjCutoff)),]
     }
     write.table(phenotypeToGeneDf, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
                 col.names = i == 1)
@@ -1468,8 +1485,11 @@ writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file){
 #' Format is VARNAME1        VARNAME2        tissue  TEST    TESTSTAT        TESTPVALUE
 #' @param inFiles The SEAHORSE results
 #' @param file The file where results should be stored. .tsv.gz will be appended.
+#' @param corCutoff The cutoff for correlation. Default is -2 (all values will be retained.)
+#' @param padjCutoff The cutoff for adjusted p-value. Default is 2 (all values will be retained.)
 #' @return NULL
-writePhenotypePhenotypeAssociations <- function(inFiles, file){
+writePhenotypePhenotypeAssociations <- function(inFiles, file, corCutoff = -2,
+                                                padjCutoff = 2){
   
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
@@ -1499,6 +1519,13 @@ writePhenotypePhenotypeAssociations <- function(inFiles, file){
                           TEST = TEST, TESTSTAT = TESTSTAT, TESTPVALUE = TESTPVALUE))
       })
       phenotypeToPhenotypeDf <- do.call(rbind, phenotypeToPhenotypeList)
+      
+      # Subset by cutoffs.
+      whichCorCutoff <- intersect(which(phenotypeToPhenotypeDf$TESTSTAT > corCutoff),
+                                  which(phenotypeToPhenotypeDf$TEST == "correlation"))
+      whichPadjCutoff <- intersect(which(phenotypeToPhenotypeDf$TESTSTAT < padjCutoff),
+                                   which(phenotypeToPhenotypeDf$TEST != "correlation"))
+      phenotypeToPhenotypeDf <- phenotypeToPhenotypeDf[sort(c(whichCorCutoff, whichPadjCutoff)),]
     }
     
     write.table(phenotypeToPhenotypeDf, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
@@ -1780,7 +1807,69 @@ plotScatter <- function(x, y, xName, yName){
   plot(x = x, y = y, xlab = xName, ylab = yName)
 }
 
-#' Write the table containing the results for one phenotype or gene.
+#' Write the table containing the top results across tissues.
+#' @param seahorseResultDir The directory containing the SEAHORSE results across tissues
+#' @param seahorseInputDir The directory containing input files for SEAHORSE, with the file
+#' names corresponding to the file names in seahorseResultDir and each file formatted as
+#' a named list of the following: expression, phenotype, dict.
+#' @param pathways The pathways in the format used by SEAHORSE
+#' @param resultType The name of the result component ("coexpression", "phenotype_association",
+#' "phenocor", or "GSEA")
+#' @param consolidatedResultFile The path where you wish to save your consolidated file.
+#' @param corCutoffSignificance The correlation cutoff significance value. Default is 0.9.
+#' @param padjCutoffSignificance The significance cutoff for adjusted p-value.
+#' Default is 0.05.
+#' @return NULL
+writeSigTable <- function(seahorseResultDir, seahorseInputDir, resultType, 
+                          consolidatedResultFile, pathways = NULL,
+                          corCutoffSignificance = 0.9, padjCutoffSignificance = 0.05){
+  
+  # Check significance cutoffs.
+  if(!is.numeric(corCutoffSignificance)){
+    stop("Correlation cutoff must be a numeric value.")
+  }
+  if(!is.numeric(padjCutoffSignificance)){
+    stop("Adjusted p-value significance cutoff must be a numeric value.")
+  }
+  
+  # List all files.
+  allFiles <- list.files(seahorseResultDir)
+  allFilesInput <- list.files(seahorseInputDir)
+
+  # Save the data.
+  if(resultType == "coexpression"){
+    
+    # Write coexpression data.
+    writeGeneGene(inFiles = paste(seahorseResultDir, allFiles, sep = "/"),
+                  file = consolidatedResultFile, cutoff = corCutoffSignificance)
+    
+  }else if(resultType == "phenotype_association"){
+    
+    # Write the phenotype-gene associations.
+    writePhenotypeGeneAssociations(resultFiles = paste(seahorseResultDir, allFiles, sep = "/"), 
+                                   inFiles = paste(seahorseInputDir, allFilesInput, sep = "/"), 
+                                   corCutoff = corCutoffSignificance,
+                                   padjCutoff = padjCutoffSignificance,
+                                   file = consolidatedResultFile)
+    
+  }else if(resultType == "GSEA"){
+    
+    # Write GSEA associations.
+    writePathwayEnrichment(inFiles = paste(seahorseResultDir, allFiles, sep = "/"), 
+                           file = consolidatedResultFile, 
+                           pathways = pathways, cutoff = padjCutoffSignificance)
+    
+  }else if(resultType == "phenocor"){
+    
+    # Write phenotype associations.
+    writePhenotypePhenotypeAssociations(inFiles = paste(seahorseResultDir, allFiles, sep = "/"), 
+                                        file = consolidatedResultFile,
+                                        padjCutoff = padjCutoffSignificance,
+                                        corCutoff = corCutoffSignificance)
+  }
+}
+
+#' Write a summary table of 
 #' @param result The full SEAHORSE result
 #' @param phenotype The phenotype data in the format used by SEAHORSE
 #' @param dictionary The phenotype dictionary in the format used by SEAHORSE
@@ -1793,7 +1882,7 @@ plotScatter <- function(x, y, xName, yName){
 #' @param resultFile The location where you wish to save your result file.
 #' @return NULL
 writeTable <- function(result, phenotype = NULL, variable, variableType, resultType, tmpFile,
-                            resultFile, dictionary = NULL, pathways = NULL){
+                       resultFile, dictionary = NULL, pathways = NULL){
   
   # Check formatting.
   if(variableType == "gene" && !(variable %in% colnames(result$coexpression))){
@@ -1874,13 +1963,13 @@ writeTable <- function(result, phenotype = NULL, variable, variableType, resultT
     # Subset filtered data.
     otherVars <- setdiff(rownames(result$phenocor$stat), variable)
     filteredDat$phenocor$stat <- rbind(as.matrix(result$phenocor$stat[variable,otherVars]),
-                                   as.matrix(result$phenocor$stat[otherVars, variable]))
+                                       as.matrix(result$phenocor$stat[otherVars, variable]))
     filteredDat$phenocor$cramerV <- rbind(as.matrix(result$phenocor$cramerV[variable,otherVars]),
-                                      as.matrix(result$phenocor$cramerV[otherVars, variable]))
+                                          as.matrix(result$phenocor$cramerV[otherVars, variable]))
     filteredDat$phenocor$padj <- rbind(as.matrix(result$phenocor$padj[variable,otherVars]),
-                                   as.matrix(result$phenocor$padj[otherVars, variable]))
+                                       as.matrix(result$phenocor$padj[otherVars, variable]))
     filteredDat$phenocor$testType <-rbind(as.matrix(result$phenocor$testType[variable,otherVars]),
-                                      as.matrix(result$phenocor$testType[otherVars, variable]))
+                                          as.matrix(result$phenocor$testType[otherVars, variable]))
     row <- rownames(filteredDat$phenocor$stat)
     whichNotNA <- which(!is.na(filteredDat$phenocor$stat))
     filteredDat$phenocor$stat <- as.matrix(filteredDat$phenocor$stat[whichNotNA])
@@ -1896,7 +1985,7 @@ writeTable <- function(result, phenotype = NULL, variable, variableType, resultT
       colnames(filteredDat$phenocor$cramerV) <-
       colnames(filteredDat$phenocor$padj) <-
       colnames(filteredDat$phenocor$testType) <- variable
-
+    
     # Build data frame.
     VARNAME2 <- rownames(filteredDat$phenocor$stat)
     TEST <- unname(filteredDat$phenocor$testType)

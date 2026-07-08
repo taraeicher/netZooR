@@ -1338,3 +1338,162 @@ test_that("plotting functions work", {
   unlink("~/result.tsv.gz")
   
 })
+test_that("saving significant table works", {
+  
+  # Simulate expression data
+  expression_data = data.frame(matrix(rexp(1000, rate=.1), ncol=10, nrow = 100))
+  rownames(expression_data) = sprintf("ENSG%011d", 1:100)
+  colnames(expression_data) = paste("sample", 1:10, sep = "")
+  
+  # Simulate phenotypic data
+  phenotype_data = data.frame(matrix(0, ncol=3, nrow = 10))
+  colnames(phenotype_data) = c("sex", "height", "group")
+  rownames(phenotype_data) = colnames(expression_data)
+  phenotype_data$sex = c(rep("male", nrow(phenotype_data)/2), rep("female", nrow(phenotype_data)/2))
+  phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = T)
+  phenotype_data$group = c(rep("1", 3), rep("2", 4), rep("3", 3))
+  
+  phenotype_dictionary = c("dichotomous", "continuous", "nominal")
+  
+  # Create toy pathways
+  pathways = list()
+  pathways$pathway1 = sample(rownames(expression_data), 50)
+  pathways$pathway2 = sample(rownames(expression_data), 30)
+  pathways$pathway3 = sample(rownames(expression_data), 70)
+  
+  # Make input data.
+  input <- list(expression = expression_data, phenotype = phenotype_data, dict = phenotype_dictionary)
+  if(!dir.exists("~/tmpInputDir")){
+    dir.create("~/tmpInputDir")
+  }
+  saveRDS(input, "~/tmpInputDir/tissue1.RDS")
+  saveRDS(input, "~/tmpInputDir/tissue2.RDS")
+  saveRDS(input, "~/tmpInputDir/tissue3.RDS")
+
+  # Get toy SEAHORSE results.
+  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways))
+  if(!dir.exists("~/tmpResultDir")){
+    dir.create("~/tmpResultDir")
+  }
+  saveRDS(results, "~/tmpResultDir/tissue1.RDS")
+  saveRDS(results, "~/tmpResultDir/tissue2.RDS")
+  saveRDS(results, "~/tmpResultDir/tissue3.RDS")
+  
+  # Create the result file directory.
+  consolidatedDir <- "~/consolidated/"
+  if(!dir.exists("~/consolidated")){
+    dir.create("~/consolidated")
+  }
+  
+  # Check that error is thrown where appropriate.
+  expect_error(writeSigTable(seahorseResultDir = "~/tmpResultDir", 
+                             seahorseInputDir = "~/tmpInputDir", 
+                             resultType = "coexpression", 
+                             consolidatedResultFile = paste0(consolidatedDir, "consolidated"), 
+                             pathways = NULL,
+                             corCutoffSignificance = "apple", padjCutoffSignificance = 0.05),
+               "Correlation cutoff must be a numeric value.")
+  expect_error(writeSigTable(seahorseResultDir = "~/tmpResultDir", 
+                             seahorseInputDir = "~/tmpInputDir", 
+                             resultType = "coexpression", 
+                             consolidatedResultFile = paste0(consolidatedDir, "consolidated"), 
+                             pathways = NULL,
+                             corCutoffSignificance = 0.5, padjCutoffSignificance = "banana"),
+               "Adjusted p-value significance cutoff must be a numeric value.")
+  
+  # Test gene-gene associations.
+  readFile <- function(fname){
+    con <- gzfile(fname, "rt")
+    data <- read.delim(con, sep = "\t", header = TRUE)
+    return(data)
+  }
+  suppressWarnings(writeSigTable(seahorseResultDir = "~/tmpResultDir", 
+                seahorseInputDir = "~/tmpInputDir", 
+                resultType = "coexpression", 
+                consolidatedResultFile = paste0(consolidatedDir, "consolidated"), 
+                pathways = NULL,
+                corCutoffSignificance = 0.5, padjCutoffSignificance = 0.05))
+  expect_equal(colnames(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))),
+               c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
+  expect_all_true(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))$Correlation > 0.5)
+  
+  # Test gene-phenotype associations.
+  suppressWarnings(writeSigTable(seahorseResultDir = "~/tmpResultDir", 
+                seahorseInputDir = "~/tmpInputDir", 
+                resultType = "phenotype_association", 
+                consolidatedResultFile = paste0(consolidatedDir, "consolidated"), 
+                pathways = NULL,
+                corCutoffSignificance = 0.5, padjCutoffSignificance = 0.05))
+  expect_equal(colnames(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))),
+               c("VARNAME","GENE",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(length(intersect(which(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))$TESTSTAT <= 0.5),
+                          which(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))$TESTSTAT >= 0.05))), 0)
+  
+  # Test phenotype-pathway associations.
+  suppressWarnings(writeSigTable(seahorseResultDir = "~/tmpResultDir", 
+                seahorseInputDir = "~/tmpInputDir", 
+                resultType = "GSEA", 
+                consolidatedResultFile = paste0(consolidatedDir, "consolidated"), 
+                pathways = NULL,
+                corCutoffSignificance = 0.5, padjCutoffSignificance = 1))
+  expect_equal(colnames(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))),
+               c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
+  expect_all_true(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))$padj < 1)
+  
+  # Test phenotype-phenotype associations.
+  suppressWarnings(writeSigTable(seahorseResultDir = "~/tmpResultDir", 
+                seahorseInputDir = "~/tmpInputDir", 
+                resultType = "phenocor", 
+                consolidatedResultFile = paste0(consolidatedDir, "consolidated"), 
+                pathways = NULL,
+                corCutoffSignificance = 0.2, padjCutoffSignificance = 0.5))
+  expect_equal(colnames(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))),
+               c("VARNAME1","VARNAME2",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_all_true(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))$TESTSTAT < 0.5)
+  
+  # Test when nothing is significant.
+  suppressWarnings(writeSigTable(seahorseResultDir = "~/tmpResultDir", 
+                seahorseInputDir = "~/tmpInputDir", 
+                resultType = "coexpression", 
+                consolidatedResultFile = paste0(consolidatedDir, "consolidated"), 
+                pathways = NULL,
+                corCutoffSignificance = 2, padjCutoffSignificance = -1))
+  expect_equal(colnames(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))),
+               c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
+  expect_equal(nrow(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))), 0)
+  
+  suppressWarnings(writeSigTable(seahorseResultDir = "~/tmpResultDir", 
+                seahorseInputDir = "~/tmpInputDir", 
+                resultType = "phenotype_association", 
+                consolidatedResultFile = paste0(consolidatedDir, "consolidated"), 
+                pathways = NULL,
+                corCutoffSignificance = 2, padjCutoffSignificance = -1))
+  expect_equal(colnames(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))),
+               c("VARNAME","GENE",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(nrow(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))), 0)
+  
+  suppressWarnings(writeSigTable(seahorseResultDir = "~/tmpResultDir", 
+                seahorseInputDir = "~/tmpInputDir", 
+                resultType = "GSEA", 
+                consolidatedResultFile = paste0(consolidatedDir, "consolidated"), 
+                pathways = NULL,
+                corCutoffSignificance = 2, padjCutoffSignificance = -1))
+  expect_equal(colnames(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))),
+               c("pathway", "pval","padj",	"log2err",	"ES",	"NES",	"size",	"ranks",	"leadingEdge",	"varname",	"tissue"))
+  expect_equal(nrow(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))), 0)
+  
+  suppressWarnings(writeSigTable(seahorseResultDir = "~/tmpResultDir", 
+                seahorseInputDir = "~/tmpInputDir", 
+                resultType = "phenocor", 
+                consolidatedResultFile = paste0(consolidatedDir, "consolidated"), 
+                pathways = NULL,
+                corCutoffSignificance = 2, padjCutoffSignificance = -1))
+  expect_equal(colnames(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))),
+               c("VARNAME1","VARNAME2",	"tissue", "TEST", "TESTSTAT", "TESTPVALUE"))
+  expect_equal(nrow(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))), 0)
+  
+  # Remove the files.
+  unlink("~/tmpInputDir", recursive = TRUE)
+  unlink("~/tmpResultDir", recursive = TRUE)
+  unlink("~/consolidated", recursive = TRUE)
+})

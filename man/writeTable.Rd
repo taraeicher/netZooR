@@ -2,7 +2,7 @@
 % Please edit documentation in R/SEAHORSE.R
 \name{writeTable}
 \alias{writeTable}
-\title{Write the table containing the results for one phenotype or gene.}
+\title{Write a summary table of}
 \usage{
 writeTable(
   result,
@@ -37,5 +37,5 @@ writeTable(
 \item{pathways}{The pathways in the format used by SEAHORSE}
 }
 \description{
-Write the table containing the results for one phenotype or gene.
+Write a summary table of
 }
