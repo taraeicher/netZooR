@@ -14,8 +14,6 @@ rugPlot(result, pathwayName, pathways, phenotypeName)
 \item{pathways}{The pathways used as input to SEAHORSE}
 
 \item{phenotypeName}{The phenotype of interest}
-
-\item{phenotype}{The phenotype of interest}
 }
 \description{
 Generates a rug plot for a single pathway-phenotype association.

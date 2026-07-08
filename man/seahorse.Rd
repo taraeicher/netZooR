@@ -48,6 +48,8 @@ downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
 
 \item{compute_phenotype_cor}{: Whether or not to compute the phenotype-phenotype association matrix. Default is TRUE.}
 
+\item{compute_gene_phenotype_cor}{: Whether or not to compute the gene-phenotype association matrix. Default is TRUE.}
+
 \item{assoc_method}{: The method used to infer associations between phenotypes and genes. Default
 is "spearman". Other options are "pearson", "kendall", and "linear". The "pearson", "kendall", and "spearman" options
 compute correlations between each phenotype and gene independently for numeric phenotypes and
@@ -62,8 +64,6 @@ for each coefficient.}
 
 \item{verbose}{Whether or not to print statements notifying user of run status.
 Outputs:}
-
-\item{compute_gene_phenotype_cor:}{Whether or not to compute the gene-phenotype association matrix. Default is TRUE.}
 }
 \value{
 results    : a list containing three objects
