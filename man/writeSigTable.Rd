@@ -32,8 +32,6 @@ a named list of the following: expression, phenotype, dict.}
 
 \item{padjCutoffSignificance}{The significance cutoff for adjusted p-value.
 Default is 0.05.}
-
-\item{dictionary}{The phenotype dictionary in the format used by SEAHORSE}
 }
 \description{
 Write the table containing the top results across tissues.

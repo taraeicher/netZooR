@@ -22,7 +22,8 @@ seahorseFormatForUI(
   result_directory,
   output_directory,
   data_dictionary,
-  pathways
+  pathways,
+  geneGeneCutoff = -2
 )
 }
 \arguments{
@@ -37,7 +38,10 @@ the same naming convention as in the result directory.}
 
 \item{data_dictionary}{: The data dictionary.}
 
-\item{pathways}{The pathways used to run SEAHORSE}
+\item{pathways}{: The pathways used to run SEAHORSE}
+
+\item{geneGeneCutoff}{: The correlation cutoff for gene-gene associations. Only correlations greater
+than this cutoff will be saved.}
 }
 \description{
 Generates the following files which are needed for use with the SEAHORSE UI:
