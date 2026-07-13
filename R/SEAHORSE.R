@@ -1286,14 +1286,12 @@ writeGeneGene <- function(inFiles, file, removeLowerTri = TRUE, cutoff = -2){
 
       # Rearrange columns.
       flatTable <- flatTable[,c("Gene A", "Gene B", "Tissue", "Correlation")]
-      print(dim(flatTable))
 
       # Subset by cutoff.
       flatTable <- flatTable[which(abs(flatTable$Correlation) > cutoff),]
     }
     
     # Write the chunk.
-    print(dim(flatTable))
     write.table(flatTable, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
                 col.names = i == 1)
     message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
