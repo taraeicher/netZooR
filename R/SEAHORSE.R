@@ -1205,7 +1205,6 @@ writePathwayEnrichment <- function(inFiles, file, pathways, cutoff = 2){
     }
     
     # Write the chunk.
-    print(dim(enrichmentVar))
     write.table(enrichmentVar, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
                 col.names = i == 1)
     message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
@@ -1488,7 +1487,6 @@ writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file, corCutoff
                                     which(phenotypeToGeneDf$TEST != "Correlation"))
         phenotypeToGeneDf <- phenotypeToGeneDf[sort(c(whichCorCutoff, whichPadjCutoff)),]
     }
-    print(dim(phenotypeToGeneDf))
     write.table(phenotypeToGeneDf, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
                 col.names = i == 1)
     message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
@@ -1541,7 +1539,6 @@ writePhenotypePhenotypeAssociations <- function(inFiles, file, corCutoff = -2,
                                    which(phenotypeToPhenotypeDf$TEST != "correlation"))
       phenotypeToPhenotypeDf <- phenotypeToPhenotypeDf[sort(c(whichCorCutoff, whichPadjCutoff)),]
     }
-    print(dim(phenotypeToPhenotypeDf))
     write.table(phenotypeToPhenotypeDf, file = con, sep = "\t", row.names = FALSE, quote = FALSE,
                 col.names = i == 1)
     message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
