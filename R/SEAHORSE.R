@@ -1105,12 +1105,15 @@ seahorseFormatForUI <- function(input_directory, result_directory, output_direct
   # message("Preparing to write phenotype-gene associations...")
   # writePhenotypeGeneAssociations(inFiles = paste(input_directory, inputfiles, sep = "/"),
   #                 resultFiles = paste(result_directory, resultfiles, sep = "/"),
-  #                file = paste(output_directory, "metadata2expression", sep = "/"))
+  #                file = paste(output_directory, "metadata2expression", sep = "/"),
+  #                estimatePValue = TRUE)
   # message("Phenotype-gene associations done.")
-  # message("Preparing to write phenotype associations...")
-  # writePhenotypePhenotypeAssociations(inFiles = paste(result_directory, resultfiles, sep = "/"),
-  #                                file = paste(output_directory, "metadata2metadata", sep = "/"))
-  # message("Phenotype associations done")
+  message("Preparing to write phenotype associations...")
+  writePhenotypePhenotypeAssociations(inFiles = paste(input_directory, inputfiles, sep = "/"),
+                                      resultFiles = paste(result_directory, resultfiles, sep = "/"),
+                                 file = paste(output_directory, "metadata2metadata", sep = "/"),
+                                 estimatePValue = TRUE)
+  message("Phenotype associations done")
   message("Preparing to write gene associations...")
   writeGeneGene(inFiles = paste(result_directory, resultfiles, sep = "/"),
                                       file = paste(output_directory, "geneexpression2geneexpression", sep = "/"),
@@ -1434,8 +1437,11 @@ writePhenotype <- function(inFiles, file){
 #' @param file The file where results should be stored. .tsv.gz will be appended.
 #' @param corCutoff The cutoff for correlation. Default is -2 (all values will be retained.)
 #' @param padjCutoff The cutoff for adjusted p-value. Default is 2 (all values will be retained.)
+#' @param estimatePValue Whether or not to estimate the p-value for the correlation results.
+#' Default is FALSE.
 #' @return NULL
-writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file, corCutoff = -2, padjCutoff = 2){
+writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file, corCutoff = -2, padjCutoff = 2,
+                                           estimatePValue = FALSE){
   
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
@@ -1472,6 +1478,15 @@ writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file, corCutoff
                 outDf$TEST <- "LIMMA Moderated t-test"
               }else if(dictVal == "nominal"){
                 outDf$TEST <- "ANOVA"
+              }else if(dictVal == "continuous" && estimatePValue == TRUE){
+                nPheno <- which(!is.na(inputs$phenotype[,var]))
+                n <- unlist(lapply(1:nrow(inputs$expression), function(i){
+                  nGene <- which(!is.na(inputs$expression[i,]))
+                  nShared <- intersect(nGene, nPheno)
+                  return(length(nShared))
+                }))
+                pval <- spearmanPFromRho(rho = outDf$TESTSTAT, n = n)
+                outDf$TESTPVALUE <- p.adjust(pval, method = "fdr")
               }
               outDf <- outDf[,c("VARNAME", "GENE", "tissue", "TEST", "TESTSTAT", "TESTPVALUE")]
             }
@@ -1494,15 +1509,28 @@ writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file, corCutoff
   }
 }
 
+#' Approximates the p-value given correlation and the number of samples
+#' @param rho The correlation vector for a given phenotype
+#' @param n The vector of sample counts used to calculate rho
+#' @return A vector of p-values
+spearmanPFromRho <- function(rho, n) {
+  t_stat <- rho * sqrt((n - 2) / (1 - rho^2))
+  p_val <- 2 * pt(abs(t_stat), df = n - 2, lower.tail = FALSE)
+  return(p_val)
+}
+
 #' Generates the phenotype results in the format expected by the UI.
 #' Format is VARNAME1        VARNAME2        tissue  TEST    TESTSTAT        TESTPVALUE
-#' @param inFiles The SEAHORSE results
+#' @param inFiles The SEAHORSE input files
+#' @param resultFiles The SEAHORSE results
 #' @param file The file where results should be stored. .tsv.gz will be appended.
 #' @param corCutoff The cutoff for correlation. Default is -2 (all values will be retained.)
 #' @param padjCutoff The cutoff for adjusted p-value. Default is 2 (all values will be retained.)
+#' @param estimatePValue Whether or not p-values should be estimated for correlation results.
+#' Default is FALSE.
 #' @return NULL
-writePhenotypePhenotypeAssociations <- function(inFiles, file, corCutoff = -2,
-                                                padjCutoff = 2){
+writePhenotypePhenotypeAssociations <- function(inFiles, resultFiles, file, corCutoff = -2,
+                                                padjCutoff = 2, estimatePValue = FALSE){
   
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
@@ -1515,7 +1543,8 @@ writePhenotypePhenotypeAssociations <- function(inFiles, file, corCutoff = -2,
   phenotype <- for(i in 1:length(tissueNames)){
     
     # Get tissue name and read file.
-    results = readRDS(inFiles[i])
+    results = readRDS(resultFiles[i])
+    inputs = readRDS(inFiles[i])
     
     phenotypeToPhenotypeDf <- data.frame(VARNAME1 = character(), VARNAME2 = character(), tissue = character(),
                                          TEST = character(), TESTSTAT = numeric(), TESTPVALUE = numeric())
@@ -1526,8 +1555,23 @@ writePhenotypePhenotypeAssociations <- function(inFiles, file, corCutoff = -2,
         TEST <- results$phenocor$testType[j,(j+1):ncol(results$phenocor$stat)]
         TESTSTAT <- results$phenocor$stat[j,(j+1):ncol(results$phenocor$stat)]
         TESTPVALUE <- results$phenocor$padj[j,(j+1):ncol(results$phenocor$padj)]
-        VARNAME1 <- rep(rownames(results$phenocor$stat)[j], length((j+1):ncol(results$phenocor$padj)))
+        var <- rownames(results$phenocor$stat)[j]
+        VARNAME1 <- rep(var, length((j+1):ncol(results$phenocor$padj)))
         tissue <- tissueNames[i]
+        
+        # Add p-value estimation if desired.
+        if(estimatePValue == TRUE){
+          whichCor <- which(TEST == "Cor")
+          if(length(whichCor) > 0){
+            nPheno2 <- apply(as.matrix(VARNAME2[whichCor]), 1, function(x) which(!is.na(inputs$phenotype[,x])))
+            nPheno <- which(!is.na(inputs$phenotype[,var]))
+            n <- unlist(lapply(nPheno2, function(n2){
+              return(length(intersect(n2, nPheno)))
+            }))
+            pval <- spearmanPFromRho(rho = TESTSTAT[whichCor], n = n)
+            TESTPVALUE[whichCor] <- p.adjust(pval, method = "fdr")
+          }
+        }
         return(data.frame(VARNAME1 = VARNAME1, VARNAME2 = VARNAME2, tissue = tissue,
                           TEST = TEST, TESTSTAT = TESTSTAT, TESTPVALUE = TESTPVALUE))
       })

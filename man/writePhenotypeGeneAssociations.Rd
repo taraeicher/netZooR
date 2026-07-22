@@ -10,7 +10,8 @@ writePhenotypeGeneAssociations(
   resultFiles,
   file,
   corCutoff = -2,
-  padjCutoff = 2
+  padjCutoff = 2,
+  estimatePValue = FALSE
 )
 }
 \arguments{
@@ -23,6 +24,9 @@ writePhenotypeGeneAssociations(
 \item{corCutoff}{The cutoff for correlation. Default is -2 (all values will be retained.)}
 
 \item{padjCutoff}{The cutoff for adjusted p-value. Default is 2 (all values will be retained.)}
+
+\item{estimatePValue}{Whether or not to estimate the p-value for the correlation results.
+Default is FALSE.}
 }
 \description{
 Generates the phenotype data in the format expected by the UI.
