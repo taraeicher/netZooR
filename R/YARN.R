@@ -17,19 +17,6 @@
 #' @importFrom Biobase ExpressionSet
 #' @importClassesFrom Biobase ExpressionSet
 #'
-#' @examples
-#' \dontrun{
-#' data(bladder)
-#' data(skin)
-#' # subsetting and changing column name just for a silly example
-#' skin <- skin[1:10,]
-#' colnames(fData(skin)) = paste("names",1:6)
-#' biomart<-"ENSEMBL_MART_ENSEMBL";
-#' genes <- sapply(strsplit(rownames(skin),split="\\."),function(i)i[1])
-#' newskin <-annotateFromBiomart(skin,genes=genes,biomart=biomart)
-#' head(fData(newskin)[,7:11])
-#' }
-#'
 annotateFromBiomart <- function(obj,genes=featureNames(obj),filters="ensembl_gene_id",
                                 attributes=c("ensembl_gene_id","hgnc_symbol","chromosome_name","start_position","end_position"),
                                 biomart="ensembl",dataset="hsapiens_gene_ensembl",...){
@@ -67,13 +54,6 @@ annotateFromBiomart <- function(obj,genes=featureNames(obj),filters="ensembl_gen
 #'
 #' @return Plots a classical multi-dimensional scaling of the 'controlGenes'. Optionally returns co-ordinates.
 #' @export
-#'
-#' @examples
-#' \donttest{
-#' data(bladder)
-#' if(!is.null(bladder)) checkMisAnnotation(bladder,'GENDER',controlGenes='Y',legendPosition='topleft')
-#' }
-#'
 checkMisAnnotation <- function(obj, phenotype, controlGenes = "all",
                                columnID = "chromosome_name", plotFlag = TRUE, legendPosition = NULL,
                                ...) {
@@ -104,12 +84,6 @@ checkMisAnnotation <- function(obj, phenotype, controlGenes = "all",
 #' @export
 #'
 #' @seealso checkTissuesToMerge
-#'
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)) checkTissuesToMerge(skin,'SMTS','SMTSD')
-#' }
 #'
 checkTissuesToMerge <- function(obj, majorGroups, minorGroups,
                                 filterFun = NULL, plotFlag = TRUE, ...) {
@@ -147,9 +121,6 @@ checkTissuesToMerge <- function(obj, majorGroups, minorGroups,
 #' @importFrom Biobase AnnotatedDataFrame
 #' @importFrom Biobase phenoData<-
 #' @importFrom Biobase pData<-
-#'
-#' @examples
-#' # obj <- downloadGTEx(type='genes',file='~/Desktop/gtex.rds')
 downloadGTEx <- function(type = "genes", file = NULL, ...) {
   if (!requireNamespace("downloader", quietly = TRUE)) {
     stop("Package 'downloader' is required for downloadGTEx(). Please install it.", call. = FALSE)
@@ -237,13 +208,6 @@ downloadGTEx <- function(type = "genes", file = NULL, ...) {
 #'
 #' @importFrom Biobase assayData
 #' @return matrix
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)) head(netZooR:::extractMatrix(skin,normalized=FALSE,log=TRUE))
-#' if(!is.null(skin)) head(netZooR:::extractMatrix(skin,normalized=FALSE,log=FALSE))
-#' }
-#'
 extractMatrix <- function(obj, normalized = FALSE, log = TRUE) {
   if (is(obj, "ExpressionSet")) {
     if (!normalized) {
@@ -278,18 +242,6 @@ extractMatrix <- function(obj, normalized = FALSE, log = TRUE) {
 #'
 #' @importFrom Biobase exprs
 #' @importFrom Biobase fData
-#'
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)){
-#'    filterGenes(skin,labels=c('X','Y','MT'),featureName='chromosome_name')
-#' }
-#' if(!is.null(skin)){
-#'    filterGenes(skin,labels='protein_coding',featureName='gene_biotype',keepOnly=TRUE)
-#' }
-#' }
-#'
 filterGenes <- function(obj, labels = c("X", "Y", "MT"), featureName = "chromosome_name",
                         keepOnly = FALSE) {
   features <- fData(obj)[, featureName]
@@ -317,13 +269,6 @@ filterGenes <- function(obj, labels = c("X", "Y", "MT"), featureName = "chromoso
 #'
 #' @importFrom Biobase exprs
 #' @importFrom Biobase pData
-#'
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)) filterLowGenes(skin,'SMTSD')
-#' }
-#'
 filterLowGenes <- function(obj, groups, threshold = 1, minSamples = NULL,
                            ...) {
   if (!requireNamespace("edgeR", quietly = TRUE)) {
@@ -354,13 +299,6 @@ filterLowGenes <- function(obj, groups, threshold = 1, minSamples = NULL,
 #'
 #' @importFrom Biobase exprs
 #' @importFrom Biobase fData
-#'
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)) filterMissingGenes(skin)
-#' }
-#'
 filterMissingGenes <- function(obj, threshold = 0) {
   sumGenes <- rowSums(exprs(obj))
   throwAwayGenes <- which(sumGenes <= threshold)
@@ -382,14 +320,6 @@ filterMissingGenes <- function(obj, threshold = 0) {
 #' @export
 #'
 #' @importFrom Biobase pData
-#'
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)) filterSamples(skin,ids="Skin - Not Sun Exposed (Suprapubic)",groups="SMTSD")
-#' if(!is.null(skin)) filterSamples(skin,ids=c("GTEX-OHPL-0008-SM-4E3I9","GTEX-145MN-1526-SM-5SI9T"))
-#' }
-#'
 filterSamples <- function(obj, ids, groups = colnames(obj), keepOnly = FALSE) {
   if (length(groups) == 1) {
     groups <- pData(obj)[, groups]
@@ -428,13 +358,6 @@ filterSamples <- function(obj, ids, groups = colnames(obj), keepOnly = FALSE) {
 #' @importFrom Biobase assayData<-
 #' @importClassesFrom Biobase eSet
 #' @importClassesFrom Biobase ExpressionSet
-#'
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)) normalizeTissueAware(skin,"SMTSD")
-#' }
-#'
 normalizeTissueAware <- function(obj, groups, normalizationMethod = c("qsmooth",
                                                                       "quantile"), ...) {
   if (!requireNamespace("preprocessCore", quietly = TRUE)) {
@@ -492,11 +415,6 @@ normalizeTissueAware <- function(obj, groups, normalizationMethod = c("qsmooth",
 #' @importFrom graphics plot
 #'
 #' @export
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)) res <- plotCMDS(skin,pch=21,bg=factor(pData(skin)$SMTSD))
-#' }
 plotCMDS <- function(obj, comp = 1:2, normalized = FALSE, distFun = dist,
                      distMethod = "euclidian", n = NULL, samples = TRUE, log = TRUE,
                      plotFlag = TRUE, ...) {
@@ -538,17 +456,6 @@ plotCMDS <- function(obj, comp = 1:2, normalized = FALSE, distFun = dist,
 #' @importFrom Biobase assayData
 #' @importFrom Biobase storageMode
 #' @importFrom graphics legend
-#'
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)) {
-#'   filtData <- filterLowGenes(skin,"SMTSD")
-#'   plotDensity(filtData,groups="SMTSD",legendPos="topleft")
-#'   plotDensity(filtData,groups="SMTSD")
-#' }
-#' }
-#'
 plotDensity <- function(obj, groups = NULL, normalized = FALSE,
                         legendPos = NULL, ...) {
   if (!requireNamespace("quantro", quietly = TRUE)) {
@@ -580,18 +487,6 @@ plotDensity <- function(obj, groups = NULL, normalized = FALSE,
 #' @importFrom stats sd
 #'
 #' @export
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)) {
-#'   tissues <- pData(skin)$SMTSD
-#'   plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10)
-#'   heatmapColColors <- RColorBrewer::brewer.pal(12,"Set3")[as.integer(factor(tissues))]
-#'   heatmapCols <- colorRampPalette(RColorBrewer::brewer.pal(9, "RdBu"))(50)
-#'   plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10,
-#'    col = heatmapCols,ColSideColors = heatmapColColors,cexRow = 0.6,cexCol = 0.6)
-#' }
-#' }
 plotHeatmap <- function(obj, n = NULL, fun = stats::sd, normalized = TRUE,
                         log = TRUE, ...) {
   if (!requireNamespace("gplots", quietly = TRUE)) {
@@ -626,12 +521,6 @@ plotHeatmap <- function(obj, n = NULL, fun = stats::sd, normalized = TRUE,
 #' @return Normalized expression
 #'
 #' @source \href{https://raw.githubusercontent.com/kokrah/qsmooth/master/R/qsmooth.r}{Kwame Okrah's qsmooth R package}
-#' @examples
-#' \donttest{
-#' data(skin)
-#' if(!is.null(skin)) head(netZooR:::qsmooth(skin,groups=pData(skin)$SMTSD))
-#' }
-#'
 qsmooth <- function(obj, groups, norm.factors = NULL, plot = FALSE,
                     window = 0.05,log=TRUE) {
   stopifnot(class(obj)=="ExpressionSet")

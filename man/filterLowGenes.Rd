@@ -24,13 +24,6 @@ Filtered ExpressionSet object
 \description{
 Filter genes that have less than a minimum threshold CPM for a given group/tissue
 }
-\examples{
-\donttest{
-data(skin)
-if(!is.null(skin)) filterLowGenes(skin,'SMTSD')
-}
-
-}
 \seealso{
 \link[edgeR]{cpm} function defined in the edgeR package.
 }

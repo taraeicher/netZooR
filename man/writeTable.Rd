@@ -2,7 +2,7 @@
 % Please edit documentation in R/SEAHORSE.R
 \name{writeTable}
 \alias{writeTable}
-\title{Write a summary table of a specific type of SEAHORSE result.}
+\title{Write table of SEAHORSE results filtered by a variable}
 \usage{
 writeTable(
   result,
@@ -37,5 +37,5 @@ writeTable(
 \item{pathways}{The pathways in the format used by SEAHORSE}
 }
 \description{
-Write a summary table of a specific type of SEAHORSE result.
+Write table of SEAHORSE results filtered by a variable
 }

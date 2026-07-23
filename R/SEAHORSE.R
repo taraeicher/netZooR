@@ -1081,36 +1081,39 @@ seahorseFormatForUI <- function(input_directory, result_directory, output_direct
     dir.create(output_directory)
   }
   
-  # # Write results.
-  # message("Preparing to write expression...")
-  # writeExpression(inFiles = paste(input_directory, inputfiles, sep = "/"),
-  #                 file = paste(output_directory, "geneexpression_data", sep = "/"))
-  # message("Expression file done.")
-  # message("Preparing to write gene mapping...")
-  # writeMapping(inFiles = paste(input_directory, inputfiles, sep = "/"),
-  #              file = paste(output_directory, "human_ensembl2symbol_map", sep = "/"))
-  # message("Mapping file done.")
-  # message("Preparing to write data dictionary...")
-  # writeToGz(data = data_dictionary, file = paste(output_directory, "data_dictionary", sep = "/"))
-  # message("Data dictionary done.")
-  # message("Preparing to write GSEA results...")
-  # writePathwayEnrichment(inFiles = paste(result_directory, resultfiles, sep = "/"),
-  #                        file = paste(output_directory, "all_gsea_results", sep = "/"),
-  #                        pathways = pathways)
-  # message("GSEA result file done.")
-  # message("Preparing to write phenotype data...")
-  # writePhenotype(inFiles = paste(input_directory, inputfiles, sep = "/"),
-  #                        file = paste(output_directory, "metadata", sep = "/"))
-  # message("Phenotype data done.")
-  # message("Preparing to write phenotype-gene associations...")
-  # writePhenotypeGeneAssociations(inFiles = paste(input_directory, inputfiles, sep = "/"),
-  #                 resultFiles = paste(result_directory, resultfiles, sep = "/"),
-  #                file = paste(output_directory, "metadata2expression", sep = "/"))
-  # message("Phenotype-gene associations done.")
-  # message("Preparing to write phenotype associations...")
-  # writePhenotypePhenotypeAssociations(inFiles = paste(result_directory, resultfiles, sep = "/"),
-  #                                file = paste(output_directory, "metadata2metadata", sep = "/"))
-  # message("Phenotype associations done")
+  # Write results.
+  message("Preparing to write expression...")
+  writeExpression(inFiles = paste(input_directory, inputfiles, sep = "/"),
+                  file = paste(output_directory, "geneexpression_data", sep = "/"))
+  message("Expression file done.")
+  message("Preparing to write gene mapping...")
+  writeMapping(inFiles = paste(input_directory, inputfiles, sep = "/"),
+               file = paste(output_directory, "human_ensembl2symbol_map", sep = "/"))
+  message("Mapping file done.")
+  message("Preparing to write data dictionary...")
+  writeToGz(data = data_dictionary, file = paste(output_directory, "data_dictionary", sep = "/"))
+  message("Data dictionary done.")
+  message("Preparing to write GSEA results...")
+  writePathwayEnrichment(inFiles = paste(result_directory, resultfiles, sep = "/"),
+                         file = paste(output_directory, "all_gsea_results", sep = "/"),
+                         pathways = pathways)
+  message("GSEA result file done.")
+  message("Preparing to write phenotype data...")
+  writePhenotype(inFiles = paste(input_directory, inputfiles, sep = "/"),
+                         file = paste(output_directory, "metadata", sep = "/"))
+  message("Phenotype data done.")
+  message("Preparing to write phenotype-gene associations...")
+  writePhenotypeGeneAssociations(inFiles = paste(input_directory, inputfiles, sep = "/"),
+                  resultFiles = paste(result_directory, resultfiles, sep = "/"),
+                 file = paste(output_directory, "metadata2expression", sep = "/"),
+                 estimatePValue = TRUE)
+  message("Phenotype-gene associations done.")
+  message("Preparing to write phenotype associations...")
+  writePhenotypePhenotypeAssociations(inFiles = paste(input_directory, inputfiles, sep = "/"),
+                                      resultFiles = paste(result_directory, resultfiles, sep = "/"),
+                                 file = paste(output_directory, "metadata2metadata", sep = "/"),
+                                 estimatePValue = TRUE)
+  message("Phenotype associations done")
   message("Preparing to write gene associations...")
   writeGeneGene(inFiles = paste(result_directory, resultfiles, sep = "/"),
                                       file = paste(output_directory, "geneexpression2geneexpression", sep = "/"),
@@ -1133,7 +1136,7 @@ writePathwayEnrichment <- function(inFiles, file, pathways, cutoff = 2){
   
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
-  on.exit(close(con))
+  on.exit(close(con), add = TRUE)
   
   # Write the pathway enrichment results.
   pathwayEnrichment <- tryCatch({for(i in 1:length(inFiles)){
@@ -1239,8 +1242,7 @@ writeGeneGene <- function(inFiles, file, removeLowerTri = TRUE, cutoff = -2){
   
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
-  on.exit(close(con))
-  
+
   # Get input file names.
   tissueNames <- formatTissueNames(inFiles)
 
@@ -1296,6 +1298,9 @@ writeGeneGene <- function(inFiles, file, removeLowerTri = TRUE, cutoff = -2){
                 col.names = i == 1)
     message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
   }
+  
+  # Close the file.
+  close(con)
 }
 
 #' Generates the expression data in the format expected by the UI. Writes a
@@ -1342,8 +1347,8 @@ writeExpression <- function(inFiles, file){
 #' @return NULL
 writeToGz <- function(data, file){
   gz <- gzfile(paste0(file, ".tsv.gz"), "w")
+  on.exit(close(gz))
   write.table(data, file = gz, sep = "\t", row.names = FALSE, quote = FALSE)
-  close(gz)
 }
 
 #' Generates the gene mapping data in the format expected by the UI. Writes as
@@ -1395,7 +1400,7 @@ writePhenotype <- function(inFiles, file){
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
   on.exit(close(con))
-  
+
   # Get input file names.
   tissueNames <- formatTissueNames(inFiles)
 
@@ -1434,13 +1439,16 @@ writePhenotype <- function(inFiles, file){
 #' @param file The file where results should be stored. .tsv.gz will be appended.
 #' @param corCutoff The cutoff for correlation. Default is -2 (all values will be retained.)
 #' @param padjCutoff The cutoff for adjusted p-value. Default is 2 (all values will be retained.)
+#' @param estimatePValue Whether or not to estimate the p-value for the correlation results.
+#' Default is FALSE.
 #' @return NULL
-writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file, corCutoff = -2, padjCutoff = 2){
+writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file, corCutoff = -2, padjCutoff = 2,
+                                           estimatePValue = FALSE){
   
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
   on.exit(close(con))
-  
+
   # Get input file names.
   tissueNames <- formatTissueNames(inFiles)
   
@@ -1472,6 +1480,15 @@ writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file, corCutoff
                 outDf$TEST <- "LIMMA Moderated t-test"
               }else if(dictVal == "nominal"){
                 outDf$TEST <- "ANOVA"
+              }else if(dictVal == "continuous" && estimatePValue == TRUE){
+                nPheno <- which(!is.na(inputs$phenotype[,var]))
+                n <- unlist(lapply(1:nrow(inputs$expression), function(i){
+                  nGene <- which(!is.na(inputs$expression[i,]))
+                  nShared <- intersect(nGene, nPheno)
+                  return(length(nShared))
+                }))
+                pval <- spearmanPFromRho(rho = outDf$TESTSTAT, n = n)
+                outDf$TESTPVALUE <- p.adjust(pval, method = "fdr")
               }
               outDf <- outDf[,c("VARNAME", "GENE", "tissue", "TEST", "TESTSTAT", "TESTPVALUE")]
             }
@@ -1494,20 +1511,32 @@ writePhenotypeGeneAssociations <- function(inFiles, resultFiles, file, corCutoff
   }
 }
 
+#' Approximates the p-value given correlation and the number of samples
+#' @param rho The correlation vector for a given phenotype
+#' @param n The vector of sample counts used to calculate rho
+#' @return A vector of p-values
+spearmanPFromRho <- function(rho, n) {
+  t_stat <- rho * sqrt((n - 2) / (1 - rho^2))
+  p_val <- 2 * pt(abs(t_stat), df = n - 2, lower.tail = FALSE)
+  return(p_val)
+}
+
 #' Generates the phenotype results in the format expected by the UI.
 #' Format is VARNAME1        VARNAME2        tissue  TEST    TESTSTAT        TESTPVALUE
-#' @param inFiles The SEAHORSE results
+#' @param inFiles The SEAHORSE input files
+#' @param resultFiles The SEAHORSE results
 #' @param file The file where results should be stored. .tsv.gz will be appended.
 #' @param corCutoff The cutoff for correlation. Default is -2 (all values will be retained.)
 #' @param padjCutoff The cutoff for adjusted p-value. Default is 2 (all values will be retained.)
+#' @param estimatePValue Whether or not p-values should be estimated for correlation results.
+#' Default is FALSE.
 #' @return NULL
-writePhenotypePhenotypeAssociations <- function(inFiles, file, corCutoff = -2,
-                                                padjCutoff = 2){
+writePhenotypePhenotypeAssociations <- function(inFiles, resultFiles, file, corCutoff = -2,
+                                                padjCutoff = 2, estimatePValue = FALSE){
   
   # Open the file.
   con <- gzfile(paste0(file, ".tsv.gz"), "wt")
-  on.exit(close(con))
-  
+
   # Get input file names.
   tissueNames <- formatTissueNames(inFiles)
   
@@ -1515,7 +1544,8 @@ writePhenotypePhenotypeAssociations <- function(inFiles, file, corCutoff = -2,
   phenotype <- for(i in 1:length(tissueNames)){
     
     # Get tissue name and read file.
-    results = readRDS(inFiles[i])
+    results = readRDS(resultFiles[i])
+    inputs = readRDS(inFiles[i])
     
     phenotypeToPhenotypeDf <- data.frame(VARNAME1 = character(), VARNAME2 = character(), tissue = character(),
                                          TEST = character(), TESTSTAT = numeric(), TESTPVALUE = numeric())
@@ -1526,8 +1556,23 @@ writePhenotypePhenotypeAssociations <- function(inFiles, file, corCutoff = -2,
         TEST <- results$phenocor$testType[j,(j+1):ncol(results$phenocor$stat)]
         TESTSTAT <- results$phenocor$stat[j,(j+1):ncol(results$phenocor$stat)]
         TESTPVALUE <- results$phenocor$padj[j,(j+1):ncol(results$phenocor$padj)]
-        VARNAME1 <- rep(rownames(results$phenocor$stat)[j], length((j+1):ncol(results$phenocor$padj)))
+        var <- rownames(results$phenocor$stat)[j]
+        VARNAME1 <- rep(var, length((j+1):ncol(results$phenocor$padj)))
         tissue <- tissueNames[i]
+        
+        # Add p-value estimation if desired.
+        if(estimatePValue == TRUE){
+          whichCor <- which(TEST == "Cor")
+          if(length(whichCor) > 0){
+            nPheno2 <- apply(as.matrix(VARNAME2[whichCor]), 1, function(x) which(!is.na(inputs$phenotype[,x])))
+            nPheno <- which(!is.na(inputs$phenotype[,var]))
+            n <- unlist(lapply(nPheno2, function(n2){
+              return(length(intersect(n2, nPheno)))
+            }))
+            pval <- spearmanPFromRho(rho = TESTSTAT[whichCor], n = n)
+            TESTPVALUE[whichCor] <- p.adjust(pval, method = "fdr")
+          }
+        }
         return(data.frame(VARNAME1 = VARNAME1, VARNAME2 = VARNAME2, tissue = tissue,
                           TEST = TEST, TESTSTAT = TESTSTAT, TESTPVALUE = TESTPVALUE))
       })
@@ -1544,6 +1589,9 @@ writePhenotypePhenotypeAssociations <- function(inFiles, file, corCutoff = -2,
                 col.names = i == 1)
     message(paste("Wrote data for", i, "out of", length(inFiles), "tissues"))
   }
+  
+  # Close the file.
+  close(con)
 }
 
 #' Generates a rug plot for a single pathway-phenotype association.
@@ -1874,9 +1922,154 @@ writeSigTable <- function(seahorseResultDir, seahorseInputDir, resultType,
   }else if(resultType == "phenocor"){
     
     # Write phenotype associations.
-    writePhenotypePhenotypeAssociations(inFiles = paste(seahorseResultDir, allFiles, sep = "/"), 
+    writePhenotypePhenotypeAssociations(inFiles = paste(seahorseInputDir, allFilesInput, sep = "/"),
+                                        resultFiles = paste(seahorseResultDir, allFiles, sep = "/"), 
                                         file = consolidatedResultFile,
                                         padjCutoff = padjCutoffSignificance,
                                         corCutoff = corCutoffSignificance)
+  }
+}
+
+#' Write table of SEAHORSE results filtered by a variable 
+#' @param result The full SEAHORSE result
+#' @param phenotype The phenotype data in the format used by SEAHORSE
+#' @param dictionary The phenotype dictionary in the format used by SEAHORSE
+#' @param pathways The pathways in the format used by SEAHORSE
+#' @param variable The variable of interest by which to filter (a phenotype or gene)
+#' @param variableType Either "gene" or "phenotype"
+#' @param resultType The name of the result component ("coexpression", "phenotype_association",
+#' "phenocor", or "GSEA")
+#' @param tmpFile The temporary file you wish to create for constructing the table.
+#' @param resultFile The location where you wish to save your result file.
+#' @return NULL
+writeTable <- function(result, phenotype = NULL, variable, variableType, resultType, tmpFile,
+                       resultFile, dictionary = NULL, pathways = NULL){
+  
+  # Check formatting.
+  if(variableType == "gene" && !(variable %in% colnames(result$coexpression))){
+    stop(paste(variable, "not in expression data"))
+  }else if(variableType == "phenotype" && !variable %in% names(result$phenotype_association)){
+    stop(paste(variable, "not in phenotype data"))
+  }
+  
+  # Obtain the filtered data.
+  filteredDat <- result
+  if(variableType == "gene" && resultType == "coexpression"){
+    
+    # Write coexpression data filtered by gene.
+    corMat <- result$coexpression[variable,]
+    filteredDat$coexpression <- as.matrix(as.data.frame(x = corMat))
+    colnames(filteredDat$coexpression) <- variable
+    saveRDS(filteredDat, tmpFile)
+    writeGeneGene(tmpFile, resultFile, removeLowerTri = FALSE)
+    
+  }else if(variableType == "phenotype" && resultType == "coexpression"){
+    
+    # Error if user tries to filter coexpression data by phenotype.
+    stop("Cannot filter coexpression data by phenotype")
+    
+  }else if(variableType == "gene" && resultType == "phenotype_association"){
+    
+    # Write gene-phenotype associations filtered by gene.
+    assoc <- lapply(result$phenotype_association, function(pheno){
+      return(pheno[variable,])
+    })
+    names(assoc) <- names(result$phenotype_association)
+    filteredDat$phenotype_association <- assoc
+    saveRDS(filteredDat, tmpFile)
+    
+    # Write input data.
+    inputDat <- list(phenotype = phenotype, dict = dictionary)
+    tmpFileInput <- paste0(tmpFile, "_phenotype.RDS")
+    saveRDS(inputDat, tmpFileInput)
+    
+    # Write the phenotype-gene associations.
+    writePhenotypeGeneAssociations(resultFiles = tmpFile, inFiles = tmpFileInput, resultFile)
+    
+  }else if(variableType == "phenotype" && resultType == "phenotype_association"){
+    
+    # Write gene-phenotype associations filtered by phenotype.
+    filteredDat$phenotype_association <- list(x = result$phenotype_association[[variable]])
+    names(filteredDat$phenotype_association) <- variable
+    saveRDS(filteredDat, tmpFile)
+    
+    # Write input data.
+    inputDat <- list(phenotype = phenotype, dict = dictionary)
+    tmpFileInput <- paste0(tmpFile, "_phenotype.RDS")
+    saveRDS(inputDat, tmpFileInput)
+    
+    # Write the phenotype-gene associations.
+    writePhenotypeGeneAssociations(resultFiles = tmpFile, inFiles = tmpFileInput, resultFile)
+    
+  }else if(variableType == "gene" && resultType == "GSEA"){
+    
+    # Error if user tries to filter GSEA results by gene
+    stop("Cannot filter GSEA results by gene")
+    
+  }else if(variableType == "phenotype" && resultType == "GSEA"){
+    
+    # Write GSEA associations filtered by phenotype.
+    filteredDat$GSEA <- list(x = result$GSEA[[variable]])
+    names(filteredDat$GSEA) <- variable
+    saveRDS(filteredDat, tmpFile)
+    writePathwayEnrichment(tmpFile, resultFile, pathways)
+    
+  }else if(variableType == "gene" && resultType == "phenocor"){
+    
+    # Error if user tries to filter phenotype correlation results by gene
+    stop("Cannot filter phenocor results by gene")
+    
+  }else if(variableType == "phenotype" && resultType == "phenocor"){
+    
+    # Subset filtered data.
+    otherVars <- setdiff(rownames(result$phenocor$stat), variable)
+    filteredDat$phenocor$stat <- rbind(as.matrix(result$phenocor$stat[variable,otherVars]),
+                                       as.matrix(result$phenocor$stat[otherVars, variable]))
+    filteredDat$phenocor$cramerV <- rbind(as.matrix(result$phenocor$cramerV[variable,otherVars]),
+                                          as.matrix(result$phenocor$cramerV[otherVars, variable]))
+    filteredDat$phenocor$padj <- rbind(as.matrix(result$phenocor$padj[variable,otherVars]),
+                                       as.matrix(result$phenocor$padj[otherVars, variable]))
+    filteredDat$phenocor$testType <-rbind(as.matrix(result$phenocor$testType[variable,otherVars]),
+                                          as.matrix(result$phenocor$testType[otherVars, variable]))
+    row <- rownames(filteredDat$phenocor$stat)
+    whichNotNA <- which(!is.na(filteredDat$phenocor$stat))
+    filteredDat$phenocor$stat <- as.matrix(filteredDat$phenocor$stat[whichNotNA])
+    filteredDat$phenocor$cramerV <- as.matrix(filteredDat$phenocor$cramerV[whichNotNA])
+    filteredDat$phenocor$padj <- as.matrix(filteredDat$phenocor$padj[whichNotNA])
+    filteredDat$phenocor$testType <- as.matrix(filteredDat$phenocor$testType[whichNotNA])
+    rowFinal <- row[whichNotNA]
+    rownames(filteredDat$phenocor$stat) <-
+      rownames(filteredDat$phenocor$cramerV) <-
+      rownames(filteredDat$phenocor$padj) <-
+      rownames(filteredDat$phenocor$testType) <- rowFinal
+    colnames(filteredDat$phenocor$stat) <-
+      colnames(filteredDat$phenocor$cramerV) <-
+      colnames(filteredDat$phenocor$padj) <-
+      colnames(filteredDat$phenocor$testType) <- variable
+    
+    # Build data frame.
+    VARNAME2 <- rownames(filteredDat$phenocor$stat)
+    TEST <- unname(filteredDat$phenocor$testType)
+    TESTSTAT <- unname(filteredDat$phenocor$stat)
+    TESTPVALUE <- unname(filteredDat$phenocor$padj)
+    VARNAME1 <- variable
+    tissueSplit <- strsplit(tmpFile, "/")[[1]]
+    tissueDot <- strsplit(tissueSplit[length(tissueSplit)], ".", fixed = TRUE)[[1]]
+    tissue <- tissueDot[1]
+    dfReturn <- data.frame(VARNAME1 = VARNAME1, VARNAME2 = VARNAME2, tissue = tissue,
+                           TEST = TEST, TESTSTAT = TESTSTAT, TESTPVALUE = TESTPVALUE)
+    
+    # Write File
+    con <- gzfile(paste0(resultFile, ".tsv.gz"), "wt")
+    on.exit(close(con))
+    write.table(dfReturn, file = con, sep = "\t", row.names = FALSE, quote = FALSE)
+  }
+  
+  # Delete temporary file.
+  if(file.exists(paste0(tmpFile, ".RDS"))){
+    unlink(paste0(tmpFile, ".RDS"))
+  }
+  if(file.exists(paste0(tmpFile, "_phenotype.RDS"))){
+    unlink(paste0(tmpFile, "_phenotype.RDS"))
   }
 }

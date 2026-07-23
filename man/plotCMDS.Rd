@@ -45,9 +45,3 @@ coordinates
 This function plots the MDS coordinates for the "n" features of interest. Potentially uncovering batch
 effects or feature relationships.
 }
-\examples{
-\donttest{
-data(skin)
-if(!is.null(skin)) res <- plotCMDS(skin,pch=21,bg=factor(pData(skin)$SMTSD))
-}
-}

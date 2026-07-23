@@ -36,17 +36,3 @@ ExpressionSet object with a fuller featureData.
 \description{
 Annotate your Expression Set with biomaRt
 }
-\examples{
-\dontrun{
-data(bladder)
-data(skin)
-# subsetting and changing column name just for a silly example
-skin <- skin[1:10,]
-colnames(fData(skin)) = paste("names",1:6)
-biomart<-"ENSEMBL_MART_ENSEMBL";
-genes <- sapply(strsplit(rownames(skin),split="\\\\."),function(i)i[1])
-newskin <-annotateFromBiomart(skin,genes=genes,biomart=biomart)
-head(fData(newskin)[,7:11])
-}
-
-}

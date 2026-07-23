@@ -670,7 +670,10 @@ test_that(".tsv.gz output works", {
   pathways$pathway3 = sample(rownames(expression_data), 70)
   
   # Make input data and write it.
-  dir.create("~/tmpInputDir")
+  inputDir <- "~/tmpInputDir"
+  if(!dir.exists(inputDir)){
+    dir.create(inputDir)
+  }
   input <- list(expression = expression_data, phenotype = phenotype_data, dict = phenotype_dictionary)
   saveRDS(input, "~/tmpInputDir/tissue1.RDS")
   saveRDS(input, "~/tmpInputDir/tissue2.RDS")
@@ -678,7 +681,10 @@ test_that(".tsv.gz output works", {
   saveRDS(c(1, 2, 3), "~/tmpInputDir/badInput.RDS")
   
   # Get toy SEAHORSE results and write them.
-  dir.create("~/tmpResultDir")
+  resultDir <- "~/tmpResultDir"
+  if(!dir.exists(resultDir)){
+    dir.create(resultDir)
+  }
   results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways))
   saveRDS(results, "~/tmpResultDir/tissue1.RDS")
   saveRDS(results, "~/tmpResultDir/tissue2.RDS")
@@ -696,8 +702,10 @@ test_that(".tsv.gz output works", {
   
   # Create the output directory.
   outputDir <- "~/tmpOutputDir/"
-  dir.create(outputDir)
-  
+  if(!dir.exists(outputDir)){
+    dir.create(outputDir)
+  }
+
   # Check that an error is thrown if the SEAHORSE input object is formatted incorrectly.
   expect_error(suppressWarnings(seahorseFormatForUI(input_directory = "~/tmpInputDir",
                                    result_directory = "~/tmpResultDir",
@@ -1415,7 +1423,7 @@ test_that("saving significant table works", {
                 corCutoffSignificance = 0.5, padjCutoffSignificance = 0.05))
   expect_equal(colnames(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))),
                c("Gene.A","Gene.B",	"Tissue",	"Correlation"))
-  expect_all_true(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))$Correlation > 0.5)
+  expect_all_true(abs(readFile(paste0(consolidatedDir, "consolidated.tsv.gz"))$Correlation) > 0.5)
   
   # Test gene-phenotype associations.
   suppressWarnings(writeSigTable(seahorseResultDir = "~/tmpResultDir", 

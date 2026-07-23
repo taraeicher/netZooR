@@ -34,10 +34,3 @@ Currently it only wraps qsmooth and quantile normalization returning a log-trans
 normalized matrix. qsmooth is a normalization approach that normalizes samples in
 a condition aware manner.
 }
-\examples{
-\donttest{
-data(skin)
-if(!is.null(skin)) normalizeTissueAware(skin,"SMTSD")
-}
-
-}
