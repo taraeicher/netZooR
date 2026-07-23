@@ -27,15 +27,3 @@ Filtered ExpressionSet object
 The main use case for this function is the removal of sex-chromosome genes.
 Alternatively, filter genes that are not protein-coding.
 }
-\examples{
-\donttest{
-data(skin)
-if(!is.null(skin)){
-   filterGenes(skin,labels=c('X','Y','MT'),featureName='chromosome_name')
-}
-if(!is.null(skin)){
-   filterGenes(skin,labels='protein_coding',featureName='gene_biotype',keepOnly=TRUE)
-}
-}
-
-}

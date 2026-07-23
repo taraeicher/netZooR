@@ -17,10 +17,3 @@ Filtered ExpressionSet object
 \description{
 The main use case for this function is the removal of missing genes.
 }
-\examples{
-\donttest{
-data(skin)
-if(!is.null(skin)) filterMissingGenes(skin)
-}
-
-}

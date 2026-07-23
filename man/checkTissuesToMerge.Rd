@@ -32,13 +32,6 @@ CMDS Plots of the majorGroupss colored by the minorGroupss. Optional matrix of C
 \description{
 Check tissues to merge based on gene expression profile
 }
-\examples{
-\donttest{
-data(skin)
-if(!is.null(skin)) checkTissuesToMerge(skin,'SMTS','SMTSD')
-}
-
-}
 \seealso{
 checkTissuesToMerge
 }

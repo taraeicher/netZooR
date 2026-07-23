@@ -25,16 +25,3 @@ coordinates
 \description{
 This function plots a heatmap of the gene expressions forthe "n" features of interest.
 }
-\examples{
-\donttest{
-data(skin)
-if(!is.null(skin)) {
-  tissues <- pData(skin)$SMTSD
-  plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10)
-  heatmapColColors <- RColorBrewer::brewer.pal(12,"Set3")[as.integer(factor(tissues))]
-  heatmapCols <- colorRampPalette(RColorBrewer::brewer.pal(9, "RdBu"))(50)
-  plotHeatmap(skin,normalized=FALSE,log=TRUE,trace="none",n=10,
-   col = heatmapCols,ColSideColors = heatmapColColors,cexRow = 0.6,cexCol = 0.6)
-}
-}
-}
