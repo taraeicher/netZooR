@@ -20,11 +20,3 @@ matrix
 This returns the raw counts, log2-transformed raw counts, or normalized expression.
 If normalized = TRUE then the log paramater is ignored.
 }
-\examples{
-\donttest{
-data(skin)
-if(!is.null(skin)) head(netZooR:::extractMatrix(skin,normalized=FALSE,log=TRUE))
-if(!is.null(skin)) head(netZooR:::extractMatrix(skin,normalized=FALSE,log=FALSE))
-}
-
-}

@@ -24,14 +24,3 @@ A density plot for each column in the ExpressionSet object colored by groups
 \description{
 Plots the density of the columns of a matrix. Wrapper for \code{\link[quantro]{matdensity}}.
 }
-\examples{
-\donttest{
-data(skin)
-if(!is.null(skin)) {
-  filtData <- filterLowGenes(skin,"SMTSD")
-  plotDensity(filtData,groups="SMTSD",legendPos="topleft")
-  plotDensity(filtData,groups="SMTSD")
-}
-}
-
-}

@@ -2,15 +2,16 @@
 % Please edit documentation in R/SEAHORSE.R
 \name{computeCorrelations}
 \alias{computeCorrelations}
-\title{Computes correlation for numeric phenotypes and ANOVA for categorical
-phenotypes.}
+\title{Computes gene-phenotype correlation for continuous phenotypes, ANOVA for nominal
+phenotypes, and t-test for dichotomous phenotypes}
 \usage{
 computeCorrelations(
   expression,
   phenotype,
   phenotype_dictionary,
   pathways,
-  method
+  method,
+  pval_adj_method
 )
 }
 \arguments{
@@ -31,8 +32,11 @@ Types can be either "numeric" or "categorical"}
 downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
 
 \item{method}{: One of "pearson", "spearman", or "kendall".}
+
+\item{pval_adj_method}{Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
+"holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".}
 }
 \description{
-Computes correlation for numeric phenotypes and ANOVA for categorical
-phenotypes.
+Computes gene-phenotype correlation for continuous phenotypes, ANOVA for nominal
+phenotypes, and t-test for dichotomous phenotypes
 }

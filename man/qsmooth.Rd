@@ -35,10 +35,3 @@ Normalized expression
 \description{
 This function was modified from github user kokrah.
 }
-\examples{
-\donttest{
-data(skin)
-if(!is.null(skin)) head(netZooR:::qsmooth(skin,groups=pData(skin)$SMTSD))
-}
-
-}

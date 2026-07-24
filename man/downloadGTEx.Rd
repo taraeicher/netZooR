@@ -19,6 +19,3 @@ Organized ExpressionSet set.
 \description{
 Downloads the V6 GTEx release and turns it into an ExpressionSet object.
 }
-\examples{
-# obj <- downloadGTEx(type='genes',file='~/Desktop/gtex.rds')
-}

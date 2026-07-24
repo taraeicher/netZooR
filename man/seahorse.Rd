@@ -16,9 +16,13 @@ seahorse(
   phenotype,
   phenotype_dictionary,
   pathways,
-  compute_cor = TRUE,
-  assoc_method = "pearson",
-  transform_expression = TRUE
+  compute_gene_cor = TRUE,
+  compute_phenotype_cor = TRUE,
+  compute_gene_phenotype_cor = TRUE,
+  assoc_method = "spearman",
+  pval_adj_method = "none",
+  usage_report_file = NULL,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -26,37 +30,47 @@ seahorse(
 with rows as genes and columns as samples.
 Row and column names must be present.
 Row names must be HGNC symbols.
-Column names must match the row names of the phenotype matrix.}
+Column names must match the row names of the phenotype matrix.
+We assume the data are adequately transformed for use with limma()
+(i.e. log-scaled and/or transformed using VOOM or DeSeq2).}
 
 \item{phenotype}{: phenotype matrix
 with rows as samples and columns as phenotype variables.}
 
 \item{phenotype_dictionary}{: a vector of strings
 containing type of each phenotype.
-Types can be either "numeric" or "categorical"}
+Types can be "dichotomous", "nominal", or "continuous"}
 
 \item{pathways}{: a list of pathways (e.g. KEGG, GO, Reactome etc. 
 downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
 
-\item{compute_cor}{: Whether or not to compute the correlation matrix. Default is TRUE.}
+\item{compute_gene_cor}{: Whether or not to compute the gene-gene correlation matrix. Default is TRUE.}
+
+\item{compute_phenotype_cor}{: Whether or not to compute the phenotype-phenotype association matrix. Default is TRUE.}
+
+\item{compute_gene_phenotype_cor}{: Whether or not to compute the gene-phenotype association matrix. Default is TRUE.}
 
 \item{assoc_method}{: The method used to infer associations between phenotypes and genes. Default
-is "pearson". Other options are "spearman", "kendall", and "linear". The "pearson", "kendall", and "spearman" options
+is "spearman". Other options are "pearson", "kendall", and "linear". The "pearson", "kendall", and "spearman" options
 compute correlations between each phenotype and gene independently for numeric phenotypes and
 compute an ANOVA for categorical phenotypes. linear" computes a linear regression
 model of the form gene ~ phenotype1 + phenotype2 + ... + phenotypeN and returns the p-values
 for each coefficient.}
 
-\item{transform_expression}{: Whether or not to transform gene expression data into logCPM.
-This parameter is only used for the "linear" association method. Use if your data are raw RNA-seq
-counts. Default is TRUE.
+\item{pval_adj_method}{Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
+"holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".}
+
+\item{usage_report_file}{Location where the usage report should be stored. Must be RDS format.}
+
+\item{verbose}{Whether or not to print statements notifying user of run status.
 Outputs:}
 }
 \value{
 results    : a list containing three objects
-        results$coexpression: a gene x gene Pearson correlation matrix.
+        results$coexpression: a gene x gene correlation matrix.
         results$phenotype_association : a list containing a vector for each phenotype
         results$GSEA: a list containing a matrix of GSEA results for each phenotype
+        results$phenocor: an upper-triangular matrix of phenotype-phenotype associations
 }
 \description{
 Run SEAHORSE in R
@@ -80,12 +94,12 @@ rownames(phenotype_data) = colnames(expression_data)
 phenotype_data$sex = c(rep("male", nrow(phenotype_data)/2), rep("female", nrow(phenotype_data)/2))
 phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = TRUE)
 
-phenotype_dictionary = c("categorical", "numeric")
+phenotype_dictionary = c("dichotomous", "continuous")
 
 pathways = list()
 pathways$pathway1 = sample(rownames(expression_data), 5)
 pathways$pathway2 = sample(rownames(expression_data), 3)
-pathways$pathway1 = sample(rownames(expression_data), 7)
+pathways$pathway3 = sample(rownames(expression_data), 7)
 
 # Run seahorse
 results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
