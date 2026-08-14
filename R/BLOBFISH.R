@@ -724,4 +724,72 @@ PlotNetwork <- function(network, genesOfInterest,
   }else{
     igraph::plot.igraph(graph, vertex.label = labels)
   }
- }
+}
+
+#' Calculates and outputs empirical p-values for a single network based on null models.
+#' @param file The file containing the null networks
+#' @param network The input network, either a matrix with TFs in rows and genes in columns or
+#' a list with TF names in the first column, gene names in the second, and scores in the third.
+#' @param logging Whether or not to print logging messages (default is TRUE)
+#' @param inputType "matrix" or "list"
+#' @param outputType "matrix or "list"
+#' @param n Number of null networks to include in your analysis. Must be less than the
+#' number of networks in the file.
+#' @param pvalFile File where you wish to store the calculated p-values. Must be RDS,
+#' and the directory must exist.
+#' @param alpha p-value cutoff for binarization.
+#' @param adjustmentMethod Method for p-value adjustment. Default is "none".
+evaluateSubnetworkAgainstNull <- function(file, network, logging = TRUE, inputType = "matrix",
+                                          outputType = "matrix", n, pvalFile, alpha = 0.05,
+                                          adjustmentMethod = "none"){
+  
+  if (!requireNamespace("rhdf5", quietly = TRUE)) {
+    stop("Package 'rhdf5' is required for reading the null networks.\n",
+         "Install using BiocManager::install('rhdf5')", call. = FALSE)
+  }
+  if (!requireNamespace("reshape2", quietly = TRUE)) {
+    stop("Package 'rhdf5' is required for reformatting the network.\n",
+         "Install using install.packages('reshape2')", call. = FALSE)
+  }
+  
+  # Melt the network if it is a matrix.
+  #if(inputType == "matrix"){
+  #  network <- reshape2::melt(network)
+  #}
+  #colnames(network) <- c("tf", "gene", "score")
+  
+  # Open the file and extract the relevant columns.
+  tf <- rhdf5::h5read(file, "matrices/tfs")
+  gene <- rhdf5::h5read(file, "matrices/genes")
+  sharedTF <- rownames(network)[rownames(network) %in% tf]
+  sharedGene <- colnames(network)[colnames(network) %in% gene]
+  networkShared <- network[sharedTF, sharedGene]
+  tfLoc <- unlist(lapply(sharedTF, function(tfi){return(which(tf == tfi))}))
+  geneLoc <- unlist(lapply(sharedGene, function(genei){return(which(gene == genei))}))
+  
+  # For each entry in your matrix, count the number of null networks with a greater value.
+  r <- matrix(rep(0, nrow(networkShared) * ncol(networkShared)), nrow = nrow(networkShared))
+  rownames(r) <- rownames(networkShared)
+  colnames(r) <- colnames(networkShared)
+  for(i in (seq_len(n))){
+    if(logging == TRUE){
+      print(paste("Calculating distribution of nulls - network", i))
+    }
+    nullMat <- rhdf5::h5read(file, paste0("matrices/", i))
+    nullMatShared <- nullMat[tfLoc, geneLoc]
+    whichGreater <- which(nullMatShared > networkShared)
+    r[whichGreater] <- r[whichGreater] + 1
+  }
+  
+  # Calculate empirical p-value.
+  empiricalP <- (r + 1) / (n + 1)
+  empiricalPAdj <- stats::p.adjust(empiricalP, method = adjustmentMethod)
+  saveRDS(empiricalPAdj, pvalFile)
+  
+  # Return binarized network.
+  binNet <- matrix(rep(0, nrow(networkShared) * ncol(networkShared)), nrow = nrow(networkShared))
+  rownames(binNet) <- rownames(networkShared)
+  colnames(binNet) <- colnames(networkShared)
+  binNet[which(empiricalPAdj < alpha)] <- 1
+  return(binNet)
+}
