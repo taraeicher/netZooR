@@ -28,9 +28,6 @@ with rows as samples and columns as phenotype variables.}
 containing type of each phenotype.
 Types can be either "numeric" or "categorical"}
 
-\item{pathways}{: a list of pathways (e.g. KEGG, GO, Reactome etc. 
-downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
-
 \item{method}{: One of "pearson", "spearman", or "kendall".}
 
 \item{pval_adj_method}{Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are

@@ -14,6 +14,11 @@
 #'                     Column names must match the row names of the phenotype matrix.
 #'                     We assume the data are adequately transformed for use with limma()
 #'                     (i.e. log-scaled and/or transformed using VOOM or DeSeq2).
+#'                    Users can also provide "NULL" (the default) if a sample-specific set
+#'                    of networks is not available.
+#' @param network : A weighted matrix where rows are samples and columns are network features.
+#'                  Users can also provide "NULL" (the default) if a sample-specific
+#'                  set of networks is not available.
 #' @param phenotype : phenotype matrix
 #'                    with rows as samples and columns as phenotype variables.
 #' @param phenotype_dictionary : a vector of strings
@@ -24,6 +29,8 @@
 #' @param compute_gene_cor : Whether or not to compute the gene-gene correlation matrix. Default is TRUE.
 #' @param compute_phenotype_cor : Whether or not to compute the phenotype-phenotype association matrix. Default is TRUE.
 #' @param compute_gene_phenotype_cor : Whether or not to compute the gene-phenotype association matrix. Default is TRUE.
+#' @param compute_network_phenotype_cor : Whether or not to compute the network-phenotype association matrix. Default is FALSE.
+#' Only computes if a network is provided.
 #' @param assoc_method : The method used to infer associations between phenotypes and genes. Default
 #' is "spearman". Other options are "pearson", "kendall", and "linear". The "pearson", "kendall", and "spearman" options
 #' compute correlations between each phenotype and gene independently for numeric phenotypes and
@@ -64,8 +71,9 @@
 #' results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
 #'  
 #' @export
-seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, compute_gene_cor = TRUE,
+seahorse <- function(expression = NULL, network = NULL, phenotype, phenotype_dictionary, pathways, compute_gene_cor = TRUE,
                      compute_phenotype_cor = TRUE, compute_gene_phenotype_cor = TRUE,
+                     compute_network_phenotype_cor = FALSE,
                      assoc_method = "spearman", pval_adj_method = "none",
                      usage_report_file = NULL, verbose = FALSE){
   
@@ -144,7 +152,47 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
     }, error = function(cond){
       stop(paste(usage_report_file, "could not be created."))
     })
-    
+  }
+  
+  # Check that the network input is valid.
+  if(compute_network_phenotype_cor == TRUE){
+    if(is.null(network)){
+      compute_network_phenotype_cor <- FALSE
+      warning(paste("compute_network_phenotype_cor was set to TRUE but no network was provided.",
+                    "Will not compute network-phenotype associations."))
+    }else if(!is.matrix(network)){
+      compute_network_phenotype_cor <- FALSE
+      warning(paste("compute_network_phenotype_cor was set to TRUE but network is not a matrix.",
+                    "Will not compute network-phenotype associations."))
+    }else if(!identical(rownames(phenotype), rownames(network))){
+      compute_network_phenotype_cor <- FALSE
+      warning(paste("compute_network_phenotype_cor was set to TRUE but network and phenotype row names do not match.",
+                    "Will not compute network-phenotype associations."))
+    }
+  }
+  
+  # Check that the expression input is valid.
+  if(compute_gene_phenotype_cor == TRUE || compute_gene_cor == TRUE){
+    if(is.null(expression)){
+      compute_gene_phenotype_cor <- FALSE
+      compute_gene_cor <- FALSE
+      warning(paste("compute_gene_phenotype_cor or compute_gene_cor was set to TRUE but no expression data were provided.",
+                    "Will not compute expression associations."))
+    }
+  }
+  
+  # Check whether the network has binary or numeric features.
+  if(compute_network_phenotype_cor == TRUE){
+    netFeatureType <- NA
+    if(all(network %in% 0:1, na.rm = TRUE) == TRUE){
+      netFeatureType <- "dichotomous"
+    }else if(is.numeric(network)){
+      netFeatureType <- "continuous"
+    }else{
+      compute_network_phenotype_cor <- FALSE
+      warning(paste("compute_network_phenotype_cor was set to TRUE but network contains a value that is neither binary nor numeric.",
+                    "Will not compute network-phenotype associations."))
+    }
   }
 
   # Compute coexpression of genes
@@ -257,10 +305,61 @@ seahorse <- function(expression, phenotype, phenotype_dictionary, pathways, comp
     }
   }
   
+  # Compute association of network features with phenotypes.
+  usagePhenNet <- NA
+  results$phenotype_net_association = list()
+  if(is.null(usage_report_file)){
+    if(compute_network_phenotype_cor == TRUE){
+      if(verbose == TRUE){
+        print("Running network-phenotype associations")
+      }
+      if(assoc_method %in% c("pearson", "spearman", "kendall")){
+        corr <- computeCorrelationsNetwork(network = network, phenotype = phenotype,
+                                           phenotype_dictionary = phenotype_dictionary,
+                                           method = assoc_method, pval_adj_method = pval_adj_method,
+                                           featureType = netFeatureType)
+        results$phenotype_net_association <- corr
+      }else{
+        linReg <- computeLinearRegressionNetwork(network = network, phenotype = phenotype,
+                                          phenotype_dictionary = phenotype_dictionary,
+                                          pval_adj_method = pval_adj_method,
+                                          featureType = netFeatureType)
+        results$phenotype_net_association <- linReg
+      }
+      if(verbose == TRUE){
+        print("Network-phenotype associations complete")
+      }
+    }
+  }else{
+    if(compute_network_phenotype_cor == TRUE){
+      usagePhenNet <- peakRAM::peakRAM({
+        if(verbose == TRUE){
+          print("Running network-phenotype associations")
+        }
+        if(assoc_method %in% c("pearson", "spearman", "kendall")){
+          corr <- computeCorrelationsNetwork(network = network, phenotype = phenotype,
+                                      phenotype_dictionary = phenotype_dictionary,
+                                      method = assoc_method, pval_adj_method = pval_adj_method,
+                                      featureType = netFeatureType)
+          results$phenotype_association <- corr
+        }else{
+          linReg <- computeLinearRegressionNetwork(network = network, phenotype = phenotype,
+                                            phenotype_dictionary = phenotype_dictionary,
+                                            pval_adj_method = pval_adj_method,
+                                            featureType = netFeatureType)
+          results$phenotype_association <- linReg
+        }
+        if(verbose == TRUE){
+          print("Network-phenotype associations complete")
+        }
+      })
+    }
+  }
+  
   # Save the results to a usage file.
   if(!is.null(usage_report_file)){
     saveRDS(list(GeneToGeneCor = usageGeneGene, PhenToPhenCor = usagePhenPhen,
-                 PhenToGeneCor = usagePhenGene), usage_report_file)
+                 PhenToGeneCor = usagePhenGene, PhenToNetCor = usagePhenNet), usage_report_file)
   }
   
   # Return the results.
@@ -341,6 +440,81 @@ computeLinearRegression <- function(expression, phenotype, phenotype_dictionary,
   return(list(pheno = phenoAssoc, gsea = gsea))
 }
 
+#' Computes linear regression for both numeric and categorical phenotypes with respect to network. 
+#' Computes logistic regression when the outcome (numeric) is dichotomous.
+#' @param network : A weighted matrix where rows are samples and columns are network features.
+#' @param phenotype : phenotype matrix
+#'                    with rows as samples and columns as phenotype variables.
+#' @param phenotype_dictionary : a vector of strings
+#'                               containing type of each phenotype.
+#'                               Types can be either "numeric" or "categorical" 
+#' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
+#' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
+#' @param featureType "continuous" or "dichotomous" (for binary networks)
+computeLinearRegressionNetwork <- function(network, phenotype, phenotype_dictionary,
+                                    pval_adj_method, featureType){
+  
+  # Initialize output.
+  phenoAssoc <- list
+
+  # Compute a design matrix for the phenotypic data.
+  formula <- paste("~ ", paste(colnames(phenotype)[1:(ncol(phenotype) - 1)], 
+                               collapse = " + "), colnames(phenotype)[ncol(phenotype)],
+                   sep = " + ")
+  design <- model.matrix(object = stats::as.formula(formula), data = phenotype)
+
+  # Check whether samples were removed and modify gene expression data accordingly.
+  if(length(setdiff(rownames(network), rownames(design)) > 0)){
+    networkSampsOld <- nrow(network)
+    network <- networkSampsOld[rownames(design),]
+    networkSampsNew <- nrow(network)
+    message(paste("Out of", networkSampsOld, "we retained", networkSampsNew,
+                  "samples."))
+  }
+  
+  # Initialize pvals.
+  pval <- NA
+  
+  # Do linear or logistic regression depending on the network feature type.
+  if(featureType == "continuous"){
+    
+    # Run the linear models. We can still use LIMMA, because the values aren't
+    # adjusted until we do empirical Bayes adjustment.
+    fit <- limma::lmFit(object = t(network), design = design)
+    
+    # Extract p-values and t-statistics.
+    coef <- fit$coefficients
+    se <- fit$stdev.unscaled * fit$sigma
+    tstat <- coef / se
+    pval <- 2 * pt(
+      -abs(tstat),
+      df = fit$df.residual
+    )
+  }else{
+    
+    # Run the linear models. We can still use LIMMA, because the values aren't
+    # adjusted until we do empirical Bayes adjustment.
+    pval <- apply(t(network), 1, function(feat){
+      concatMat <- cbind(phenotype, feat)
+      fitFeat <- glm(formula = paste("feat", formula), data = concatMat, family = "binomial")
+      zStatFeat <- coef(summary(fitFeat))[,3]
+      pvalFeat <- coef(summary(fitFeat))[,4]
+      return(pvalFeat)
+    })
+  }
+  
+  # Format p-values as a list for all covariates.
+  p_list <- lapply(rownames(pval), function(c){
+    p <- pval[c,]
+    padj <- stats::p.adjust(pval[c,], method = pval_adj_method)
+    return(data.frame(stat = p, padj = padj, row.names = colnames(pval)))
+  })
+  names(p_list) <- rownames(pval)
+  phenoAssoc = p_list
+
+  return(phenoAssoc)
+}
+
 #' Computes gene-phenotype correlation for continuous phenotypes, ANOVA for nominal
 #' phenotypes, and t-test for dichotomous phenotypes
 #' @param expression : gene expression matrix (normalized, and filtered) 
@@ -353,8 +527,6 @@ computeLinearRegression <- function(expression, phenotype, phenotype_dictionary,
 #' @param phenotype_dictionary : a vector of strings
 #'                               containing type of each phenotype.
 #'                               Types can be either "numeric" or "categorical" 
-#' @param pathways : a list of pathways (e.g. KEGG, GO, Reactome etc. 
-#'                   downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)
 #' @param method : One of "pearson", "spearman", or "kendall".
 #' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
 #' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
@@ -383,6 +555,274 @@ computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pat
     gsea[[pheno_name]] = output_seahorse$GSEA
   }
   return(list(pheno = phenoAssoc, gsea = gsea))
+}
+
+#' Computes network-phenotype correlation for continuous phenotypes with continuous network features,
+#' t-test for continuous phenotypes with dichotomous network features, ANOVA for categorical
+#' phenotypes with continuous network features, t-test for dichotomous phenotypes with continuous network features,
+#' and FFH for categorical or dichotomous phenotypes with dichotomous network features.
+#' @param network : A weighted matrix where rows are samples and columns are network features.
+#' @param phenotype : phenotype matrix
+#'                    with rows as samples and columns as phenotype variables.
+#' @param phenotype_dictionary : a vector of strings
+#'                               containing type of each phenotype.
+#'                               Types can be either "numeric" or "categorical" 
+#' @param method : One of "pearson", "spearman", or "kendall".
+#' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
+#' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
+computeCorrelationsNetwork <- function(network, phenotype, phenotype_dictionary, pathways, method,
+                                pval_adj_method, featureType){
+  
+  phenoAssoc <- list()
+  for (i in 1:ncol(phenotype)){
+    pheno = phenotype[,i]
+    pheno_name = colnames(phenotype)[i]
+    
+    if (phenotype_dictionary[i] == "continuous" && featureType == "continuous"){
+      output_seahorse = networkContinuous(network, pheno, method = method)
+      output_seahorse_padj <- rep(NA, length(output_seahorse$cor))
+    }else if (phenotype_dictionary[i] == "nominal" && featureType == "continuous") {
+      output_seahorse = networkANOVA(network, pheno)
+      output_seahorse_padj <- stats::p.adjust(output_seahorse$cor, method = pval_adj_method)
+    }else if (phenotype_dictionary[i] == "dichotomous" && featureType == "continuous") {
+      output_seahorse = networkTTest(network, pheno, dichotomousVar = "phenotype")
+      output_seahorse_padj <- stats::p.adjust(output_seahorse$cor, method = pval_adj_method)
+    }else if (phenotype_dictionary[i] == "continuous" && featureType == "dichotomous") {
+      output_seahorse = networkTTest(network, pheno, dichotomousVar = "feature")
+      output_seahorse_padj <- stats::p.adjust(output_seahorse$cor, method = pval_adj_method)
+    }else if ((phenotype_dictionary[i] == "nominal" || phenotype_dictionary[i] == "dichotomous") && featureType == "dichotomous") {
+      output_seahorse = networkChisq(network, pheno)
+      output_seahorse_padj <- stats::p.adjust(output_seahorse$cor, method = pval_adj_method)
+    }
+    phenoAssoc[[pheno_name]] = data.frame(stat = output_seahorse$cor,
+                                          padj = output_seahorse_padj,
+                                          testType = output_seahorse$testType,
+                                          row.names = names(output_seahorse$cor))
+  }
+  return(phenoAssoc)
+}
+
+#' Function to find network correlations with continuous phenotypes.
+#' @param network : A weighted matrix where rows are samples and columns are network features.
+#' @param pheno : phenotype matrix
+#'                    with rows as samples and columns as phenotype variables.
+#' @param method : One of "pearson", "spearman", or "kendall".
+#' @export
+networkContinuous <- function(network, pheno, method){
+  
+  output_seahorse = list()
+  output_seahorse$cor = list()
+
+  # Run correlations.
+  phenotype_vector = as.numeric(pheno)
+  cors <- cor(network, phenotype_vector, use = "pairwise.complete.obs", method = method)
+  cors <- as.numeric(cors)
+  names(cors) <- colnames(network)
+  output_seahorse$cor = cors
+
+  return(data.frame(cor = cors,
+                    V = rep(NA, ncol(network)),
+                    testType = rep("Cor", ncol(network)),
+                    row.names = colnames(network)))
+}
+
+#' Function to run ANOVA on nominal phenotypes with continuous network features.
+#' @param network : A weighted matrix where rows are samples and columns are network features.
+#' @param pheno : phenotype matrix
+#'                    with rows as samples and columns as phenotype variables.
+#' @export
+networkANOVA <- function(network, phenotype){
+  
+  output_seahorse = list()
+  output_seahorse$cor = list()
+  
+  phenotype_vector = factor(as.character(phenotype))
+  cor <- unlist(apply(network, MARGIN=2, function(x){
+    results <- NA
+    tryCatch({
+      results <- anova(lm(as.numeric(as.character(x))~phenotype_vector))$`Pr(>F)`[1]
+    }, error = function(cond){
+      warning("In this phenotype pair, all continuous values are missing for all but one phenotype level - NA result will be returned")
+    })
+    return(results)
+  }))
+  
+  return(data.frame(cor = cor,
+                    V = rep(NA, ncol(network)),
+                    testType = rep("ANOVA", ncol(network)),
+                    row.names = colnames(network)))
+}
+
+#' Function to compute Welch's t-test statistics on dichotomous phenotypes with
+#' continuous network features or on continuous phenotypes with dichotomous network features.
+#' @param network The network features to test.
+#' @param phenotype A phenotype vector against which to run associations.
+#' @param dichotomousVar Whether the phenotype is dichotomous or continuous.
+#' @returns A data frame with two vectors: "cor", which lists the t-test p-values, 
+#' and "V" which is set to NA.
+networkTTest <- function(network, phenotype, dichotomousVar){
+  
+  # Case 1 - the phenotype is dichotomous and the network features are numeric.
+  # We can vectorize this and use matrixTests.
+  # Case 2 - the phenotype is numeric and the network features are dichotomous.
+  # We cannot vectorize this and use t.test instead, which defaults to Welch's t-test.
+  if(dichotomousVar == "phenotype"){
+    
+    # Split groups.
+    phenotype_vector = factor(as.character(phenotype))
+    levels <- unique(phenotype_vector)
+    group1 <- network[which(phenotype_vector == levels[1]),]
+    group2 <- network[which(phenotype_vector == levels[2]),]
+    
+    # Check that thresholds are met.
+    whichLevel1 <- length(which(phenotype_vector == levels[1]))
+    whichLevel2 <- length(which(phenotype_vector == levels[2]))
+    cor <- NA
+    
+    if(length(dim(group1)) >= 2 || length(dim(group2)) >= 2){
+      meetsThreshold <- colSums(!is.na(group1)) >= 2 & colSums(!is.na(group2)) >= 2
+      
+      # Initialize result to NA.
+      cor <- rep(NA, ncol(group1))
+      names(cor) <- rownames(group1)
+      
+      # Only compute correlations if both levels are represented in the phenotype vector.
+      if(whichLevel1 > 0 && whichLevel2 > 0 && length(which(meetsThreshold == TRUE)) > 0){
+        # Compute t-test where thresholds are met.
+        tresValid <- matrixTests::col_t_welch(
+          group1[, meetsThreshold, drop = FALSE],
+          group2[, meetsThreshold, drop = FALSE]
+        )
+        
+        # Compute remaining t-tests.
+        cor[meetsThreshold] <- tresValid$pvalue
+      }
+    }else{
+      meetsThreshold <- sum(!is.na(group1)) >= 2 & sum(!is.na(group2)) >= 2
+      
+      # Initialize result to NA.
+      names(cor) <- names(group1)
+      
+      # Only compute correlations if both levels are represented in the phenotype vector.
+      if(whichLevel1 > 0 && whichLevel2 > 0 && length(which(meetsThreshold == TRUE)) > 0){
+        tryCatch({
+          # Compute t-test where thresholds are met.
+          tresValid <- t.test(group1[meetsThreshold, drop = FALSE], 
+                              group2[meetsThreshold, drop = FALSE])
+          
+          # Compute remaining t-tests.
+          cor[meetsThreshold] <- tresValid$p.value
+        }, error = function(cond){
+          warning("Could not compute t-test (it is possible that variance is too low). Returning NA.")
+        })
+      }
+    }
+    
+  }else{
+    cor <- unlist(lapply(1:ncol(network), function(i){
+      network_vector = factor(as.character(network[,i]))
+      levels <- unique(network_vector)
+      group1 <- phenotype[which(network_vector == levels[1])]
+      group2 <- phenotype[which(network_vector == levels[2])]
+      stat <- NA
+      if(length(which(!is.na(group1))) > 2 && length(which(!is.na(group2))) > 2){
+        tryCatch({
+          tres <- t.test(group1, group2)
+          stat = tres$p.value
+        }, error = function(cond){
+          warning("Could not compute t-test (it is possible that variance is too low). Returning NA.")
+        })
+      }
+      names(stat) <- colnames(network)[i]
+      return(stat)
+    }))
+  }
+  if(length(which(is.na(cor))) > 0){
+    warning("Some network features did not have sufficient sample sizes to perform a t-test - NAs will be returned")
+  }
+  
+  # Return the data frame.
+  return(data.frame(cor = cor,
+                    V = rep(NA, ncol(network)),
+                    testType = rep("T-Test", ncol(network)),
+                    row.names = colnames(network)))
+  
+}
+
+#' Function to run associations between categorical phenotypes and dichotomous network features.
+#' If at least 5 samples exist in each group, run a Chi-square test and compute Cramer's V.
+#' Otherwise, run a Fisher-Freeman-Halton Test.
+#' @param network The network features to test.
+#' @param phenotypesToCompare A data frame containing all phenotypes against which to run associations.
+#' phenotypes against which to compare.
+#' @returns A data frame with two vectors: "cor", which lists the Chi-square or Fisher-Freeman-Halton Test p-values, 
+#' and "V" which lists the Cramer's V statistics (will be NA if Fisher-Freeman-Halton Test is computed)
+networkChisq <- function(network, phenotype){
+  
+  # Generate the tables for all phenotype pairs.
+  allPhenoPairTables <- lapply(1:ncol(network), function(i){
+    grpCounts <- table(network[,i], phenotype)
+  })
+  names(allPhenoPairTables) <- colnames(network)
+  
+  # Do a chi-square test everywhere else.
+  # Run the comparisons one at a time because Chi-square and FFH cannot be scaled.
+  chisqRes <- lapply(allPhenoPairTables, function(chisqTable) {
+    
+    # Check that we have 2 or more non-zero marginals. Only run the test if we do.
+    rowMarginals <- rowSums(chisqTable)
+    colMarginals <- colSums(chisqTable) 
+    nonzeroRowMarginalCount <- length(which(rowMarginals > 0))
+    nonzeroColMarginalCount <- length(which(colMarginals > 0))
+    pval <- NA
+    V <- NA
+    type <- "Chi-square"
+    if(nonzeroRowMarginalCount >= 2 && nonzeroColMarginalCount >= 2){
+      # Run the test. If a warning is thrown, switch to FFH.
+      chisq <- withCallingHandlers(
+        chisq.test(chisqTable),
+        warning = function(w) {
+          if (grepl("Chi-squared approximation may be incorrect", w$message)) {
+            # Do not change only within the warning scope but also within the parent scope.
+            type <<- "FFH"
+            invokeRestart("muffleWarning")
+          }
+        }
+      )
+      
+      # Get the p-value and Cramer's V.
+      pval <- chisq$p.value
+      V <- sqrt(chisq$statistic / (sum(chisqTable) * min(nrow(chisqTable) - 1, 
+                                                         ncol(chisqTable) - 1)))
+    }else{
+      warning("Less than 2 nonzero marginals in the contingency table - Chi-square will return NA")
+    }
+    return(list(pval = pval, v = V, testType = type))
+  })
+  chisqP <- unlist(lapply(chisqRes, function(res){
+    return(res$pval)
+  }))
+  cramerV <- unlist(lapply(chisqRes, function(res){
+    return(res$v)
+  }))
+  testType <- unlist(lapply(chisqRes, function(res){
+    return(res$testType)
+  }))
+  corResNotLessFull <- data.frame(cor = chisqP,
+                                  V = cramerV,
+                                  testType = testType,
+                                  row.names = colnames(network))
+  
+  # Run FFS where warning was issued.
+  corResNotLess <- corResNotLessFull[which(corResNotLessFull$testType == "Chi-square"),]
+  switchedTables <- allPhenoPairTables[which(corResNotLessFull$testType == "FFH")]
+  corResSwitched <- phenotype_ffs(switchedTables)
+  
+  # Bind together the results from the FFH and Chi-Square tests.
+  corRes <- rbind(corResNotLess, corResSwitched)
+  corRes <- corRes[colnames(network),]
+  
+  return(corRes)
 }
 
 #' Function to run GSEA for a continuous phenotype
