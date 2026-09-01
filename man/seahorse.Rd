@@ -113,6 +113,7 @@ pathways$pathway2 = sample(rownames(expression_data), 3)
 pathways$pathway3 = sample(rownames(expression_data), 7)
 
 # Run seahorse
-results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
+results <- seahorse(expression = expression_data, phenotype = phenotype_data, 
+                    phenotype_dictionary = phenotype_dictionary, pathways = pathways)
  
 }

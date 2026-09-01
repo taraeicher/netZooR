@@ -68,7 +68,8 @@
 #' pathways$pathway3 = sample(rownames(expression_data), 7)
 #'
 #' # Run seahorse
-#' results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
+#' results <- seahorse(expression = expression_data, phenotype = phenotype_data, 
+#'                     phenotype_dictionary = phenotype_dictionary, pathways = pathways)
 #'  
 #' @export
 seahorse <- function(expression = NULL, network = NULL, phenotype, phenotype_dictionary, pathways, compute_gene_cor = TRUE,
@@ -481,7 +482,7 @@ computeLinearRegressionNetwork <- function(network, phenotype, phenotype_diction
     # Run the linear models. We can still use LIMMA, because the values aren't
     # adjusted until we do empirical Bayes adjustment.
     fit <- limma::lmFit(object = t(network), design = design)
-    
+
     # Extract p-values and t-statistics.
     coef <- fit$coefficients
     se <- fit$stdev.unscaled * fit$sigma
@@ -492,24 +493,23 @@ computeLinearRegressionNetwork <- function(network, phenotype, phenotype_diction
     )
   }else{
     
-    # Run the linear models. We can still use LIMMA, because the values aren't
-    # adjusted until we do empirical Bayes adjustment.
-    pval <- apply(t(network), 1, function(feat){
+    # Run the linear models. We need to use GLM here because these are logistic regression models.
+    pval <- t(apply(t(network), 1, function(feat){
       concatMat <- cbind(phenotype, feat)
       fitFeat <- glm(formula = paste("feat", formula), data = concatMat, family = "binomial")
       zStatFeat <- coef(summary(fitFeat))[,3]
       pvalFeat <- coef(summary(fitFeat))[,4]
       return(pvalFeat)
-    })
+    }))
   }
   
   # Format p-values as a list for all covariates.
-  p_list <- lapply(rownames(pval), function(c){
-    p <- pval[c,]
-    padj <- stats::p.adjust(pval[c,], method = pval_adj_method)
-    return(data.frame(stat = p, padj = padj, row.names = colnames(pval)))
+  p_list <- lapply(colnames(pval), function(c){
+    p <- pval[,c]
+    padj <- stats::p.adjust(pval[,c], method = pval_adj_method)
+    return(data.frame(stat = p, padj = padj, row.names = rownames(pval)))
   })
-  names(p_list) <- rownames(pval)
+  names(p_list) <- colnames(pval)
   phenoAssoc = p_list
 
   return(phenoAssoc)
@@ -524,6 +524,7 @@ computeLinearRegressionNetwork <- function(network, phenotype, phenotype_diction
 #'                     Column names must match the row names of the phenotype matrix.
 #' @param phenotype : phenotype matrix
 #'                    with rows as samples and columns as phenotype variables.
+#' @param pathways : Pathways used for GSEA calculation
 #' @param phenotype_dictionary : a vector of strings
 #'                               containing type of each phenotype.
 #'                               Types can be either "numeric" or "categorical" 
@@ -567,9 +568,11 @@ computeCorrelations <- function(expression, phenotype, phenotype_dictionary, pat
 #' @param phenotype_dictionary : a vector of strings
 #'                               containing type of each phenotype.
 #'                               Types can be either "numeric" or "categorical" 
+#' @param pathways : Pathways used for GSEA calculation
 #' @param method : One of "pearson", "spearman", or "kendall".
-#' @param pval_adj_method Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
+#' @param pval_adj_method : Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are
 #' "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", and "fdr".
+#' @param featureType : Whether network features are continuous or dichotomous.
 computeCorrelationsNetwork <- function(network, phenotype, phenotype_dictionary, pathways, method,
                                 pval_adj_method, featureType){
   
@@ -628,7 +631,7 @@ networkContinuous <- function(network, pheno, method){
 
 #' Function to run ANOVA on nominal phenotypes with continuous network features.
 #' @param network : A weighted matrix where rows are samples and columns are network features.
-#' @param pheno : phenotype matrix
+#' @param phenotype : phenotype matrix
 #'                    with rows as samples and columns as phenotype variables.
 #' @export
 networkANOVA <- function(network, phenotype){
@@ -753,8 +756,7 @@ networkTTest <- function(network, phenotype, dichotomousVar){
 #' If at least 5 samples exist in each group, run a Chi-square test and compute Cramer's V.
 #' Otherwise, run a Fisher-Freeman-Halton Test.
 #' @param network The network features to test.
-#' @param phenotypesToCompare A data frame containing all phenotypes against which to run associations.
-#' phenotypes against which to compare.
+#' @param phenotype The phenotype of interest
 #' @returns A data frame with two vectors: "cor", which lists the Chi-square or Fisher-Freeman-Halton Test p-values, 
 #' and "V" which lists the Cramer's V statistics (will be NA if Fisher-Freeman-Halton Test is computed)
 networkChisq <- function(network, phenotype){

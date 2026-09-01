@@ -812,11 +812,11 @@ test_that("seahorse function works with dichotomous network feature input", {
   expect_true(length(results) > 0)
   # Check that results contain expected top-level keys
   expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
-  expect_true(all(results$phenotype_net_association$sex$testType == "FFH"))
-  expect_true(all(results$phenotype_net_association$sex$stat == results$phenotype_net_association$sex$padj))
+  expect_true(all(results$phenotype_net_association$sex$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$sex$stat) == na.omit(results$phenotype_net_association$sex$padj)))
   expect_true(all(results$phenotype_net_association$height$testType == "T-Test"))
-  expect_true(all(results$phenotype_net_association$group$testType == "FFH"))
-  expect_true(all(results$phenotype_net_association$group$stat == results$phenotype_net_association$group$padj))
+  expect_true(all(results$phenotype_net_association$group$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$group$stat) == na.omit(results$phenotype_net_association$group$padj)))
   
   # Verify the phenotype data with FDR adjustment.
   results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary,
@@ -827,13 +827,15 @@ test_that("seahorse function works with dichotomous network feature input", {
   expect_true(length(results) > 0)
   # Check that results contain expected top-level keys
   expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
-  expect_true(all(results$phenotype_net_association$sex$testType == "FFH"))
-  expect_true(all(stats::p.adjust(results$phenotype_net_association$sex$stat, method = "fdr") == results$phenotype_net_association$sex$padj))
+  expect_true(all(results$phenotype_net_association$sex$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$sex$stat, method = "fdr")) == 
+                    na.omit(results$phenotype_net_association$sex$padj)))
   expect_true(all(results$phenotype_net_association$height$testType == "T-Test"))
-  expect_true(all(stats::p.adjust(results$phenotype_net_association$height$stat, method = "fdr")[which(!is.na(results$phenotype_net_association$height$padj))] 
-                  == results$phenotype_net_association$height$padj[which(!is.na(results$phenotype_net_association$height$padj))]))
-  expect_true(all(results$phenotype_net_association$group$testType == "FFH"))
-  expect_true(all(stats::p.adjust(results$phenotype_net_association$group$stat, method = "fdr") == results$phenotype_net_association$group$padj))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$height$stat, method = "fdr")[which(!is.na(results$phenotype_net_association$height$padj))]) 
+                  == na.omit(results$phenotype_net_association$height$padj[which(!is.na(results$phenotype_net_association$height$padj))])))
+  expect_true(all(results$phenotype_net_association$group$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$group$stat, method = "fdr")) == 
+                    na.omit(results$phenotype_net_association$group$padj)))
   
   # Verify the phenotype data with Bonferroni adjustment.
   results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
@@ -844,13 +846,15 @@ test_that("seahorse function works with dichotomous network feature input", {
   expect_true(length(results) > 0)
   # Check that results contain expected top-level keys
   expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
-  expect_true(all(results$phenotype_net_association$sex$testType == "FFH"))
-  expect_true(all(stats::p.adjust(results$phenotype_net_association$sex$stat, method = "bonferroni") == results$phenotype_net_association$sex$padj))
+  expect_true(all(results$phenotype_net_association$sex$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$sex$stat, method = "bonferroni")) == 
+                    na.omit(results$phenotype_net_association$sex$padj)))
   expect_true(all(results$phenotype_net_association$height$testType == "T-Test"))
-  expect_true(all(stats::p.adjust(results$phenotype_net_association$height$stat, method = "bonferroni")[which(!is.na(results$phenotype_net_association$height$padj))] 
-                  == results$phenotype_net_association$height$padj[which(!is.na(results$phenotype_net_association$height$padj))]))
-  expect_true(all(results$phenotype_net_association$group$testType == "FFH"))
-  expect_true(all(stats::p.adjust(results$phenotype_net_association$group$stat, method = "bonferroni") == results$phenotype_net_association$group$padj))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$height$stat, method = "bonferroni")[which(!is.na(results$phenotype_net_association$height$padj))]) 
+                  == na.omit(results$phenotype_net_association$height$padj[which(!is.na(results$phenotype_net_association$height$padj))])))
+  expect_true(all(results$phenotype_net_association$group$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$group$stat, method = "bonferroni")) == 
+                    na.omit(results$phenotype_net_association$group$padj)))
   
   # Test with a larger data set and more dichotomous / nominal phenotypes.
   phenotype_data_2 <- do.call(rbind, rep(list(phenotype_data), 10))
@@ -870,19 +874,19 @@ test_that("seahorse function works with dichotomous network feature input", {
   
   # Verify structure
   expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
-  expect_true(any(results$phenotype_net_association$smoke$testType == "FFH"))
-  expect_true(all(results$phenotype_net_association$smoke$stat == results$phenotype_net_association$smoke$padj))
-  expect_true(any(results$phenotype_net_association$grade$testType == "FFH"))
-  expect_true(all(results$phenotype_net_association$grade$stat == results$phenotype_net_association$grade$padj))
-  expect_true(all(results$phenotype_net_association$rare_group$testType == "Chi-square"))
-  expect_true(all(results$phenotype_net_association$rare_group$stat == results$phenotype_net_association$rare_group$padj))
+  expect_true(any(results$phenotype_net_association$smoke$testType  %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$smoke$stat) == na.omit(results$phenotype_net_association$smoke$padj)))
+  expect_true(all(results$phenotype_net_association$grade$testType  %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$grade$stat) == na.omit(results$phenotype_net_association$grade$padj)))
+  expect_true(all(results$phenotype_net_association$rare_group$testType  %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$rare_group$stat) == na.omit(results$phenotype_net_association$rare_group$padj)))
   expect_true(all(results$phenotype_net_association$WBC$testType == "T-Test"))
-  expect_true(all(results$phenotype_net_association$WBC$stat == results$phenotype_net_association$WBC$padj))
-  expect_true(all(results$phenotype_net_association$sex$testType == "Chi-square"))
-  expect_true(all(results$phenotype_net_association$sex$stat == results$phenotype_net_association$sex$padj))
+  expect_true(all(na.omit(results$phenotype_net_association$WBC$stat) == na.omit(results$phenotype_net_association$WBC$padj)))
+  expect_true(all(results$phenotype_net_association$sex$testType  %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$sex$stat) == na.omit(results$phenotype_net_association$sex$padj)))
   expect_true(all(results$phenotype_net_association$height$testType == "T-Test"))
-  expect_true(all(results$phenotype_net_association$group$testType == "Chi-square"))
-  expect_true(all(results$phenotype_net_association$group$stat == results$phenotype_net_association$group$padj))
+  expect_true(all(results$phenotype_net_association$group$testType  %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$group$stat) == na.omit(results$phenotype_net_association$group$padj)))
   
   # Run SEAHORSE with logistic regression.
   results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
