@@ -481,7 +481,9 @@ SignificantBreadthFirstSearch <- function(networks, pValues, startingNodes,
     stop("ERROR: List of nodes to exclude does not overlap with network nodes")
   }
   if(length(intersect(startingNodes, nodesToExclude)) > 0){
-    stop("ERROR: Starting nodes cannot overlap with nodes to exclude")
+    nodesShared <- intersect(startingNodes, nodesToExclude)
+    warning(paste("Path exists from the following edges back to themselves (ignoring):", paste(nodesShared, collapse = ",")))
+    startingNodes <- setdiff(startingNodes, nodesToExclude)
   }
   
   # Identify genes and transcription factors to test, based on which of these we are
