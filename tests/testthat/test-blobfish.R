@@ -62,10 +62,10 @@ test_that("[BLOBFISH] SignificantBreadthFirstSearch() function yields expected r
                                              startingNodes = c("geneA", "geneB", "geneC"),
                                              nodesToExclude = c("blob", "fish"), startFromTF = FALSE),
                "ERROR: List of nodes to exclude does not overlap with network nodes")
-  expect_error(SignificantBreadthFirstSearch(networks = subnetwork, pValues = pvalues,
+  expect_warning(SignificantBreadthFirstSearch(networks = subnetwork, pValues = pvalues,
                                              startingNodes = c("geneA", "geneB", "geneC"),
                                              nodesToExclude = c("geneA", "geneB"), startFromTF = FALSE),
-               "ERROR: Starting nodes cannot overlap with nodes to exclude")
+                 "Path exists from the following edges back to themselves \\(ignoring\\): geneA,geneB")
   
   # Ensure that, when starting from genes A, B, and C, we obtain the correct values.
   expect_true(length(setdiff(c("tf2__geneA", "tf2__geneB", "tf3__geneA", "tf4__geneC"),
