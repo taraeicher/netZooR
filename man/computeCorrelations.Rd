@@ -28,6 +28,8 @@ with rows as samples and columns as phenotype variables.}
 containing type of each phenotype.
 Types can be either "numeric" or "categorical"}
 
+\item{pathways}{: Pathways used for GSEA calculation}
+
 \item{method}{: One of "pearson", "spearman", or "kendall".}
 
 \item{pval_adj_method}{Wrapper for p.adjust. Defaults to "none" (no adjustment). Other options are

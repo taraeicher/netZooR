@@ -9,7 +9,7 @@ networkANOVA(network, phenotype)
 \arguments{
 \item{network}{: A weighted matrix where rows are samples and columns are network features.}
 
-\item{pheno}{: phenotype matrix
+\item{phenotype}{: phenotype matrix
 with rows as samples and columns as phenotype variables.}
 }
 \description{

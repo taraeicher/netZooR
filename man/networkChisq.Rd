@@ -11,8 +11,7 @@ networkChisq(network, phenotype)
 \arguments{
 \item{network}{The network features to test.}
 
-\item{phenotypesToCompare}{A data frame containing all phenotypes against which to run associations.
-phenotypes against which to compare.}
+\item{phenotype}{The phenotype of interest}
 }
 \value{
 A data frame with two vectors: "cor", which lists the Chi-square or Fisher-Freeman-Halton Test p-values, 
