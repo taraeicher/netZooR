@@ -12,13 +12,15 @@ Description:
               GSEA is performed through R package "fgsea".}
 \usage{
 seahorse(
-  expression,
+  expression = NULL,
+  network = NULL,
   phenotype,
   phenotype_dictionary,
   pathways,
   compute_gene_cor = TRUE,
   compute_phenotype_cor = TRUE,
   compute_gene_phenotype_cor = TRUE,
+  compute_network_phenotype_cor = FALSE,
   assoc_method = "spearman",
   pval_adj_method = "none",
   usage_report_file = NULL,
@@ -27,12 +29,18 @@ seahorse(
 }
 \arguments{
 \item{expression}{: gene expression matrix (normalized, and filtered) 
-with rows as genes and columns as samples.
-Row and column names must be present.
-Row names must be HGNC symbols.
-Column names must match the row names of the phenotype matrix.
-We assume the data are adequately transformed for use with limma()
-(i.e. log-scaled and/or transformed using VOOM or DeSeq2).}
+ with rows as genes and columns as samples.
+ Row and column names must be present.
+ Row names must be HGNC symbols.
+ Column names must match the row names of the phenotype matrix.
+ We assume the data are adequately transformed for use with limma()
+ (i.e. log-scaled and/or transformed using VOOM or DeSeq2).
+Users can also provide "NULL" (the default) if a sample-specific set
+of networks is not available.}
+
+\item{network}{: A weighted matrix where rows are samples and columns are network features.
+Users can also provide "NULL" (the default) if a sample-specific
+set of networks is not available.}
 
 \item{phenotype}{: phenotype matrix
 with rows as samples and columns as phenotype variables.}
@@ -49,6 +57,9 @@ downloaded from http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp)}
 \item{compute_phenotype_cor}{: Whether or not to compute the phenotype-phenotype association matrix. Default is TRUE.}
 
 \item{compute_gene_phenotype_cor}{: Whether or not to compute the gene-phenotype association matrix. Default is TRUE.}
+
+\item{compute_network_phenotype_cor}{: Whether or not to compute the network-phenotype association matrix. Default is FALSE.
+Only computes if a network is provided.}
 
 \item{assoc_method}{: The method used to infer associations between phenotypes and genes. Default
 is "spearman". Other options are "pearson", "kendall", and "linear". The "pearson", "kendall", and "spearman" options
@@ -102,6 +113,7 @@ pathways$pathway2 = sample(rownames(expression_data), 3)
 pathways$pathway3 = sample(rownames(expression_data), 7)
 
 # Run seahorse
-results <- seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways)
+results <- seahorse(expression = expression_data, phenotype = phenotype_data, 
+                    phenotype_dictionary = phenotype_dictionary, pathways = pathways)
  
 }

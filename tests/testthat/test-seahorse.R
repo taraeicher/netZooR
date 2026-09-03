@@ -1,6 +1,6 @@
 context("test SEAHORSE result")
 
-test_that("seahorse function works", {
+test_that("seahorse function works with expression input", {
   skip_if_not_installed("fgsea")
   skip_if_not_installed("matrixTests")
   skip_if_not_installed("stats")
@@ -29,26 +29,34 @@ test_that("seahorse function works", {
   
   # Check that seahorse returns an error if the p-value adjustment method
   # is invalid.
-  expect_error(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_error(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                         pval_adj_method = "myCoolAdjustmentMethod"),
                "myCoolAdjustmentMethod is not a valid method for stats::p.adjust().")
 
   # Check that seahorse returns an error if the phenotype dictionary entry is invalid.
   phenotype_bad1 <- c("nominal", "continuous", "nominal")
-  expect_error(seahorse(expression_data, phenotype_data, phenotype_bad1, pathways,
+  expect_error(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_bad1, pathways = pathways,
                         pval_adj_method = "bonferroni"),
                "Phenotype sex set to nominal but has 2 levels or fewer.")
   phenotype_bad2 <- c("dichotomous", "continuous", "dichotomous")
-  expect_error(seahorse(expression_data, phenotype_data, phenotype_bad2, pathways,
+  expect_error(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_bad2, pathways = pathways,
                         pval_adj_method = "bonferroni"),
                "Phenotype group set to dichotomous but has more than 2 levels.")
   phenotype_bad3 <- c("continuous", "continuous", "nominal")
-  expect_error(seahorse(expression_data, phenotype_data, phenotype_bad3, pathways,
+  expect_error(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_bad3, pathways = pathways,
                         pval_adj_method = "bonferroni"),
                "Phenotype sex set to continuous but cannot be converted to numeric.")
   
+  # Check that seahorse returns an error if the expression dictionary entry is invalid.
+  expect_warning(seahorse(expression = NULL,compute_gene_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                          pval_adj_method = "bonferroni"),
+                 "compute_gene_phenotype_cor or compute_gene_cor was set to TRUE but no expression data were provided. Will not compute expression associations.")
+  expect_warning(seahorse(expression = NULL,compute_gene_phenotype_cor = FALSE, compute_gene_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                          pval_adj_method = "bonferroni"),
+                 "compute_gene_phenotype_cor or compute_gene_cor was set to TRUE but no expression data were provided. Will not compute expression associations.")
+  
   # Run seahorse
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways))
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways))
 
   # Verify structure
   expect_type(results, "list")
@@ -83,7 +91,7 @@ test_that("seahorse function works", {
   expression_data_2 = data.frame(matrix(rexp(1000, rate=.1), ncol=100, nrow = 100))
   rownames(expression_data_2) = paste("gene", 1:100, sep = "")
   colnames(expression_data_2) = paste("sample", 1:100, sep = "")
-  results <- suppressWarnings(seahorse(expression_data_2, phenotype_data_2, phenotype_dictionary_2, pathways))
+  results <- suppressWarnings(seahorse(expression = expression_data_2, phenotype = phenotype_data_2, phenotype_dictionary = phenotype_dictionary_2, pathways = pathways))
   
   # Verify structure
   expect_type(results, "list")
@@ -160,7 +168,7 @@ test_that("seahorse function works", {
   expect_all_equal(results$phenocor$testType["height", "WBC"], "Cor")
   
   # Verify the phenotype data with FDR adjustment.
-  results <- suppressWarnings(seahorse(expression_data_2, phenotype_data_2, phenotype_dictionary_2, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data_2, phenotype = phenotype_data_2, phenotype_dictionary = phenotype_dictionary_2, pathways = pathways,
                       pval_adj_method = "fdr"))
   
   # Verify structure
@@ -240,7 +248,7 @@ test_that("seahorse function works", {
   expect_all_equal(results$phenocor$testType["height", "WBC"], "Cor")
   
   # Run seahorse without correlation matrix
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE))
   
   # Verify structure
@@ -263,7 +271,7 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run seahorse without phenotype matrix
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_phenotype_cor = FALSE))
   
   # Verify structure
@@ -280,7 +288,7 @@ test_that("seahorse function works", {
   expect_true(all(!is.na(results$coexpression)))
   
   # Run seahorse without gene-phenotype matrix
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_phenotype_cor = FALSE))
   
   # Verify structure
@@ -301,7 +309,7 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run seahorse with bonferroni correction
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE, pval_adj_method = "bonferroni"))
   
   # Verify structure
@@ -326,7 +334,7 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run seahorse with fdr correction
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE, pval_adj_method = "fdr"))
   
   # Verify structure
@@ -352,7 +360,7 @@ test_that("seahorse function works", {
   
   
   # Run SEAHORSE with linear regression.
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE, assoc_method = "linear"))
   # Verify structure
   expect_type(results, "list")
@@ -375,7 +383,7 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run SEAHORSE with linear regression and Bonferroni adjustment
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE, assoc_method = "linear",
                       pval_adj_method = "bonferroni"))
   # Verify structure
@@ -403,7 +411,7 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run SEAHORSE with linear regression and FDR adjustment
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE, assoc_method = "linear", pval_adj_method = "fdr"))
   # Verify structure
   expect_type(results, "list")
@@ -432,7 +440,7 @@ test_that("seahorse function works", {
   # Check that SEAHORSE runs with linear regression and a malformed column name.
   phenotype_data_mal <- phenotype_data
   colnames(phenotype_data_mal) <- c("?sex", "height in inches", "123group")
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data_mal, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data_mal, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE, assoc_method = "linear"))
   # Verify structure
   expect_type(results, "list")
@@ -451,7 +459,7 @@ test_that("seahorse function works", {
   expect_true(all(c("X.sex", "height.in.inches", "X123group") %in% colnames(results$phenocor$padj)))
   
   # Check that SEAHORSE runs with correlation and a malformed column name.
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data_mal, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data_mal, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE, assoc_method = "pearson"))
   # Verify structure
   expect_type(results, "list")
@@ -473,10 +481,10 @@ test_that("seahorse function works", {
   # included.
   phenotype_data_na <- phenotype_data
   phenotype_data_na[5,"height"] <- NA
-  expect_message(suppressWarnings(seahorse(expression_data, phenotype_data_na, phenotype_dictionary, pathways,
+  expect_message(suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data_na, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                           compute_gene_cor = FALSE, assoc_method = "linear")),
                  "Out of 10 we retained 9 samples.")
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data_na, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data_na, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE, assoc_method = "linear"))
   # Verify structure
   expect_type(results, "list")
@@ -495,7 +503,7 @@ test_that("seahorse function works", {
   expect_true(all(c("sex", "height", "group") %in% colnames(results$phenocor$padj)))
   
   # Run SEAHORSE with linear regression and the correlation matrix.
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = TRUE, compute_phenotype_cor = FALSE, assoc_method = "linear"))
   # Verify structure
   expect_type(results, "list")
@@ -508,7 +516,7 @@ test_that("seahorse function works", {
   
   # Run SEAHORSE and save usage file (all).
   skip_if_not_installed("peakRAM")
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
                       usage_report_file = "usage_file.RDS"))
   usage <- readRDS("usage_file.RDS")
@@ -519,13 +527,13 @@ test_that("seahorse function works", {
   unlink("usage_file.RDS")
   
   # Input invalid usage file.
-  expect_error(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_error(suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
                       usage_report_file = "/some_nonexistent_dir/usage_file.RDS")),
                "/some_nonexistent_dir/usage_file.RDS could not be created.")
   
   # Save usage file (all but gene-gene)
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE, compute_phenotype_cor = TRUE, assoc_method = "linear",
                       usage_report_file = "usage_file.RDS"))
   usage <- readRDS("usage_file.RDS")
@@ -536,7 +544,7 @@ test_that("seahorse function works", {
   unlink("usage_file.RDS")
   
   # Save usage file (all but phenotype-phenotype)
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = TRUE, compute_phenotype_cor = FALSE, assoc_method = "linear",
                       usage_report_file = "usage_file.RDS"))
   usage <- readRDS("usage_file.RDS")
@@ -547,7 +555,7 @@ test_that("seahorse function works", {
   unlink("usage_file.RDS")
   
   # Save usage file (only phenotype-genotype)
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = FALSE, compute_phenotype_cor = FALSE, assoc_method = "linear",
                       usage_report_file = "usage_file.RDS"))
   usage <- readRDS("usage_file.RDS")
@@ -558,27 +566,27 @@ test_that("seahorse function works", {
   unlink("usage_file.RDS")
   
   # Test that statements print when verbose = TRUE.
-  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                       compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
                       verbose = TRUE)),
                 "Running gene co-expression")
-  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                          compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
                          verbose = TRUE)),
                 "Gene co-expression complete")
-  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                          compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
                          verbose = TRUE)),
                 "Running phenotype associations")
-  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                          compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
                          verbose = TRUE)),
                 "Phenotype associations complete")
-  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                          compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
                          verbose = TRUE)),
                 "Running gene-phenotype associations")
-  expect_output(suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways,
+  expect_output(suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
                          compute_gene_cor = TRUE, compute_phenotype_cor = TRUE, assoc_method = "linear",
                          verbose = TRUE)),
                 "Gene-phenotype associations complete")
@@ -586,7 +594,7 @@ test_that("seahorse function works", {
   # Check that NA values are returned when the phenotype has less than 2 levels.
   phenotype_data_1_lev <- phenotype_data
   phenotype_data_1_lev$sex <- rep("male", nrow(phenotype_data_1_lev))
-  result <- suppressWarnings(seahorse(expression_data, phenotype_data_1_lev, phenotype_dictionary, pathways,
+  result <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data_1_lev, phenotype_dictionary = phenotype_dictionary, pathways = pathways,
            compute_gene_cor = FALSE, compute_phenotype_cor = FALSE))
   expect_equal(result$phenotype_association$sex$stat, NA)
   expect_equal(result$GSEA$sex, NA)
@@ -599,7 +607,7 @@ test_that("seahorse function works", {
                           pathway3 = c("Neutron Star", "Supernova", "Black Hole", "Red Dwarf", "White Dwarf", "Red Giant",
                                        "Blue Giant", "Nebula", "Oort Cloud", "Brown Dwarf", "Comet", "Asteroid", "Dark Matter",
                                        "Dark Energy", "Binary Star System", "Black Dwarf"))
-  result <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, uselessPathways,
+  result <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = uselessPathways,
                      compute_gene_cor = FALSE, compute_phenotype_cor = FALSE))
   expect_equal(nrow(result$GSEA$sex), 0)
   expect_equal(nrow(result$GSEA$height), 0)
@@ -612,7 +620,7 @@ test_that("seahorse function works", {
   phenotype_data_2_zeros[which(phenotype_data_2$grade == "A")[21:45], "sex"] <- NA
   phenotype_data_2_zeros[which(phenotype_data_2$grade == "B"), "sex"] <- NA
   phenotype_data_2_zeros[which(phenotype_data_2$grade == "C"), "sex"] <- NA
-  result <- suppressWarnings(seahorse(expression_data_2, phenotype_data_2_zeros, phenotype_dictionary_2, pathways,
+  result <- suppressWarnings(seahorse(expression = expression_data_2, phenotype = phenotype_data_2_zeros, phenotype_dictionary = phenotype_dictionary_2, pathways = pathways,
                      compute_gene_cor = FALSE, compute_phenotype_cor = TRUE))
   expect_true(is.na(result$phenocor$stat["sex", "grade"]))
   
@@ -621,7 +629,7 @@ test_that("seahorse function works", {
   phenotype_data_2_na <- phenotype_data_2
   phenotype_data_2_na[which(phenotype_data_2$grade == "A"), "WBC"] <- NA
   phenotype_data_2_na[which(phenotype_data_2$grade == "B"), "WBC"] <- NA
-  result <- suppressWarnings(seahorse(expression_data_2, phenotype_data_2_na, phenotype_dictionary_2, pathways,
+  result <- suppressWarnings(seahorse(expression = expression_data_2, phenotype = phenotype_data_2_na, phenotype_dictionary = phenotype_dictionary_2, pathways = pathways,
                      compute_gene_cor = FALSE, compute_phenotype_cor = TRUE))
   expect_true(is.na(result$phenocor$stat["grade", "WBC"]))
   
@@ -629,7 +637,7 @@ test_that("seahorse function works", {
   # for one level (dichotomous).
   phenotype_data_2_na <- phenotype_data_2
   phenotype_data_2_na[which(phenotype_data_2$sex == "female"), "WBC"] <- NA
-  result <- suppressWarnings(seahorse(expression_data_2, phenotype_data_2_na, phenotype_dictionary_2, pathways,
+  result <- suppressWarnings(seahorse(expression = expression_data_2, phenotype = phenotype_data_2_na, phenotype_dictionary = phenotype_dictionary_2, pathways = pathways,
                      compute_gene_cor = FALSE, compute_phenotype_cor = TRUE))
   expect_true(is.na(result$phenocor$stat["sex", "WBC"]))
   
@@ -639,9 +647,297 @@ test_that("seahorse function works", {
   phenotype_dictionary_smaller <- c("dichotomous", "continuous")
   phenotype_data_smaller[which(phenotype_data_smaller$sex == "female"), "WBC"] <- 1
   phenotype_data_smaller[which(phenotype_data_smaller$sex == "male"), "WBC"] <- 1
-  result <- suppressWarnings(seahorse(expression_data_2, phenotype_data_smaller, phenotype_dictionary_smaller, pathways,
+  result <- suppressWarnings(seahorse(expression = expression_data_2, phenotype = phenotype_data_smaller, phenotype_dictionary = phenotype_dictionary_smaller, pathways = pathways,
                      compute_gene_cor = FALSE, compute_phenotype_cor = TRUE))
   expect_true(is.na(result$phenocor$stat["sex", "WBC"]))
+})
+test_that("seahorse function works with continuous network feature input", {
+  skip_if_not_installed("fgsea")
+  skip_if_not_installed("matrixTests")
+  skip_if_not_installed("stats")
+  skip_if_not_installed("limma")
+  set.seed(42)
+  # Simulate network data
+  network = t(matrix(rexp(1000, rate=.1), ncol=10, nrow = 100))
+  colnames(network) = paste("feature", 1:100, sep = "")
+  rownames(network) = paste("sample", 1:10, sep = "")
+  
+  # Simulate phenotypic data
+  phenotype_data = data.frame(matrix(0, ncol=3, nrow = 10))
+  colnames(phenotype_data) = c("sex", "height", "group")
+  rownames(phenotype_data) = rownames(network)
+  phenotype_data$sex = c(rep("male", nrow(phenotype_data)/2), rep("female", nrow(phenotype_data)/2))
+  phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = T)
+  phenotype_data$group = c(rep("1", 3), rep("2", 4), rep("3", 3))
+  
+  phenotype_dictionary = c("dichotomous", "continuous", "nominal")
+  
+  # Check that seahorse returns an error if the network format is incorrect.
+  expect_warning(seahorse(network = NULL,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                          pval_adj_method = "bonferroni"),
+                 "compute_network_phenotype_cor was set to TRUE but no network was provided. Will not compute network-phenotype associations.")
+  expect_warning(seahorse(network = as.data.frame(network),compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                          pval_adj_method = "bonferroni"),
+                 "compute_network_phenotype_cor was set to TRUE but network is not a matrix. Will not compute network-phenotype associations.")
+  
+  # Run seahorse
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary))
+  
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
+  expect_true(all(results$phenotype_net_association$sex$testType == "T-Test"))
+  expect_true(all(results$phenotype_net_association$sex$stat == results$phenotype_net_association$sex$padj))
+  expect_true(all(results$phenotype_net_association$height$testType == "Cor"))
+  expect_true(all(!is.na(results$phenotype_net_association$height$stat)))
+  expect_true(all(is.na(results$phenotype_net_association$height$padj)))
+  expect_true(all(results$phenotype_net_association$group$testType == "ANOVA"))
+  expect_true(all(results$phenotype_net_association$group$stat == results$phenotype_net_association$group$padj))
+  
+  # Verify the phenotype data with FDR adjustment.
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                                       pval_adj_method = "fdr"))
+  
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
+  expect_true(all(results$phenotype_net_association$sex$testType == "T-Test"))
+  expect_true(all(stats::p.adjust(results$phenotype_net_association$sex$stat, method = "fdr") == results$phenotype_net_association$sex$padj))
+  expect_true(all(results$phenotype_net_association$height$testType == "Cor"))
+  expect_true(all(!is.na(results$phenotype_net_association$height$stat)))
+  expect_true(all(is.na(results$phenotype_net_association$height$padj)))
+  expect_true(all(results$phenotype_net_association$group$testType == "ANOVA"))
+  expect_true(all(stats::p.adjust(results$phenotype_net_association$group$stat, method = "fdr") == results$phenotype_net_association$group$padj))
+  
+  # Verify the phenotype data with Bonferroni adjustment.
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                                       pval_adj_method = "bonferroni"))
+  
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
+  expect_true(all(results$phenotype_net_association$sex$testType == "T-Test"))
+  expect_true(all(stats::p.adjust(results$phenotype_net_association$sex$stat, method = "bonferroni") == results$phenotype_net_association$sex$padj))
+  expect_true(all(results$phenotype_net_association$height$testType == "Cor"))
+  expect_true(all(!is.na(results$phenotype_net_association$height$stat)))
+  expect_true(all(is.na(results$phenotype_net_association$height$padj)))
+  expect_true(all(results$phenotype_net_association$group$testType == "ANOVA"))
+  expect_true(all(stats::p.adjust(results$phenotype_net_association$group$stat, method = "bonferroni") == results$phenotype_net_association$group$padj))
+  
+  # Run SEAHORSE with linear regression.
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                                       compute_gene_cor = FALSE, assoc_method = "linear"))
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA", "phenocor", "phenotype_net_association") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("(Intercept)", "sexmale", "height", "group2", "group3") %in% names(results$phenotype_net_association)))
+  expect_equal(results$phenotype_net_association$sexmale$stat, results$phenotype_net_association$sexmale$padj)
+  expect_equal(results$phenotype_net_association$height$stat, results$phenotype_net_association$height$padj)
+  expect_equal(results$phenotype_net_association$group3$stat, results$phenotype_net_association$group3$padj)
+  expect_equal(results$phenotype_net_association$group2$stat, results$phenotype_net_association$group2$padj)
+  expect_true(is.na(results$coexpression))
+  
+  # Run SEAHORSE with linear regression and Bonferroni adjustment
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                                       compute_gene_cor = FALSE, assoc_method = "linear",
+                                       pval_adj_method = "bonferroni"))
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA", "phenocor", "phenotype_net_association") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("(Intercept)", "sexmale", "height", "group3", "group2") %in% names(results$phenotype_net_association)))
+  expect_equal(stats::p.adjust(results$phenotype_net_association$sexmale$stat, method = "bonferroni"),
+               results$phenotype_net_association$sexmale$padj)
+  expect_equal(stats::p.adjust(results$phenotype_net_association$height$stat, method = "bonferroni"),
+               results$phenotype_net_association$height$padj)
+  expect_equal(stats::p.adjust(results$phenotype_net_association$group3$stat, method = "bonferroni"),
+               results$phenotype_net_association$group3$padj)
+  expect_equal(stats::p.adjust(results$phenotype_net_association$group2$stat, method = "bonferroni"),
+               results$phenotype_net_association$group2$padj)
+  expect_true(is.na(results$coexpression))
+  
+  # Check that SEAHORSE runs with linear regression and a malformed column name.
+  phenotype_data_mal <- phenotype_data
+  colnames(phenotype_data_mal) <- c("?sex", "height in inches", "123group")
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data_mal, phenotype_dictionary = phenotype_dictionary, 
+                                       compute_gene_cor = FALSE, assoc_method = "linear"))
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA", "phenocor", "phenotype_net_association") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("(Intercept)", "X.sexmale", "height.in.inches", "X123group3", "X123group2") %in% names(results$phenotype_net_association)))
+  expect_true(is.na(results$coexpression))
+})
+test_that("seahorse function works with dichotomous network feature input", {
+  skip_if_not_installed("fgsea")
+  skip_if_not_installed("matrixTests")
+  skip_if_not_installed("stats")
+  skip_if_not_installed("limma")
+  set.seed(42)
+  # Simulate network data
+  network = t(matrix(rbinom(n = 1000, size = 1, prob = 0.5), ncol=10, nrow = 100))
+  colnames(network) = paste("feature", 1:100, sep = "")
+  rownames(network) = paste("sample", 1:10, sep = "")
+  
+  # Simulate phenotypic data
+  phenotype_data = data.frame(matrix(0, ncol=3, nrow = 10))
+  colnames(phenotype_data) = c("sex", "height", "group")
+  rownames(phenotype_data) = rownames(network)
+  phenotype_data$sex = c(rep("male", nrow(phenotype_data)/2), rep("female", nrow(phenotype_data)/2))
+  phenotype_data$height = 65 + sample.int(10, nrow(phenotype_data), replace = T)
+  phenotype_data$group = c(rep("1", 3), rep("2", 4), rep("3", 3))
+  
+  phenotype_dictionary = c("dichotomous", "continuous", "nominal")
+  
+  # Run seahorse
+  expect_warning(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary),
+                 "Some network features did not have sufficient sample sizes to perform a t-test - NAs will be returned")
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary))
+  
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
+  expect_true(all(results$phenotype_net_association$sex$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$sex$stat) == na.omit(results$phenotype_net_association$sex$padj)))
+  expect_true(all(results$phenotype_net_association$height$testType == "T-Test"))
+  expect_true(all(results$phenotype_net_association$group$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$group$stat) == na.omit(results$phenotype_net_association$group$padj)))
+  
+  # Verify the phenotype data with FDR adjustment.
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary,
+                                       pval_adj_method = "fdr"))
+  
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
+  expect_true(all(results$phenotype_net_association$sex$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$sex$stat, method = "fdr")) == 
+                    na.omit(results$phenotype_net_association$sex$padj)))
+  expect_true(all(results$phenotype_net_association$height$testType == "T-Test"))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$height$stat, method = "fdr")[which(!is.na(results$phenotype_net_association$height$padj))]) 
+                  == na.omit(results$phenotype_net_association$height$padj[which(!is.na(results$phenotype_net_association$height$padj))])))
+  expect_true(all(results$phenotype_net_association$group$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$group$stat, method = "fdr")) == 
+                    na.omit(results$phenotype_net_association$group$padj)))
+  
+  # Verify the phenotype data with Bonferroni adjustment.
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                                       pval_adj_method = "bonferroni"))
+  
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
+  expect_true(all(results$phenotype_net_association$sex$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$sex$stat, method = "bonferroni")) == 
+                    na.omit(results$phenotype_net_association$sex$padj)))
+  expect_true(all(results$phenotype_net_association$height$testType == "T-Test"))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$height$stat, method = "bonferroni")[which(!is.na(results$phenotype_net_association$height$padj))]) 
+                  == na.omit(results$phenotype_net_association$height$padj[which(!is.na(results$phenotype_net_association$height$padj))])))
+  expect_true(all(results$phenotype_net_association$group$testType %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(stats::p.adjust(results$phenotype_net_association$group$stat, method = "bonferroni")) == 
+                    na.omit(results$phenotype_net_association$group$padj)))
+  
+  # Test with a larger data set and more dichotomous / nominal phenotypes.
+  phenotype_data_2 <- do.call(rbind, rep(list(phenotype_data), 10))
+  phenotype_data_2$smoke = c(rep("No", 90), rep("Yes", 10))
+  phenotype_data_2$grade = c(rep("A", 45), rep("B", 45), rep("C", 10))
+  phenotype_data_2$rare_group <- rep("common", 100)
+  phenotype_data_2$rare_group[c(1:12, 14, 18, 19)] <- "rare"
+  phenotype_data_2$WBC <- runif(n = 100, min = 4000, max = 11000)
+  phenotype_data_2 <- phenotype_data_2[,c("smoke", "sex", "group", "height", "grade", "rare_group", "WBC")]
+  phenotype_dictionary_2 <- c("dichotomous", "dichotomous", "nominal", "continuous", "nominal", "dichotomous", "continuous")
+  network_data_2 = matrix(rbinom(n = 10000, size = 1, prob = 0.5), ncol=100, nrow = 100)
+  colnames(network_data_2) = paste("feature", 1:100, sep = "")
+  rownames(network_data_2) = paste("sample", 1:100, sep = "")
+  rownames(phenotype_data_2) <- paste("sample", 1:100, sep = "")
+  results <- suppressWarnings(seahorse(network = network_data_2, compute_network_phenotype_cor = TRUE, 
+                                       phenotype = phenotype_data_2, phenotype_dictionary = phenotype_dictionary_2, pathways = pathways))
+  
+  # Verify structure
+  expect_true(all(c("coexpression", "phenotype_association", "phenocor", "GSEA", "phenotype_net_association") %in% names(results)))
+  expect_true(any(results$phenotype_net_association$smoke$testType  %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$smoke$stat) == na.omit(results$phenotype_net_association$smoke$padj)))
+  expect_true(all(results$phenotype_net_association$grade$testType  %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$grade$stat) == na.omit(results$phenotype_net_association$grade$padj)))
+  expect_true(all(results$phenotype_net_association$rare_group$testType  %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$rare_group$stat) == na.omit(results$phenotype_net_association$rare_group$padj)))
+  expect_true(all(results$phenotype_net_association$WBC$testType == "T-Test"))
+  expect_true(all(na.omit(results$phenotype_net_association$WBC$stat) == na.omit(results$phenotype_net_association$WBC$padj)))
+  expect_true(all(results$phenotype_net_association$sex$testType  %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$sex$stat) == na.omit(results$phenotype_net_association$sex$padj)))
+  expect_true(all(results$phenotype_net_association$height$testType == "T-Test"))
+  expect_true(all(results$phenotype_net_association$group$testType  %in% c("FFH", "Chi-square")))
+  expect_true(all(na.omit(results$phenotype_net_association$group$stat) == na.omit(results$phenotype_net_association$group$padj)))
+  
+  # Run SEAHORSE with logistic regression.
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                                       compute_gene_cor = FALSE, assoc_method = "linear"))
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA", "phenocor", "phenotype_net_association") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("(Intercept)", "sexmale", "height", "group2", "group3") %in% names(results$phenotype_net_association)))
+  expect_equal(results$phenotype_net_association$sexmale$stat, results$phenotype_net_association$sexmale$padj)
+  expect_equal(results$phenotype_net_association$height$stat, results$phenotype_net_association$height$padj)
+  expect_equal(results$phenotype_net_association$group3$stat, results$phenotype_net_association$group3$padj)
+  expect_equal(results$phenotype_net_association$group2$stat, results$phenotype_net_association$group2$padj)
+  expect_true(is.na(results$coexpression))
+  
+  # Run SEAHORSE with linear regression and Bonferroni adjustment
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data, phenotype_dictionary = phenotype_dictionary, 
+                                       compute_gene_cor = FALSE, assoc_method = "linear",
+                                       pval_adj_method = "bonferroni"))
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA", "phenocor", "phenotype_net_association") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("(Intercept)", "sexmale", "height", "group3", "group2") %in% names(results$phenotype_net_association)))
+  expect_equal(stats::p.adjust(results$phenotype_net_association$sexmale$stat, method = "bonferroni"),
+               results$phenotype_net_association$sexmale$padj)
+  expect_equal(stats::p.adjust(results$phenotype_net_association$height$stat, method = "bonferroni"),
+               results$phenotype_net_association$height$padj)
+  expect_equal(stats::p.adjust(results$phenotype_net_association$group3$stat, method = "bonferroni"),
+               results$phenotype_net_association$group3$padj)
+  expect_equal(stats::p.adjust(results$phenotype_net_association$group2$stat, method = "bonferroni"),
+               results$phenotype_net_association$group2$padj)
+  expect_true(is.na(results$coexpression))
+  
+  # Check that SEAHORSE runs with linear regression and a malformed column name.
+  phenotype_data_mal <- phenotype_data
+  colnames(phenotype_data_mal) <- c("?sex", "height in inches", "123group")
+  results <- suppressWarnings(seahorse(network = network,compute_network_phenotype_cor = TRUE, phenotype =phenotype_data_mal, phenotype_dictionary = phenotype_dictionary, 
+                                       compute_gene_cor = FALSE, assoc_method = "linear"))
+  # Verify structure
+  expect_type(results, "list")
+  expect_true(length(results) > 0)
+  # Check that results contain expected top-level keys
+  expect_true(all(c("coexpression", "phenotype_association", "GSEA", "phenocor", "phenotype_net_association") %in% names(results)))
+  # Check that phenotype names appear in sub-lists
+  expect_true(all(c("(Intercept)", "X.sexmale", "height.in.inches", "X123group3", "X123group2") %in% names(results$phenotype_net_association)))
+  expect_true(is.na(results$coexpression))
 })
 test_that(".tsv.gz output works", {
   # Check packages.
@@ -685,7 +981,7 @@ test_that(".tsv.gz output works", {
   if(!dir.exists(resultDir)){
     dir.create(resultDir)
   }
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways))
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways))
   saveRDS(results, "~/tmpResultDir/tissue1.RDS")
   saveRDS(results, "~/tmpResultDir/tissue2.RDS")
   saveRDS(results, "~/tmpResultDir/tissue3.RDS")
@@ -1114,7 +1410,7 @@ test_that("plotting functions work", {
   input <- list(expression = expression_data, phenotype = phenotype_data, dict = phenotype_dictionary)
   
   # Get toy SEAHORSE results.
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways))
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways))
   
   # Test that rug plot throws an error if the pathway does not exist.
   expect_error(rugPlot(result = results, pathwayName = "pathwayX", pathways = pathways,
@@ -1379,7 +1675,7 @@ test_that("saving significant table works", {
   saveRDS(input, "~/tmpInputDir/tissue3.RDS")
 
   # Get toy SEAHORSE results.
-  results <- suppressWarnings(seahorse(expression_data, phenotype_data, phenotype_dictionary, pathways))
+  results <- suppressWarnings(seahorse(expression = expression_data, phenotype = phenotype_data, phenotype_dictionary = phenotype_dictionary, pathways = pathways))
   if(!dir.exists("~/tmpResultDir")){
     dir.create("~/tmpResultDir")
   }
