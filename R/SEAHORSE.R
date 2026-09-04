@@ -342,13 +342,13 @@ seahorse <- function(expression = NULL, network = NULL, phenotype, phenotype_dic
                                       phenotype_dictionary = phenotype_dictionary,
                                       method = assoc_method, pval_adj_method = pval_adj_method,
                                       featureType = netFeatureType)
-          results$phenotype_association <- corr
+          results$phenotype_net_association <- corr
         }else{
           linReg <- computeLinearRegressionNetwork(network = network, phenotype = phenotype,
                                             phenotype_dictionary = phenotype_dictionary,
                                             pval_adj_method = pval_adj_method,
                                             featureType = netFeatureType)
-          results$phenotype_association <- linReg
+          results$phenotype_net_association <- linReg
         }
         if(verbose == TRUE){
           print("Network-phenotype associations complete")
